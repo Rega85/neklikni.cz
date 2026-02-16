@@ -1,28 +1,39 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ShieldAlert, ShieldCheck, Zap, Share2 } from 'lucide-react';
+import { ShieldAlert, Zap, Share2 } from 'lucide-react';
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<null | { risk: number, verdict: string }>(null);
 
-  const analyzeScam = () => {
+  const analyzeScam = async () => {
+    if (!input) return;
     setLoading(true);
-    // Simulace AI analýzy pro náš prototyp
-    setTimeout(() => {
-      let risk = 2;
-      let verdict = "Tento text vypadá bezpečně.";
+    setResult(null);
+    
+    try {
+      // TADY SE DĚJE TA MAGIE - voláme tvůj soubor v api/analyze/route.ts
+      const response = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: input }),
+      });
       
-      if (input.toLowerCase().includes("klikni") || input.includes("!")) {
-        risk = 98;
-        verdict = "VAROVÁNÍ: Vysoké riziko podvodu!";
-      }
+      if (!response.ok) throw new Error('AI neodpovídá');
       
-      setResult({ risk, verdict });
+      const data = await response.json();
+      setResult(data);
+    } catch (error) {
+      console.error(error);
+      setResult({ 
+        risk: 0, 
+        verdict: "Chyba: AI mozek se nepodařilo kontaktovat. Zkontroluj API klíč na Vercelu." 
+      });
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (
@@ -59,8 +70,10 @@ export default function Home() {
         </div>
 
         {result && (
-          <div className={`animate-in fade-in slide-in-from-top-4 p-8 rounded-3xl border-2 ${result.risk > 50 ? 'border-red-500/50 bg-red-500/10' : 'border-green-500/50 bg-green-500/10'}`}>
-            <div className="text-5xl font-black mb-2">{result.risk}% RIZIKO</div>
+          <div className={`animate-in fade-in slide-in-from-top-4 p-8 rounded-3xl border-2 transition-all ${result.risk > 50 ? 'border-red-500/50 bg-red-500/10' : 'border-green-500/50 bg-green-500/10'}`}>
+            <div className={`text-5xl font-black mb-2 ${result.risk > 50 ? 'text-red-400' : 'text-green-400'}`}>
+              {result.risk}% RIZIKO
+            </div>
             <p className="text-xl font-medium mb-6 opacity-80">{result.verdict}</p>
             <button className="flex items-center gap-2 mx-auto px-6 py-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors">
               <Share2 size={18} /> Sdílet varování
