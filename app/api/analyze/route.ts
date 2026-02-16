@@ -6,11 +6,21 @@ const anthropic = new Anthropic({
 });
 
 export async function POST(req: Request) {
+  // DOČASNÝ DEBUG - smaž po vyřešení
+  console.log('ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
+  console.log('Key starts with:', process.env.ANTHROPIC_API_KEY?.substring(0, 10));
+  
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json({ 
+      error: "API klíč není nastaven na Vercelu" 
+    }, { status: 500 });
+  }
+
   try {
     const { text } = await req.json();
 
     const response = await anthropic.messages.create({
-      model: "claude-3-5-sonnet-latest",
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 1024,
       system: "Jsi přísný expert na kyberbezpečnost. Analyzuj text a odhal podvody (scamy, phishing, falešné výhry). Pokud jde o dar od cizích lidí nebo loterii, je to VŽDY vysoké riziko. Odpověz POUZE v JSON: { \"risk\": číslo_0_až_100, \"verdict\": \"české vysvětlení\" }",
       messages: [{ role: "user", content: text }],
