@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState } from 'react';
-import { ShieldAlert, Zap, Share2, Lock } from 'lucide-react'; // Přidal jsem ikonku zámku pro limit
+import { useRouter } from 'next/navigation';
+import { ShieldAlert, Zap, Share2, Lock } from 'lucide-react';
 
 export default function Home() {
+  const router = useRouter();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  // Změnili jsme typ 'risk', aby mohl být i string ("LIMIT")
   const [result, setResult] = useState<null | { risk: number | string, verdict: string }>(null);
 
   const analyzeScam = async () => {
@@ -23,18 +24,15 @@ export default function Home() {
       
       const data = await response.json();
 
-      // Rate limit exceeded (429)
       if (response.status === 429) {
         setResult({ 
-          risk: "LIMIT", // Místo čísla pošleme text
-          // Tady byl ten bug! Backend vrací data.message, ne data.verdict
+          risk: "LIMIT",
           verdict: data.message || "Denní limit vyčerpán. Přejdi na PRO verzi pro neomezený přístup." 
         });
         setLoading(false);
         return;
       }
 
-      // Jiné errory od backendu
       if (!response.ok) {
         setResult({ 
           risk: 0, 
@@ -44,7 +42,6 @@ export default function Home() {
         return;
       }
       
-      // Success
       setResult(data);
     } catch (error) {
       console.error(error);
@@ -59,7 +56,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden">
-      {/* Animované částice na pozadí */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
         <div className="absolute h-2 w-2 bg-blue-500 rounded-full top-1/4 left-1/4 animate-ping"></div>
         <div className="absolute h-2 w-2 bg-purple-500 rounded-full top-3/4 left-2/3 animate-pulse"></div>
@@ -95,7 +91,6 @@ export default function Home() {
             ${result.risk === "LIMIT" ? 'border-amber-500/50 bg-amber-500/10' : 
               (result.risk as number) > 50 ? 'border-red-500/50 bg-red-500/10' : 'border-green-500/50 bg-green-500/10'}`}>
             
-            {/* Zobrazení čísla NEBO textu LIMIT */}
             <div className={`text-5xl font-black mb-3 
               ${result.risk === "LIMIT" ? 'text-amber-400' : 
                 (result.risk as number) > 50 ? 'text-red-400' : 'text-green-400'}`}>
@@ -112,9 +107,11 @@ export default function Home() {
               {result.verdict}
             </p>
 
-            {/* Pokud je limit, nabídneme PRO verzi, jinak Sdílení */}
             {result.risk === "LIMIT" ? (
-              <button className="flex items-center justify-center w-full gap-2 mx-auto px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl transition-all font-bold text-white shadow-lg hover:shadow-amber-500/25">
+              <button 
+                onClick={() => router.push('/login')}
+                className="flex items-center justify-center w-full gap-2 mx-auto px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl transition-all font-bold text-white shadow-lg hover:shadow-amber-500/25"
+              >
                 Odemknout PRO verzi
               </button>
             ) : (
