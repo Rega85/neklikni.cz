@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
-// DŮLEŽITÉ: Vynutit Node.js runtime
 export const runtime = 'nodejs';
 
 const anthropic = new Anthropic({
@@ -9,15 +8,9 @@ const anthropic = new Anthropic({
 });
 
 export async function POST(req: Request) {
-  // Debug logy
-  console.log('=== DEBUG START ===');
-  console.log('ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
-  console.log('Key starts with:', process.env.ANTHROPIC_API_KEY?.substring(0, 15));
-  console.log('=== DEBUG END ===');
-  
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ 
-      error: "API klíč není nastaven na Vercelu" 
+      error: "API klíč není nastaven" 
     }, { status: 500 });
   }
 
@@ -33,12 +26,23 @@ export async function POST(req: Request) {
 
     const content = response.content[0];
     if (content.type === 'text') {
-        return NextResponse.json(JSON.parse(content.text));
+      // Odstraň markdown code blocky (```json ... ```)
+      let jsonText = content.text.trim();
+      jsonText = jsonText.replace(/^```json\s*/i, '');
+      jsonText = jsonText.replace(/\s*```$/, '');
+      jsonText = jsonText.trim();
+      
+      const result = JSON.parse(jsonText);
+      return NextResponse.json(result);
     }
+    
     return NextResponse.json({ risk: 50, verdict: "AI vrátila nečitelný formát." });
 
   } catch (error) {
     console.error("=== CHYBA API ===", error);
-    return NextResponse.json({ error: "AI mozek má výpadek." }, { status: 500 });
+    return NextResponse.json({ 
+      error: "AI mozek má výpadek.",
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 });
   }
 }
