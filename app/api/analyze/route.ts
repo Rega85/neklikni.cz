@@ -6,7 +6,7 @@ import crypto from "crypto";
 
 export const runtime = "nodejs";
 
-const FREE_MODEL = "claude-3-5-haiku-20241022";
+const FREE_MODEL = "claude-haiku-4-5-20251001";
 const PRO_MODEL = "claude-sonnet-4-5-20250929";
 
 // Admin klient (service role) - jen pro anonymní IP tracking
