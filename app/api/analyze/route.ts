@@ -3,16 +3,18 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export const runtime = 'nodejs';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
-
 export async function POST(req: Request) {
+  // Kontrola API klíče
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ 
       error: "API klíč není nastaven" 
     }, { status: 500 });
   }
+
+  // Inicializace uvnitř funkce - bezpečné
+  const anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY,
+  });
 
   try {
     const { text } = await req.json();
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
 
     const content = response.content[0];
     if (content.type === 'text') {
-      // Odstraň markdown code blocky (```json ... ```)
+      // Odstraň markdown code blocky
       let jsonText = content.text.trim();
       jsonText = jsonText.replace(/^```json\s*/i, '');
       jsonText = jsonText.replace(/\s*```$/, '');
