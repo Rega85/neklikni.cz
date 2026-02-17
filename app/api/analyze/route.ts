@@ -1,17 +1,62 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
+import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 export const runtime = 'nodejs';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
+
+function hashIP(ip: string): string {
+  return crypto
+    .createHash('sha256')
+    .update(ip + process.env.IP_PEPPER)
+    .digest('hex');
+}
+
 export async function POST(req: Request) {
-  // Kontrola API klíče
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ 
       error: "API klíč není nastaven" 
     }, { status: 500 });
   }
 
-  // Inicializace uvnitř funkce - bezpečné
+  // Získej IP adresu
+  const forwarded = req.headers.get('x-forwarded-for');
+  const ip = forwarded ? forwarded.split(',')[0].trim() : 'unknown';
+  const ipHash = hashIP(ip);
+  const today = new Date().toISOString().split('T')[0];
+
+  // Rate limit check (3/den pro free users)
+  const FREE_LIMIT = 3;
+  
+  try {
+    const { data, error } = await supabase
+      .rpc('increment_usage_daily', {
+        p_ip_hash: ipHash,
+        p_day: today
+      });
+
+    if (error) throw error;
+
+    const checks = data as number;
+
+    if (checks > FREE_LIMIT) {
+      return NextResponse.json({
+        error: "limit",
+        limit: FREE_LIMIT,
+        verdict: `Využil jsi ${FREE_LIMIT} analýzy zdarma dnes. Přejdi na PRO verzi pro neomezený přístup.`
+      }, { status: 429 });
+    }
+
+  } catch (e) {
+    console.error('Rate limit check failed:', e);
+  }
+
+  // Inicializace Anthropic
   const anthropic = new Anthropic({
     apiKey: process.env.ANTHROPIC_API_KEY,
   });
@@ -28,13 +73,13 @@ export async function POST(req: Request) {
 
     const content = response.content[0];
     if (content.type === 'text') {
-      // Odstraň markdown code blocky
       let jsonText = content.text.trim();
       jsonText = jsonText.replace(/^```json\s*/i, '');
       jsonText = jsonText.replace(/\s*```$/, '');
       jsonText = jsonText.trim();
       
       const result = JSON.parse(jsonText);
+      
       return NextResponse.json(result);
     }
     
