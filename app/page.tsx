@@ -14,16 +14,35 @@ export default function Home() {
     setResult(null);
     
     try {
-      // TADY SE DĚJE TA MAGIE - voláme tvůj soubor v api/analyze/route.ts
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: input }),
       });
       
-      if (!response.ok) throw new Error('AI neodpovídá');
-      
       const data = await response.json();
+
+      // Rate limit exceeded (429)
+      if (response.status === 429) {
+        setResult({ 
+          risk: 0, 
+          verdict: data.verdict || "Využil jsi denní limit analýz zdarma. Přejdi na PRO verzi pro neomezený přístup." 
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Jiné errory
+      if (!response.ok) {
+        setResult({ 
+          risk: 0, 
+          verdict: data.details || "Chyba: AI mozek se nepodařilo kontaktovat." 
+        });
+        setLoading(false);
+        return;
+      }
+      
+      // Success
       setResult(data);
     } catch (error) {
       console.error(error);
