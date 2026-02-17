@@ -1,14 +1,19 @@
 import { NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
+// DŮLEŽITÉ: Vynutit Node.js runtime
+export const runtime = 'nodejs';
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
 export async function POST(req: Request) {
-  // DOČASNÝ DEBUG - smaž po vyřešení
+  // Debug logy
+  console.log('=== DEBUG START ===');
   console.log('ANTHROPIC_API_KEY exists:', !!process.env.ANTHROPIC_API_KEY);
-  console.log('Key starts with:', process.env.ANTHROPIC_API_KEY?.substring(0, 10));
+  console.log('Key starts with:', process.env.ANTHROPIC_API_KEY?.substring(0, 15));
+  console.log('=== DEBUG END ===');
   
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json({ 
@@ -33,7 +38,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ risk: 50, verdict: "AI vrátila nečitelný formát." });
 
   } catch (error) {
-    console.error("Chyba API:", error);
+    console.error("=== CHYBA API ===", error);
     return NextResponse.json({ error: "AI mozek má výpadek." }, { status: 500 });
   }
 }
