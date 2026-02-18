@@ -3,7 +3,13 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// ✅ Lazy inicializace: Stripe se vytvoří až ve chvíli, kdy ho fakt potřebujeme
+function getStripe() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error("STRIPE_SECRET_KEY is not set");
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY);
+}
 
 const PRICES = {
   easy: { priceId: "price_1T1whDBCHNo2zYHXNIU912Vl", mode: "payment" as const },
@@ -13,15 +19,19 @@ const PRICES = {
 
 type Plan = keyof typeof PRICES;
 
+// Tato routa musí být dynamická, aby se nepokoušela o statický build bez klíčů
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   try {
+    const stripe = getStripe(); // Voláme až za běhu (runtime)
+    
     const { plan } = (await req.json()) as { plan?: string };
 
     if (!plan || !(plan in PRICES)) {
       return NextResponse.json({ error: "Neplatný plán" }, { status: 400 });
     }
 
-    // ✅ REÁLNÁ AUTENTIZACE (Místo hacku)
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,7 +47,7 @@ export async function POST(req: Request) {
                 cookieStore.set(name, value, options)
               );
             } catch {
-              // V route handleru nevadí, pokud set selže
+              // V route handleru bezpečně ignorujeme chyby nastavení cookies
             }
           },
         },
