@@ -9,14 +9,13 @@ export const runtime = "nodejs";
 const FREE_MODEL = "claude-haiku-4-5-20251001";
 const PRO_MODEL = "claude-sonnet-4-5-20250929";
 
-// ✅ Lazy initialization - volá se až za runtime
 function getSupabaseAdmin() {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error("Missing Supabase credentials");
   }
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_KEY
+    process.env.SUPABASE_SERVICE_ROLE_KEY // ✅ Opraveno
   );
 }
 
@@ -29,7 +28,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Chybí text k analýze" }, { status: 400 });
     }
 
-    // Vytvoř session klient (s cookies přihlášeného uživatele)
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -44,19 +42,15 @@ export async function POST(req: Request) {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Výchozí nastavení
     let tier = "free";
     let modelToUse = FREE_MODEL;
     let maxChars = 4000;
     let systemPrompt =
       'Jsi expert na kyberbezpečnost. Analyzuj text a vrať POUZE validní JSON: {"risk": 0-100, "verdict": "Stručně (max 2 věty) proč je to bezpečné/podvod."}';
 
-    // --- PŘIHLÁŠENÝ UŽIVATEL ---
     if (user) {
-      // ✅ Zavolej až tady, když to skutečně potřebuješ
       const supabaseAdmin = getSupabaseAdmin();
-      
-      // Zjisti tier (bez odečtu kreditů)
+
       const { data: profile } = await supabaseAdmin
         .from("user_profiles")
         .select("tier")
@@ -72,7 +66,6 @@ export async function POST(req: Request) {
           'Jsi elitní expert na kyberbezpečnost. Vrať POUZE validní JSON: {"risk": 0-100, "verdict": "Popiš taktiky manipulace + 2 konkrétní kroky co dělat. Max 5 vět."}';
       }
 
-      // Hard limit na délku PŘED odečtem kreditů
       if (text.length > maxChars) {
         return NextResponse.json(
           { risk: 0, verdict: `Text je příliš dlouhý. Maximum je ${maxChars} znaků.` },
@@ -80,7 +73,6 @@ export async function POST(req: Request) {
         );
       }
 
-      // Odečti kredit (přes session klienta s auth.uid())
       const { data: accessData, error: rpcError } = await supabase.rpc("consume_access", {
         p_input_chars: text.length,
         p_model_used: modelToUse,
@@ -101,7 +93,6 @@ export async function POST(req: Request) {
       }
 
     } else {
-      // --- ANONYMNÍ UŽIVATEL (IP rate limit) ---
       if (text.length > maxChars) {
         return NextResponse.json(
           { risk: 0, verdict: `Text je příliš dlouhý. Maximum je ${maxChars} znaků.` },
@@ -120,7 +111,6 @@ export async function POST(req: Request) {
       const ipHash = crypto.createHash("sha256").update(ip + pepper).digest("hex");
       const today = new Date().toISOString().split("T")[0];
 
-      // ✅ Zavolej až tady pro anonymní uživatele
       const supabaseAdmin = getSupabaseAdmin();
 
       const { data: checks, error: checkErr } = await supabaseAdmin.rpc("increment_usage_daily", {
@@ -141,7 +131,6 @@ export async function POST(req: Request) {
       }
     }
 
-    // --- VOLÁNÍ AI ---
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "Chybí ANTHROPIC_API_KEY." }, { status: 500 });
