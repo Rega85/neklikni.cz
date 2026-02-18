@@ -1,42 +1,52 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Check, Zap, Shield, Crown } from 'lucide-react';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Check, Zap, Shield, Crown } from "lucide-react";
+
+type Plan = "easy" | "basic" | "pro";
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState<string | null>(null);
+  const [loading, setLoading] = useState<Plan | null>(null);
   const router = useRouter();
 
-  const handleCheckout = async (priceId: string) => {
-    setLoading(priceId);
+  const handleCheckout = async (plan: Plan) => {
+    setLoading(plan);
+
     try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId }),
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }), // ✅ POSÍLÁME PLAN
       });
-      
-      const data = await res.json();
-      
+
+      const data = await res.json().catch(() => ({}));
+
       if (res.status === 401) {
-        // Pokud není přihlášený, pošleme ho nejdřív na login
-        router.push('/login');
+        router.push("/login");
         return;
       }
-      
-      if (data.url) {
-        // Přesměrování rovnou na Stripe!
-        window.location.href = data.url;
-      } else {
-        alert("Chyba při vytváření pokladny: " + data.error);
+
+      if (!res.ok) {
+        alert("Chyba: " + (data?.error ?? `HTTP ${res.status}`));
+        return;
       }
-    } catch (error) {
+
+      if (data?.url) {
+        window.location.href = data.url; // ✅ přesměrování na Stripe
+        return;
+      }
+
+      alert("Chyba: server nevrátil checkout URL.");
+    } catch (err) {
+      console.error(err);
       alert("Něco se pokazilo. Zkus to prosím znovu.");
     } finally {
       setLoading(null);
     }
   };
+
+  const disabled = loading !== null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center py-20 px-6">
@@ -44,7 +54,9 @@ export default function PricingPage() {
         <h1 className="text-5xl font-black bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
           Vyber si svou ochranu
         </h1>
-        <p className="text-slate-400 text-lg">Zabezpeč svůj digitální život dřív, než bude pozdě.</p>
+        <p className="text-slate-400 text-lg">
+          Zabezpeč svůj digitální život dřív, než bude pozdě.
+        </p>
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl w-full">
@@ -56,17 +68,25 @@ export default function PricingPage() {
           </div>
           <div className="text-4xl font-black mb-2">29 Kč</div>
           <p className="text-slate-400 text-sm mb-8">Jednorázová platba</p>
+
           <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex gap-3"><Check className="text-green-400 shrink-0" /> 10 AI analýz</li>
-            <li className="flex gap-3"><Check className="text-green-400 shrink-0" /> Rychlý model (Haiku)</li>
-            <li className="flex gap-3"><Check className="text-green-400 shrink-0" /> Neomezená platnost kreditů</li>
+            <li className="flex gap-3">
+              <Check className="text-green-400 shrink-0" /> 10 AI analýz
+            </li>
+            <li className="flex gap-3">
+              <Check className="text-green-400 shrink-0" /> Rychlý model (Haiku)
+            </li>
+            <li className="flex gap-3">
+              <Check className="text-green-400 shrink-0" /> Neomezená platnost kreditů
+            </li>
           </ul>
-          <button 
-            onClick={() => handleCheckout('price_1T1whDBCHNo2zYHXNIU912Vl')}
-            disabled={loading !== null}
-            className="w-full py-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 transition-colors"
+
+          <button
+            onClick={() => handleCheckout("easy")}
+            disabled={disabled}
+            className="w-full py-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 transition-colors disabled:opacity-60"
           >
-            {loading === 'price_1T1whDBCHNo2zYHXNIU912Vl' ? "Načítám pokladnu..." : "Koupit balíček"}
+            {loading === "easy" ? "Načítám pokladnu..." : "Koupit balíček"}
           </button>
         </div>
 
@@ -75,23 +95,36 @@ export default function PricingPage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-blue-500 text-white px-4 py-1 rounded-full text-sm font-bold">
             NEJOBLÍBENĚJŠÍ
           </div>
+
           <div className="flex items-center gap-3 mb-4 mt-2">
             <Shield className="text-blue-400" />
             <h2 className="text-2xl font-bold">BASIC</h2>
           </div>
-          <div className="text-4xl font-black mb-2">99 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span></div>
+
+          <div className="text-4xl font-black mb-2">
+            99 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span>
+          </div>
+
           <p className="text-blue-300/80 text-sm mb-8">Klid na celý měsíc</p>
+
           <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex gap-3"><Check className="text-blue-400 shrink-0" /> 50 analýz měsíčně</li>
-            <li className="flex gap-3"><Check className="text-blue-400 shrink-0" /> Rychlý model (Haiku)</li>
-            <li className="flex gap-3"><Check className="text-blue-400 shrink-0" /> Automatická obnova</li>
+            <li className="flex gap-3">
+              <Check className="text-blue-400 shrink-0" /> 50 analýz měsíčně
+            </li>
+            <li className="flex gap-3">
+              <Check className="text-blue-400 shrink-0" /> Rychlý model (Haiku)
+            </li>
+            <li className="flex gap-3">
+              <Check className="text-blue-400 shrink-0" /> Automatická obnova
+            </li>
           </ul>
-          <button 
-            onClick={() => handleCheckout('price_1T1whYBCHNo2zYHXq0nQ3GJ7')}
-            disabled={loading !== null}
-            className="w-full py-4 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/25"
+
+          <button
+            onClick={() => handleCheckout("basic")}
+            disabled={disabled}
+            className="w-full py-4 rounded-xl font-bold bg-blue-600 hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/25 disabled:opacity-60"
           >
-            {loading === 'price_1T1whYBCHNo2zYHXq0nQ3GJ7' ? "Načítám pokladnu..." : "Získat BASIC"}
+            {loading === "basic" ? "Načítám pokladnu..." : "Získat BASIC"}
           </button>
         </div>
 
@@ -101,20 +134,34 @@ export default function PricingPage() {
             <Crown className="text-purple-400" />
             <h2 className="text-2xl font-bold">PRO</h2>
           </div>
-          <div className="text-4xl font-black mb-2">199 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span></div>
+
+          <div className="text-4xl font-black mb-2">
+            199 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span>
+          </div>
+
           <p className="text-slate-400 text-sm mb-8">Pro náročné uživatele</p>
+
           <ul className="space-y-4 mb-8 flex-1">
-            <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> 200 analýz měsíčně</li>
-            <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> <b>Elitní model (Sonnet 3.5)</b></li>
-            <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> Hloubkový psychologický rozbor podvodu</li>
-            <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> Až 12 000 znaků na zprávu</li>
+            <li className="flex gap-3">
+              <Check className="text-purple-400 shrink-0" /> 200 analýz měsíčně
+            </li>
+            <li className="flex gap-3">
+              <Check className="text-purple-400 shrink-0" /> <b>Elitní model</b>
+            </li>
+            <li className="flex gap-3">
+              <Check className="text-purple-400 shrink-0" /> Hloubkový rozbor podvodu
+            </li>
+            <li className="flex gap-3">
+              <Check className="text-purple-400 shrink-0" /> Až 12 000 znaků na zprávu
+            </li>
           </ul>
-          <button 
-            onClick={() => handleCheckout('price_1T1wi8BCHNo2zYHXH5xDjwwm')}
-            disabled={loading !== null}
-            className="w-full py-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 transition-colors"
+
+          <button
+            onClick={() => handleCheckout("pro")}
+            disabled={disabled}
+            className="w-full py-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 transition-colors disabled:opacity-60"
           >
-            {loading === 'price_1T1wi8BCHNo2zYHXH5xDjwwm' ? "Načítám pokladnu..." : "Získat PRO"}
+            {loading === "pro" ? "Načítám pokladnu..." : "Získat PRO"}
           </button>
         </div>
       </div>

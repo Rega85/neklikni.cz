@@ -34,6 +34,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center">
         <h1 className="text-3xl font-bold text-white mb-2">Přihlášení</h1>
         <p className="text-slate-400 mb-8">Zadej e-mail. Pošleme ti magický odkaz.</p>
+        
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="relative">
             <Mail className="absolute left-4 top-4 text-slate-500" size={20} />
@@ -43,6 +44,26 @@ export default function LoginPage() {
             {loading ? "Odesílám..." : <>Získat přístup <ArrowRight size={20} /></>}
           </button>
         </form>
+
+        {/* 🔥 TAJNÉ DEV TLAČÍTKO PRO OBEJITÍ LIMITŮ 🔥 */}
+        <button 
+          type="button"
+          onClick={async () => {
+            const { error } = await supabase.auth.signInWithPassword({
+              email: 'test@test.cz', 
+              password: 'Neklikni2026!'
+            });
+            if (!error) {
+              window.location.href = '/pricing';
+            } else {
+              alert("Chyba hesla: " + error.message);
+            }
+          }}
+          className="mt-8 w-full p-4 bg-red-900/30 border border-red-500/50 text-red-400 font-bold rounded-xl hover:bg-red-800/40 transition-colors"
+        >
+          🔥 DEV HACK LOGIN (Bez mailu)
+        </button>
+
       </div>
     </div>
   );

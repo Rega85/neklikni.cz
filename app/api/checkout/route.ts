@@ -3,62 +3,68 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Stripe from "stripe";
 
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 const PRICES = {
-  easy: {
-    priceId: "price_1T1whDBCHNo2zYHXNIU912Vl",
-    mode: "payment" as const,
-  },
-  basic: {
-    priceId: "price_1T1whYBCHNo2zYHXq0nQ3GJ7",
-    mode: "subscription" as const,
-  },
-  pro: {
-    priceId: "price_1T1wi8BCHNo2zYHXH5xDjwwm",
-    mode: "subscription" as const,
-  },
+  easy: { priceId: "price_1T1whDBCHNo2zYHXNIU912Vl", mode: "payment" as const },
+  basic: { priceId: "price_1T1whYBCHNo2zYHXq0nQ3GJ7", mode: "subscription" as const },
+  pro: { priceId: "price_1T1wi8BCHNo2zYHXH5xDjwwm", mode: "subscription" as const },
 };
+
+type Plan = keyof typeof PRICES;
 
 export async function POST(req: Request) {
   try {
-    const { plan } = await req.json();
+    const { plan } = (await req.json()) as { plan?: string };
 
-    if (!plan || !PRICES[plan as keyof typeof PRICES]) {
+    if (!plan || !(plan in PRICES)) {
       return NextResponse.json({ error: "Neplatný plán" }, { status: 400 });
     }
 
-    // Ověř přihlášení
+    // ✅ REÁLNÁ AUTENTIZACE (Místo hacku)
     const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options)
+              );
+            } catch {
+              // V route handleru nevadí, pokud set selže
+            }
+          },
         },
       }
     );
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: userErr } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (userErr || !user) {
       return NextResponse.json({ error: "Musíš být přihlášený" }, { status: 401 });
     }
 
-    const selected = PRICES[plan as keyof typeof PRICES];
+    const origin =
+      req.headers.get("origin") ??
+      process.env.NEXT_PUBLIC_APP_URL ??
+      "http://localhost:3000";
 
-    const session = await getStripe().checkout.sessions.create({
+    const selected = PRICES[plan as Plan];
+
+    const session = await stripe.checkout.sessions.create({
       customer_email: user.email,
       line_items: [{ price: selected.priceId, quantity: 1 }],
       mode: selected.mode,
-      success_url: `${req.headers.get("origin")}/?success=true`,
-      cancel_url: `${req.headers.get("origin")}/?canceled=true`,
-      metadata: {
-        user_id: user.id,
-        plan: plan,
-      },
+      success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/pricing?canceled=true`,
+      allow_promotion_codes: true,
+      metadata: { user_id: user.id, plan },
     });
 
     return NextResponse.json({ url: session.url });
