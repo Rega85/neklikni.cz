@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Zap, LogOut, Coins, UserCircle } from "lucide-react";
+import { LogOut, Coins, UserCircle } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 export default function HeaderWithCredits() {
@@ -26,6 +26,22 @@ export default function HeaderWithCredits() {
       }
     }
     getStatus();
+
+    const channel = supabase
+      .channel("profile-credits")
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "user_profiles" },
+        (payload) => {
+          const updated = payload.new as { tier: string; credits_remaining: number };
+          setData((prev) => prev ? {
+            ...prev,
+            tier: updated.tier ?? prev.tier,
+            credits: updated.credits_remaining ?? prev.credits,
+          } : prev);
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   if (!data) return null;
@@ -38,34 +54,38 @@ export default function HeaderWithCredits() {
           NeKlikni<span className="text-purple-500">.cz</span>
         </Link>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3">
 
+          {/* Kredity */}
           <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl shadow-inner">
             <Coins size={16} className="text-yellow-500" />
             <span className="text-sm font-bold text-white tabular-nums">{data.credits}</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-3 px-4 py-1.5 bg-slate-900/50 border border-slate-800 rounded-2xl">
-            <UserCircle size={18} className="text-slate-500" />
+          {/* Dokoupit kredity – vždy viditelné */}
+          <Link
+            href="/pricing"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-purple-500 text-slate-300 hover:text-purple-400 text-xs font-bold rounded-xl transition-all"
+          >
+            + Kredity
+          </Link>
+
+          {/* Email + tier */}
+          <div className="flex items-center gap-3 px-4 py-1.5 bg-slate-900/50 border border-slate-800 rounded-2xl">
+            <UserCircle size={18} className="text-slate-500 shrink-0" />
             <div className="flex flex-col">
               <span className="text-xs font-bold text-slate-200 leading-none">{data.email}</span>
               <span className={`text-[9px] font-black uppercase mt-1 px-1.5 py-0.5 rounded-md w-fit ${
-                data.tier === 'pro' ? 'bg-purple-600 text-white' : 'bg-slate-700 text-slate-400'
+                data.tier === 'pro' ? 'bg-purple-600 text-white' : 
+                data.tier === 'basic' ? 'bg-blue-600 text-white' : 
+                'bg-slate-700 text-slate-400'
               }`}>
                 {data.tier}
               </span>
             </div>
           </div>
 
-          {data.tier === 'free' && (
-            <Link 
-              href="/pricing" 
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-black py-2.5 px-5 rounded-xl transition-all shadow-lg shadow-purple-500/20 active:scale-95"
-            >
-              UPGRADE
-            </Link>
-          )}
-
+          {/* Odhlásit */}
           <button 
             onClick={() => supabase.auth.signOut().then(() => window.location.href = "/")}
             className="text-slate-500 hover:text-red-400 transition-colors p-2"
