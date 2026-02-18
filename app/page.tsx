@@ -1,34 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldAlert, Zap, Share2, Lock, LogOut, User } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
+import { ShieldAlert, Zap, Share2, Lock } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
-  const supabase = createClient();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<null | { risk: number | string, verdict: string }>(null);
-  const [user, setUser] = useState<any>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  // Při načtení stránky zkontroluj, jestli je uživatel přihlášený
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      setAuthLoading(false);
-    };
-    getUser();
-  }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    router.refresh();
-  };
 
   const analyzeScam = async () => {
     if (!input) return;
@@ -76,36 +56,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white flex flex-col font-sans relative overflow-hidden">
-      {/* Navbar */}
-      <nav className="w-full px-6 py-4 flex justify-between items-center z-20">
-        <span className="text-lg font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent">
-          NeKlikni.cz
-        </span>
-        <div className="flex items-center gap-3">
-          {authLoading ? null : user ? (
-            <>
-              <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-2 rounded-xl border border-slate-700">
-                <User size={16} className="text-green-400" />
-                <span className="text-sm text-slate-300">{user.email}</span>
-                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full font-medium">PRO</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
-              >
-                <LogOut size={16} /> Odhlásit
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => router.push('/login')}
-              className="flex items-center gap-2 px-4 py-2 text-sm bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl font-medium hover:opacity-90 transition-opacity"
-            >
-              Přihlásit se
-            </button>
-          )}
-        </div>
-      </nav>
 
       {/* Animované částice na pozadí */}
       <div className="absolute inset-0 opacity-20 pointer-events-none">
@@ -162,7 +112,7 @@ export default function Home() {
 
               {result.risk === "LIMIT" ? (
                 <button 
-                  onClick={() => router.push('/login')}
+                  onClick={() => router.push('/pricing')}
                   className="flex items-center justify-center w-full gap-2 mx-auto px-6 py-4 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl transition-all font-bold text-white shadow-lg hover:shadow-amber-500/25"
                 >
                   Odemknout PRO verzi
