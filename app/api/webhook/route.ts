@@ -38,17 +38,14 @@ export async function POST(req: Request) {
       }
 
       if (plan === "easy") {
-        // Jednorázový balíček: přidej 10 kreditů
         await supabaseAdmin
           .from("user_profiles")
           .update({
-            credits_remaining: supabaseAdmin.rpc ? undefined : 0, // handled below
             stripe_customer_id: session.customer as string,
             updated_at: new Date().toISOString(),
           })
           .eq("id", userId);
 
-        // Přičti 10 kreditů atomicky
         await supabaseAdmin.rpc("add_credits", {
           p_user_id: userId,
           p_amount: 10,
@@ -84,10 +81,9 @@ export async function POST(req: Request) {
       }
     }
 
-    // Když se předplatné zruší
     if (event.type === "customer.subscription.deleted") {
       const subscription = event.data.object as Stripe.Subscription;
-      
+
       await supabaseAdmin
         .from("user_profiles")
         .update({
