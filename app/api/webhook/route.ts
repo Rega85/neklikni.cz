@@ -1,16 +1,27 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
+import { createClient } from "@supabase/supabase-js";
 
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!);
-const getSupabaseAdmin = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+}
+
+// Funkce pro admin přístup (přepisuje RLS)
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY! // Musí být SERVICE ROLE KEY
+  );
+}
 
 export async function POST(req: Request) {
   const body = await req.text();
-  const sig = req.headers.get("stripe-signature")!;
+  const sig = req.headers.get("stripe-signature");
+
+  if (!sig || !process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error("❌ Chybí signatura nebo Webhook Secret");
+    return NextResponse.json({ error: "Unauthorized" }, { status: 400 });
+  }
 
   let event: Stripe.Event;
 
@@ -18,87 +29,50 @@ export async function POST(req: Request) {
     event = getStripe().webhooks.constructEvent(
       body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     );
-  } catch (err) {
-    console.error("Webhook signature error:", err);
+  } catch (err: any) {
+    console.error(`❌ Chyba podpisu: ${err.message}`);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
 
-  try {
-    if (event.type === "checkout.session.completed") {
-      const session = event.data.object as Stripe.Checkout.Session;
-      const userId = session.metadata?.user_id;
-      const plan = session.metadata?.plan;
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const userId = session.metadata?.user_id;
+    const plan = session.metadata?.plan;
 
-      if (!userId || !plan) {
-        console.error("Missing metadata");
-        return NextResponse.json({ error: "Missing metadata" }, { status: 400 });
-      }
+    if (!userId) return NextResponse.json({ error: "No user ID" }, { status: 400 });
 
-      if (plan === "easy") {
-        await supabaseAdmin
-          .from("user_profiles")
-          .update({
-            stripe_customer_id: session.customer as string,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", userId);
+    // 1. Nejdřív zjistíme, kolik má uživatel aktuálně kreditů
+    const { data: profile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("credits_remaining")
+      .eq("id", userId)
+      .single();
 
-        await supabaseAdmin.rpc("add_credits", {
-          p_user_id: userId,
-          p_amount: 10,
-        });
-      }
+    const currentCredits = profile?.credits_remaining || 0;
+    const addedCredits = plan === "easy" ? 10 : plan === "basic" ? 50 : 100;
 
-      if (plan === "basic") {
-        await supabaseAdmin
-          .from("user_profiles")
-          .update({
-            tier: "basic",
-            credits_remaining: 50,
-            credits_reset_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: session.subscription as string,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", userId);
-      }
+    // 2. Přičteme kredity a uložíme Stripe ID
+    const { error: updateError } = await supabaseAdmin
+      .from("user_profiles")
+      .update({
+        credits_remaining: currentCredits + addedCredits,
+        stripe_customer_id: session.customer as string,
+        tier: plan,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", userId);
 
-      if (plan === "pro") {
-        await supabaseAdmin
-          .from("user_profiles")
-          .update({
-            tier: "pro",
-            credits_remaining: 200,
-            credits_reset_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            stripe_customer_id: session.customer as string,
-            stripe_subscription_id: session.subscription as string,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", userId);
-      }
+    if (updateError) {
+      console.error("❌ Chyba při zápisu kreditů:", updateError);
+      return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
     }
 
-    if (event.type === "customer.subscription.deleted") {
-      const subscription = event.data.object as Stripe.Subscription;
-
-      await supabaseAdmin
-        .from("user_profiles")
-        .update({
-          tier: "free",
-          credits_remaining: 0,
-          stripe_subscription_id: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("stripe_subscription_id", subscription.id);
-    }
-
-    return NextResponse.json({ received: true });
-  } catch (error) {
-    console.error("Webhook processing error:", error);
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
+    console.log(`✅ Úspěšně připsáno ${addedCredits} kreditů uživateli ${userId}`);
   }
+
+  return NextResponse.json({ received: true });
 }
