@@ -2,9 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const supabaseAdmin = createClient(
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!);
+const getSupabaseAdmin = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!
 );
@@ -16,7 +15,7 @@ export async function POST(req: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       body,
       sig,
       process.env.STRIPE_WEBHOOK_SECRET!
@@ -25,6 +24,8 @@ export async function POST(req: Request) {
     console.error("Webhook signature error:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
+
+  const supabaseAdmin = getSupabaseAdmin();
 
   try {
     if (event.type === "checkout.session.completed") {
