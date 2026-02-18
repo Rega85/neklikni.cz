@@ -9,11 +9,16 @@ export const runtime = "nodejs";
 const FREE_MODEL = "claude-haiku-4-5-20251001";
 const PRO_MODEL = "claude-sonnet-4-5-20250929";
 
-// Admin klient (service role) - jen pro anonymní IP tracking
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
+// ✅ Lazy initialization - volá se až za runtime
+function getSupabaseAdmin() {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
+    throw new Error("Missing Supabase credentials");
+  }
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  );
+}
 
 export async function POST(req: Request) {
   try {
@@ -48,6 +53,9 @@ export async function POST(req: Request) {
 
     // --- PŘIHLÁŠENÝ UŽIVATEL ---
     if (user) {
+      // ✅ Zavolej až tady, když to skutečně potřebuješ
+      const supabaseAdmin = getSupabaseAdmin();
+      
       // Zjisti tier (bez odečtu kreditů)
       const { data: profile } = await supabaseAdmin
         .from("user_profiles")
@@ -111,6 +119,9 @@ export async function POST(req: Request) {
       const ip = xff.split(",")[0].trim();
       const ipHash = crypto.createHash("sha256").update(ip + pepper).digest("hex");
       const today = new Date().toISOString().split("T")[0];
+
+      // ✅ Zavolej až tady pro anonymní uživatele
+      const supabaseAdmin = getSupabaseAdmin();
 
       const { data: checks, error: checkErr } = await supabaseAdmin.rpc("increment_usage_daily", {
         p_ip_hash: ipHash,
