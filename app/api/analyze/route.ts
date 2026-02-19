@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
+import { createClient as createAdminClient } from "@supabase/supabase-js"; // ✅ Přidán admin import
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -17,7 +18,6 @@ export async function POST(req: Request) {
       .eq("id", user.id)
       .single();
 
-    // 🛑 OPRAVA: Frontend při !response.ok čeká JSON s klíčem "error"
     if (!profile || profile.credits_remaining <= 0) {
       return NextResponse.json({ 
         error: "Kredity vyčerpány. Přejdi na vyšší tarif pro další analýzy." 
@@ -56,13 +56,23 @@ export async function POST(req: Request) {
       aiData = { risk: 50, verdict: "Analýza proběhla, ale data jsou poškozená." };
     }
 
-    // 💸 Odečti kredit
-    await supabase
+    // ✅ ODEČTI KREDIT (Bypass RLS přes Admin klienta)
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+
+    const { error: updateError } = await supabaseAdmin
       .from("user_profiles")
       .update({ credits_remaining: profile.credits_remaining - 1 })
       .eq("id", user.id);
 
-    // ✅ isLocked – Sladěno s frontendem přesně podle tvého návrhu
+    if (updateError) {
+      // Když se tohle pokazí, chceme to okamžitě vidět v logu Vercelu
+      console.error("❌ Chyba při odečítání kreditu:", updateError);
+    }
+
+    // ✅ isLocked – Sladěno s frontendem
     return NextResponse.json({
       risk: aiData.risk ?? 50,
       verdict: tier === "free" ? "" : (aiData.verdict ?? ""),
