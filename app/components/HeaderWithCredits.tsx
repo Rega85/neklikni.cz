@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { LogOut, Coins, UserCircle } from "lucide-react";
+import { LogOut, Coins, UserCircle, Settings } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 export default function HeaderWithCredits() {
@@ -44,6 +44,13 @@ export default function HeaderWithCredits() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  const handlePortal = async () => {
+    const res = await fetch("/api/portal", { method: "POST" });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert("Chyba: " + (data.error ?? "Nepodařilo se otevřít portal"));
+  };
+
   if (!data) return null;
 
   return (
@@ -62,7 +69,7 @@ export default function HeaderWithCredits() {
             <span className="text-sm font-bold text-white tabular-nums">{data.credits}</span>
           </div>
 
-          {/* Dokoupit kredity – vždy viditelné */}
+          {/* Dokoupit kredity */}
           <Link
             href="/pricing"
             className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-purple-500 text-slate-300 hover:text-purple-400 text-xs font-bold rounded-xl transition-all"
@@ -84,6 +91,17 @@ export default function HeaderWithCredits() {
               </span>
             </div>
           </div>
+
+          {/* Správa předplatného – jen pro placené */}
+          {data.tier !== 'free' && (
+            <button
+              onClick={handlePortal}
+              className="text-slate-500 hover:text-blue-400 transition-colors p-2"
+              title="Spravovat předplatné"
+            >
+              <Settings size={20} />
+            </button>
+          )}
 
           {/* Odhlásit */}
           <button 
