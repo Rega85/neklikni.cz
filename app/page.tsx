@@ -36,11 +36,13 @@ export default function Home() {
       const rawData = await response.json();
 
       if (response.status === 401) {
-        setResult({ risk: "LIMIT", verdict: "Pro analýzu se musíš přihlásit." });
+        // ✅ Atraktivnější hláška pro nové uživatele
+        setResult({ risk: "LIMIT", verdict: "Získej 3 analýzy zdarma! Stačí se jen přihlásit." });
         return;
       }
       if (response.status === 402) {
-        setResult({ risk: "LIMIT", verdict: "Kredity vyčerpány. Přejdi na vyšší tarif." });
+        // ✅ Jasná výzva k akci pro ty, co už službu znají
+        setResult({ risk: "LIMIT", verdict: "Dosáhl jsi svého limitu. Odemkni neomezenou ochranu!" });
         return;
       }
       if (!response.ok) {
@@ -118,15 +120,23 @@ export default function Home() {
             <button
               onClick={analyzeScam}
               disabled={loading}
-              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-2xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 font-black text-white flex items-center justify-center gap-2"
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-2xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 font-black text-white flex items-center justify-center gap-2 group active:scale-95"
             >
-              {loading ? "Analyzuji..." : <><ShieldAlert size={20} /> Prověřit</>}
+              {/* ✅ Konverzní tlačítko se slovem "ZDARMA" */}
+              {loading ? (
+                "Analyzuji..."
+              ) : (
+                <>
+                  <ShieldAlert size={20} className="group-hover:scale-110 transition-transform" />
+                  {!result ? "Prověřit zdarma" : "Prověřit znovu"}
+                </>
+              )}
             </button>
           </div>
         </div>
 
         {result && (
-          <div className={`rounded-3xl border overflow-hidden animate-in fade-in slide-in-from-top-4
+          <div className={`rounded-3xl border overflow-hidden animate-in fade-in slide-in-from-top-4 shadow-2xl
             ${result.risk === "LIMIT"
               ? 'border-amber-500/50 bg-amber-500/10'
               : isHigh
@@ -134,7 +144,6 @@ export default function Home() {
                 : 'border-green-500/30 bg-green-950/20'
             }`}>
 
-            {/* Hlavička */}
             <div className="p-8 text-center border-b border-white/5">
               <div className={`text-7xl font-black mb-2
                 ${result.risk === "LIMIT" ? 'text-amber-500' : isHigh ? 'text-red-400' : 'text-green-400'}`}>
@@ -148,7 +157,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Tělo */}
             <div className="p-8">
               {result.isLocked ? (
                 <div className="space-y-4">
@@ -159,43 +167,43 @@ export default function Home() {
                       <div className="h-3 bg-white/40 rounded-full w-4/6" />
                       <div className="h-3 bg-white/40 rounded-full w-5/6" />
                     </div>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-center p-4">
                       <span className="text-2xl">🔒</span>
                       <p className="text-white font-bold text-sm">Podrobný rozbor je v BASIC / PRO</p>
-                      <p className="text-slate-400 text-xs">Zjisti proč a co dělat dál</p>
+                      <p className="text-slate-400 text-xs leading-tight">Získej víc detailů a konkrétní doporučení</p>
                     </div>
                   </div>
                   <button
                     onClick={() => router.push('/pricing')}
-                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl font-black text-white transition-all hover:scale-[1.01]"
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl font-black text-white transition-all hover:scale-[1.01] shadow-lg shadow-purple-500/20"
                   >
                     Odemknout rozbor → 99 Kč/měs
                   </button>
                 </div>
 
               ) : result.risk === "LIMIT" ? (
-                <div className="text-center space-y-4">
-                  <p className="text-amber-200 text-lg leading-relaxed">{result.verdict}</p>
+                <div className="text-center space-y-6">
+                  <p className="text-amber-200 text-lg leading-relaxed italic font-medium">"{result.verdict}"</p>
                   <button
-                    onClick={() => router.push('/pricing')}
-                    className="w-full py-4 bg-amber-500 hover:bg-amber-400 rounded-xl font-black text-slate-950 transition-all"
+                    onClick={() => router.push('/register')}
+                    className="w-full py-4 bg-amber-500 hover:bg-amber-400 rounded-xl font-black text-slate-950 transition-all shadow-lg shadow-amber-500/20"
                   >
-                    Doplnit kredity
+                    Vytvořit účet zdarma
                   </button>
                 </div>
 
               ) : (
                 <div className="space-y-6">
-                  <p className="text-slate-200 text-lg leading-relaxed font-medium">
-                    {result.verdict}
+                  {/* Verdikt se zobrazením PRO analýzy */}
+                  <p className="text-slate-200 text-lg leading-relaxed font-medium italic">
+                    "{result.verdict}"
                   </p>
 
                   {result.analysis && (
-                    <div className="space-y-6 pt-6 border-t border-white/5">
-
+                    <div className="space-y-8 pt-8 border-t border-white/5">
                       <div>
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-3">
-                          Hloubková analýza
+                          Hloubková analýza Sonnet 3.5
                         </h4>
                         <p className="text-slate-300 text-sm leading-relaxed">
                           {result.analysis}
@@ -210,7 +218,7 @@ export default function Home() {
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                             {result.threats.map((threat, i) => (
                               <div key={i} className="flex items-center gap-2 p-3 bg-white/5 rounded-xl border border-white/5 text-xs text-slate-300">
-                                <span>⚠️</span> {threat}
+                                <span className="text-purple-500">⚠️</span> {threat}
                               </div>
                             ))}
                           </div>
@@ -222,19 +230,23 @@ export default function Home() {
                           <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-2">
                             Doporučený postup
                           </h4>
-                          <p className="text-sm text-purple-100/90 leading-relaxed">
+                          <p className="text-sm text-purple-100/90 leading-relaxed font-medium">
                             {result.recommendation}
                           </p>
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-1 rounded-md">
-                          PRO analýza
+                      <div className="flex items-center gap-2 pt-2">
+                        <div className="flex items-center gap-2 px-3 py-1 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+                          <div className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">
+                            PRO analýza
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+                          Elitní model Sonnet 3.5
                         </span>
-                        <span className="text-xs text-slate-500">Elitní model Sonnet</span>
                       </div>
-
                     </div>
                   )}
                 </div>
