@@ -10,74 +10,88 @@ export default function Header() {
   const supabase = createClient();
 
   useEffect(() => {
+    let channel: any;
+
     async function getStatus() {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('tier, credits_remaining')
-          .eq('id', user.id)
-          .single();
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
         
-        setData({ 
-          id: user.id,
-          tier: profile?.tier || 'free', 
-          credits: profile?.credits_remaining || 0,
-          email: user.email || "" 
-        });
+        if (user) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('tier, credits_remaining')
+            .eq('id', user.id)
+            .single();
+          
+          setData({ 
+            id: user.id,
+            tier: profile?.tier || 'free', 
+            credits: profile?.credits_remaining || 0,
+            email: user.email || "" 
+          });
 
-        const channel = supabase
-          .channel("profile-credits")
-          .on("postgres_changes", { 
-            event: "UPDATE", 
-            schema: "public", 
-            table: "user_profiles",
-            filter: `id=eq.${user.id}`
-          }, (payload) => {
-            const updated = payload.new as { tier: string; credits_remaining: number };
-            setData((prev) => prev ? {
-              ...prev,
-              tier: updated.tier ?? prev.tier,
-              credits: updated.credits_remaining ?? prev.credits,
-            } : prev);
-          })
-          .subscribe();
-
-        // cleanup vrátíme přes closure
-        return () => { supabase.removeChannel(channel); };
+          // ✅ Subscription s filtrem na konkrétního uživatele
+          channel = supabase
+            .channel("profile-credits")
+            .on("postgres_changes", { 
+              event: "UPDATE", 
+              schema: "public", 
+              table: "user_profiles",
+              filter: `id=eq.${user.id}`
+            }, (payload) => {
+              const updated = payload.new as { tier: string; credits_remaining: number };
+              setData((prev) => prev ? {
+                ...prev,
+                tier: updated.tier ?? prev.tier,
+                credits: updated.credits_remaining ?? prev.credits,
+              } : prev);
+            })
+            .subscribe();
+        }
+      } catch (error) {
+        console.error("Auth error:", error);
+      } finally {
+        // ✅ Loading skončí vždy, i pro nepřihlášené
+        setLoading(false);
       }
-
-      // ✅ Vždy na konci – i pro nepřihlášené
-      setLoading(false);
     }
 
-    getStatus().then(cleanup => {
-      setLoading(false);
-      return cleanup;
-    });
+    getStatus();
+
+    // Cleanup vracíme přímo v useEffectu
+    return () => { 
+      if (channel) supabase.removeChannel(channel); 
+    };
   }, [supabase]);
 
   return (
     <header className="fixed top-0 left-0 w-full border-b border-white/5 bg-slate-950/60 backdrop-blur-md z-50">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
 
-        <Link href="/" className="text-white font-black text-xl tracking-tighter hover:opacity-80 transition-opacity italic">
-          NeKlikni<span className="text-purple-500">.cz</span>
-        </Link>
+        {/* ✅ Větší logo a explicitní navigace */}
+        <div className="flex items-center gap-4">
+          <Link href="/" className="text-white font-black text-2xl tracking-tighter hover:opacity-80 transition-opacity italic">
+            NeKlikni<span className="text-purple-500">.cz</span>
+          </Link>
+          <Link 
+            href="/"
+            className="hidden sm:flex items-center gap-1.5 text-slate-500 hover:text-white text-xs font-bold transition-colors px-3 py-1.5 rounded-xl hover:bg-slate-900"
+          >
+            ← Domů
+          </Link>
+        </div>
 
         <div className="flex items-center gap-3">
           {loading ? (
             <div className="h-8 w-32 animate-pulse bg-white/5 rounded-xl" />
           ) : data ? (
             <>
-              {/* Kredity */}
+              {/* Kredity - synchronizované v reálném čase */}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl">
                 <Coins size={16} className="text-yellow-500" />
                 <span className="text-sm font-bold text-white tabular-nums">{data.credits}</span>
               </div>
 
-              {/* Dokoupit */}
               <Link
                 href="/pricing"
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-purple-500 text-slate-300 hover:text-purple-400 text-xs font-bold rounded-xl transition-all"
@@ -85,17 +99,17 @@ export default function Header() {
                 + Kredity
               </Link>
 
-              {/* Profil */}
+              {/* Profil s označením tarifu */}
               <Link 
                 href="/profile"
                 className="group flex items-center gap-3 px-4 py-1.5 bg-slate-900/50 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 transition-all rounded-2xl"
               >
                 <UserCircle size={18} className="text-slate-500 group-hover:text-purple-400 transition-colors shrink-0" />
                 <div className="flex flex-col">
-                  <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors leading-none hidden sm:block">
+                  <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors leading-none hidden sm:block text-right">
                     {data.email}
                   </span>
-                  <span className={`text-[9px] font-black uppercase mt-1 px-1.5 py-0.5 rounded-md w-fit ${
+                  <span className={`text-[9px] font-black uppercase mt-1 px-1.5 py-0.5 rounded-md w-fit self-end ${
                     data.tier === 'pro' ? 'bg-purple-600 text-white' : 
                     data.tier === 'basic' ? 'bg-blue-600 text-white' : 
                     'bg-slate-700 text-slate-400'
@@ -105,7 +119,6 @@ export default function Header() {
                 </div>
               </Link>
 
-              {/* Odhlásit */}
               <button
                 onClick={() => supabase.auth.signOut().then(() => window.location.href = "/")}
                 className="text-slate-500 hover:text-red-400 transition-colors p-2 rounded-xl hover:bg-red-500/10"
