@@ -35,8 +35,19 @@ export default function Home() {
       });
       
       const rawData = await response.json();
+
+      if (response.status === 401) {
+        setResult({ risk: "LIMIT", verdict: "Pro analýzu se musíš přihlásit." });
+        return;
+      }
+
+      if (response.status === 402) {
+        setResult({ risk: "LIMIT", verdict: "Kredity vyčerpány. Přejdi na vyšší tarif." });
+        return;
+      }
+
       if (!response.ok) {
-        setResult({ risk: "LIMIT", verdict: rawData.error || "Vyčerpali jste kredity." });
+        setResult({ risk: 0, verdict: "Něco se pokazilo. Zkus to znovu." });
         return;
       }
 
@@ -61,7 +72,6 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 flex flex-col items-center px-6 pt-32 pb-20 relative">
       
-      {/* Toast - Fake Door */}
       {showToast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4">
           <div className="bg-slate-900 border border-purple-500/50 shadow-2xl shadow-purple-500/20 px-6 py-4 rounded-2xl flex items-start gap-4 max-w-md">
@@ -76,7 +86,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Hlavní vycentrovaný obsah */}
       <div className="max-w-3xl w-full space-y-12">
         <div className="text-center space-y-6">
           <h1 className="text-7xl font-black tracking-tighter italic text-white">
@@ -126,11 +135,52 @@ export default function Home() {
               {result.risk === "LIMIT" ? "🔒 LIMIT" : `${result.risk}% RIZIKO`}
             </div>
 
-            <div className="mt-6">
-              <p className="text-xl font-medium italic text-slate-200 leading-relaxed px-4">
-                "{result.verdict}"
-              </p>
-            </div>
+            {/* Paywall pro free */}
+            {result.isLocked ? (
+              <div className="mt-6 space-y-4">
+                <div className="relative rounded-2xl border border-white/10 bg-white/5 p-6 overflow-hidden">
+                  <div className="space-y-3 blur-md opacity-30 select-none pointer-events-none" aria-hidden="true">
+                    <div className="h-4 bg-white/30 rounded w-full" />
+                    <div className="h-4 bg-white/30 rounded w-5/6" />
+                    <div className="h-4 bg-white/30 rounded w-4/6" />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div
+                      className="px-5 py-2 rounded-full bg-slate-950 border border-purple-500/50 text-white font-bold text-sm shadow-2xl"
+                      role="alert"
+                      aria-label="Obsah je uzamčen. Pro zobrazení detailů potřebujete tarif Basic nebo Pro."
+                    >
+                      🔒 Podrobný rozbor je v BASIC / PRO
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => router.push('/pricing')}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl font-black text-white shadow-lg transition-transform hover:scale-[1.01]"
+                >
+                  ODEMKNOUT ANALÝZU (99 Kč/měs)
+                </button>
+              </div>
+            ) : result.risk === "LIMIT" ? (
+              <div className="mt-6">
+                <p className="text-xl font-medium text-amber-200 leading-relaxed px-4">
+                  {result.verdict}
+                </p>
+                <button 
+                  onClick={() => router.push('/pricing')} 
+                  className="mt-8 w-full py-4 bg-amber-500 hover:bg-amber-400 rounded-xl font-black text-slate-950 shadow-lg transition-all"
+                >
+                  DOPLNIT KREDITY / PŘIHLÁSIT SE
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6">
+                <p className="text-xl font-medium italic text-slate-200 leading-relaxed px-4">
+                  "{result.verdict}"
+                </p>
+              </div>
+            )}
+
           </div>
         )}
       </div>
