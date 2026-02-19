@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ShieldAlert, Image as ImageIcon, Sparkles, Scale } from "lucide-react"; // Přidána ikona váhy
+import { ShieldAlert, Image as ImageIcon, Sparkles } from "lucide-react"; 
 import { z } from "zod";
 
 const AnalyzeResponseSchema = z.object({
@@ -76,100 +76,63 @@ export default function Home() {
         </div>
       )}
 
-      {/* HLAVNÍ KONTEJNER S SIDEBAREM */}
-      <div className="max-w-7xl w-full flex flex-col lg:flex-row items-start justify-center gap-12">
+      {/* Hlavní vycentrovaný obsah */}
+      <div className="max-w-3xl w-full space-y-12">
+        <div className="text-center space-y-6">
+          <h1 className="text-7xl font-black tracking-tighter italic text-white">
+            Prověř <span className="text-purple-500 underline decoration-white/10">než klikneš</span>
+          </h1>
+          <p className="text-slate-400 text-xl max-w-lg mx-auto leading-relaxed">
+            AI bodyguard pro tvůj klidný internet. Prověříme zprávy dřív, než na ně klikneš.
+          </p>
+        </div>
 
-        {/* 🛡️ LEVÝ SIDEBAR (Disclaimer) */}
-        <aside className="hidden lg:flex flex-col gap-4 w-[240px] sticky top-32 opacity-60 hover:opacity-100 transition-opacity">
-          <div className="p-5 bg-slate-900/40 border-l-2 border-purple-600 rounded-r-2xl backdrop-blur-sm space-y-4">
-            <div className="flex items-center gap-2 text-purple-400">
-              <Scale size={16} />
-              <h4 className="text-[10px] font-black uppercase tracking-[0.2em]">Omezení odpovědnosti</h4>
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-2 shadow-2xl focus-within:border-purple-500/50 transition-all flex flex-col">
+          <textarea 
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Vlož podezřelou zprávu, SMS nebo odkaz..."
+            className="w-full bg-transparent p-6 outline-none text-white text-lg resize-none min-h-[150px]"
+          />
+          
+          <div className="flex flex-col sm:flex-row justify-between items-center px-4 pb-4 gap-4">
+            <button 
+              onClick={handleFakeDoor}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 text-slate-400 hover:text-purple-400 transition-colors px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-purple-500/50 group"
+            >
+              <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
+              <span className="text-sm font-bold">Nahrát screenshot</span>
+              <span className="ml-2 text-[9px] bg-gradient-to-r from-blue-600 to-purple-600 text-white px-2 py-0.5 rounded-md font-black uppercase tracking-widest shadow-lg">PRO</span>
+            </button>
+
+            <button 
+              onClick={analyzeScam}
+              disabled={loading}
+              className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-2xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 font-black text-white flex items-center justify-center gap-2"
+            >
+              {loading ? "Analyzuji..." : <><ShieldAlert size={20} /> Prověřit</>}
+            </button>
+          </div>
+        </div>
+
+        {result && (
+          <div className={`p-8 rounded-3xl border-2 transition-all text-center animate-in fade-in slide-in-from-top-4
+            ${result.risk === "LIMIT" ? 'border-amber-500/50 bg-amber-500/10' : 
+              (!isNaN(Number(result.risk)) && Number(result.risk) > 50) ? 'border-red-500/50 bg-red-950/20' : 'border-green-500/50 bg-green-950/20'}`}>
+            
+            <div className={`text-6xl font-black mb-4 
+              ${result.risk === "LIMIT" ? 'text-amber-500' : 
+                (!isNaN(Number(result.risk)) && Number(result.risk) > 50) ? 'text-red-500' : 'text-green-500'}`}>
+              {result.risk === "LIMIT" ? "🔒 LIMIT" : `${result.risk}% RIZIKO`}
             </div>
-            <p className="text-[11px] leading-relaxed text-slate-400 italic">
-              Poslední rozhodnutí o interakci se zprávou je **vždy na vás**. AI je rádce, ne prorok. NeKlikni.cz negarantuje 100% přesnost analýzy.
-            </p>
-            <div className="pt-3 border-t border-slate-800">
-              <p className="text-[9px] text-slate-500 leading-tight">
-                Používáním služby souhlasíte s našimi VOP.
+
+            <div className="mt-6">
+              <p className="text-xl font-medium italic text-slate-200 leading-relaxed px-4">
+                "{result.verdict}"
               </p>
             </div>
           </div>
-        </aside>
-
-        {/* STŘEDNÍ ČÁST (Hlavní obsah) */}
-        <div className="max-w-3xl w-full space-y-12">
-          <div className="text-center space-y-6">
-            <h1 className="text-7xl font-black tracking-tighter italic text-white">
-              Prověř <span className="text-purple-500 underline decoration-white/10">než klikneš</span>
-            </h1>
-            <p className="text-slate-400 text-xl max-w-lg mx-auto leading-relaxed">
-              AI bodyguard pro tvůj klidný internet. Prověříme zprávy dřív, než na ně klikneš.
-            </p>
-          </div>
-
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-2 shadow-2xl focus-within:border-purple-500/50 transition-all flex flex-col">
-            <textarea 
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Vlož podezřelou zprávu, SMS nebo odkaz..."
-              className="w-full bg-transparent p-6 outline-none text-white text-lg resize-none min-h-[150px]"
-            />
-            
-            <div className="flex flex-col sm:flex-row justify-between items-center px-4 pb-4 gap-4">
-              <button 
-                onClick={handleFakeDoor}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 text-slate-400 hover:text-purple-400 transition-colors px-4 py-3 rounded-xl bg-slate-950/50 border border-slate-800 hover:border-purple-500/50 group"
-              >
-                <ImageIcon size={20} className="group-hover:scale-110 transition-transform" />
-                <span className="text-sm font-bold">Nahrát screenshot</span>
-                <span className="ml-2 text-[9px] bg-gradient-to-r from-blue-600 to-purple-600 text-white px-2 py-0.5 rounded-md font-black uppercase tracking-widest shadow-lg">PRO</span>
-              </button>
-
-              <button 
-                onClick={analyzeScam}
-                disabled={loading}
-                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-500 px-8 py-3 rounded-2xl transition-all shadow-lg shadow-purple-500/20 disabled:opacity-50 font-black text-white flex items-center justify-center gap-2"
-              >
-                {loading ? "Analyzuji..." : <><ShieldAlert size={20} /> Prověřit</>}
-              </button>
-            </div>
-          </div>
-
-          {result && (
-            <div className={`p-8 rounded-3xl border-2 transition-all text-center animate-in fade-in slide-in-from-top-4
-              ${result.risk === "LIMIT" ? 'border-amber-500/50 bg-amber-500/10' : 
-                (!isNaN(Number(result.risk)) && Number(result.risk) > 50) ? 'border-red-500/50 bg-red-950/20' : 'border-green-500/50 bg-green-950/20'}`}>
-              
-              <div className={`text-6xl font-black mb-4 
-                ${result.risk === "LIMIT" ? 'text-amber-500' : 
-                  (!isNaN(Number(result.risk)) && Number(result.risk) > 50) ? 'text-red-500' : 'text-green-500'}`}>
-                {result.risk === "LIMIT" ? "🔒 LIMIT" : `${result.risk}% RIZIKO`}
-              </div>
-
-              {/* ... zbytek tvé logiky výsledků (verdict, locked state) ... */}
-              {result.isLocked ? (
-                <div className="mt-6 space-y-4">
-                  {/* ... tvůj lock box ... */}
-                </div>
-              ) : (
-                <div className="mt-6">
-                  <p className="text-xl font-medium italic text-slate-200 leading-relaxed px-4">
-                    "{result.verdict}"
-                  </p>
-                  {/* ✅ Sekundární Legal Shield pod verdiktem */}
-                  <p className="mt-6 text-[10px] text-slate-500 italic opacity-50">
-                    Analýza je generována AI a slouží pouze jako informativní pomůcka. 
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* PRAVÝ PLACEHOLDER (Pro dokonalé vycentrování středu) */}
-        <div className="hidden lg:block w-[240px]"></div>
-
+        )}
       </div>
     </main>
   );
