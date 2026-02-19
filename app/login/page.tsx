@@ -1,23 +1,40 @@
 "use client";
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
+
+type Mode = "password" | "magic";
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [mode, setMode] = useState<Mode>("password");
+  const [error, setError] = useState('');
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
-    });
-    if (error) alert("Chyba: " + error.message);
-    else setSubmitted(true);
+    setError('');
+
+    if (mode === "password") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setError("Špatný e-mail nebo heslo.");
+      } else {
+        window.location.href = '/';
+      }
+    } else {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      });
+      if (error) setError("Chyba: " + error.message);
+      else setSubmitted(true);
+    }
+
     setLoading(false);
   };
 
@@ -33,36 +50,81 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center">
         <h1 className="text-3xl font-bold text-white mb-2">Přihlášení</h1>
-        <p className="text-slate-400 mb-8">Zadej e-mail. Pošleme ti magický odkaz.</p>
-        
+        <p className="text-slate-400 mb-8">
+          {mode === "password" ? "Přihlas se e-mailem a heslem." : "Pošleme ti magický odkaz."}
+        </p>
+
+        {/* Přepínač módu */}
+        <div className="flex bg-slate-950 rounded-xl p-1 mb-6">
+          <button
+            type="button"
+            onClick={() => setMode("password")}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === "password" ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}
+          >
+            Heslo
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("magic")}
+            className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === "magic" ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}
+          >
+            Magic link
+          </button>
+        </div>
+
         <form onSubmit={handleLogin} className="space-y-4">
+          {/* Email */}
           <div className="relative">
             <Mail className="absolute left-4 top-4 text-slate-500" size={20} />
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="karel@novak.cz" className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-blue-500 outline-none" />
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="karel@novak.cz"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 outline-none transition-colors"
+            />
           </div>
-          <button type="submit" disabled={loading || !email} className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2">
-            {loading ? "Odesílám..." : <>Získat přístup <ArrowRight size={20} /></>}
+
+          {/* Heslo – jen pro password mode */}
+          {mode === "password" && (
+            <div className="relative">
+              <Lock className="absolute left-4 top-4 text-slate-500" size={20} />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Heslo"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 outline-none transition-colors"
+              />
+            </div>
+          )}
+
+          {/* Chybová hláška */}
+          {error && (
+            <p className="text-red-400 text-sm font-medium">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !email || (mode === "password" && !password)}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+          >
+            {loading ? "Přihlašuji..." : <>
+              {mode === "password" ? "Přihlásit se" : "Poslat magic link"}
+              <ArrowRight size={20} />
+            </>}
           </button>
         </form>
 
-        {/* 🔥 TAJNÉ DEV TLAČÍTKO PRO OBEJITÍ LIMITŮ 🔥 */}
-        <button 
-          type="button"
-          onClick={async () => {
-            const { error } = await supabase.auth.signInWithPassword({
-              email: 'test@test.cz', 
-              password: 'Neklikni2026!'
-            });
-            if (!error) {
-              window.location.href = '/pricing';
-            } else {
-              alert("Chyba hesla: " + error.message);
-            }
-          }}
-          className="mt-8 w-full p-4 bg-red-900/30 border border-red-500/50 text-red-400 font-bold rounded-xl hover:bg-red-800/40 transition-colors"
-        >
-          🔥 DEV HACK LOGIN (Bez mailu)
-        </button>
+        {/* Registrace */}
+        <p className="text-slate-500 text-sm mt-6">
+          Nemáš účet?{" "}
+          <a href="/register" className="text-purple-400 hover:text-purple-300 font-bold transition-colors">
+            Zaregistruj se
+          </a>
+        </p>
 
       </div>
     </div>
