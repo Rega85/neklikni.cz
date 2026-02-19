@@ -38,6 +38,28 @@ export default function LoginPage() {
     setLoading(false);
   };
 
+  // ✅ PŘIDÁNA FUNKCE PRO RESET HESLA
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError("Zadej nejdřív svůj e-mail do políčka nahoře.");
+      return;
+    }
+    setLoading(true);
+    setError('');
+    
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/update-password`, 
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setError("Chyba: " + error.message);
+    } else {
+      alert("Koukni do schránky! Poslali jsme ti odkaz na obnovu hesla.");
+    }
+  };
+
   if (submitted) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
       <CheckCircle2 className="w-20 h-20 text-green-400 mb-6 animate-bounce" />
@@ -88,16 +110,28 @@ export default function LoginPage() {
 
           {/* Heslo – jen pro password mode */}
           {mode === "password" && (
-            <div className="relative">
-              <Lock className="absolute left-4 top-4 text-slate-500" size={20} />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Heslo"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 outline-none transition-colors"
-              />
+            <div className="space-y-1">
+              <div className="relative">
+                <Lock className="absolute left-4 top-4 text-slate-500" size={20} />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Heslo"
+                  className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 outline-none transition-colors"
+                />
+              </div>
+              {/* ✅ NENÁPADNÉ TLAČÍTKO NA RESET */}
+              <div className="flex justify-end pr-2">
+                <button
+                  type="button"
+                  onClick={handleResetPassword}
+                  className="text-xs font-medium text-slate-500 hover:text-purple-400 transition-colors"
+                >
+                  Zapomenuté heslo?
+                </button>
+              </div>
             </div>
           )}
 
@@ -111,7 +145,7 @@ export default function LoginPage() {
             disabled={loading || !email || (mode === "password" && !password)}
             className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
           >
-            {loading ? "Přihlašuji..." : <>
+            {loading ? "Zpracovávám..." : <>
               {mode === "password" ? "Přihlásit se" : "Poslat magic link"}
               <ArrowRight size={20} />
             </>}
