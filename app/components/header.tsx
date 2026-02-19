@@ -3,17 +3,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { LogOut, Coins, UserCircle } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
 
 export default function Header() {
   const [data, setData] = useState<{ id: string, tier: string, credits: number, email: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
-  const router = useRouter();
 
   useEffect(() => {
     async function getStatus() {
       const { data: { user } } = await supabase.auth.getUser();
+      
       if (user) {
         const { data: profile } = await supabase
           .from('user_profiles')
@@ -28,7 +27,6 @@ export default function Header() {
           email: user.email || "" 
         });
 
-        // ✅ Subscription s filtrem na konkrétního uživatele
         const channel = supabase
           .channel("profile-credits")
           .on("postgres_changes", { 
@@ -36,23 +34,28 @@ export default function Header() {
             schema: "public", 
             table: "user_profiles",
             filter: `id=eq.${user.id}`
-          },
-            (payload) => {
-              const updated = payload.new as { tier: string; credits_remaining: number };
-              setData((prev) => prev ? {
-                ...prev,
-                tier: updated.tier ?? prev.tier,
-                credits: updated.credits_remaining ?? prev.credits,
-              } : prev);
-            }
-          )
+          }, (payload) => {
+            const updated = payload.new as { tier: string; credits_remaining: number };
+            setData((prev) => prev ? {
+              ...prev,
+              tier: updated.tier ?? prev.tier,
+              credits: updated.credits_remaining ?? prev.credits,
+            } : prev);
+          })
           .subscribe();
 
+        // cleanup vrátíme přes closure
         return () => { supabase.removeChannel(channel); };
       }
+
+      // ✅ Vždy na konci – i pro nepřihlášené
       setLoading(false);
     }
-    getStatus();
+
+    getStatus().then(cleanup => {
+      setLoading(false);
+      return cleanup;
+    });
   }, [supabase]);
 
   return (
@@ -68,11 +71,13 @@ export default function Header() {
             <div className="h-8 w-32 animate-pulse bg-white/5 rounded-xl" />
           ) : data ? (
             <>
+              {/* Kredity */}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl">
                 <Coins size={16} className="text-yellow-500" />
                 <span className="text-sm font-bold text-white tabular-nums">{data.credits}</span>
               </div>
 
+              {/* Dokoupit */}
               <Link
                 href="/pricing"
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-purple-500 text-slate-300 hover:text-purple-400 text-xs font-bold rounded-xl transition-all"
@@ -80,16 +85,17 @@ export default function Header() {
                 + Kredity
               </Link>
 
+              {/* Profil */}
               <Link 
                 href="/profile"
-                className="group flex items-center gap-3 px-4 py-1.5 bg-slate-900/50 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 transition-all rounded-2xl cursor-pointer"
+                className="group flex items-center gap-3 px-4 py-1.5 bg-slate-900/50 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 transition-all rounded-2xl"
               >
                 <UserCircle size={18} className="text-slate-500 group-hover:text-purple-400 transition-colors shrink-0" />
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-slate-200 group-hover:text-white transition-colors leading-none hidden sm:block">
                     {data.email}
                   </span>
-                  <span className={`text-[9px] font-black uppercase mt-1 px-1.5 py-0.5 rounded-md w-fit shadow-sm ${
+                  <span className={`text-[9px] font-black uppercase mt-1 px-1.5 py-0.5 rounded-md w-fit ${
                     data.tier === 'pro' ? 'bg-purple-600 text-white' : 
                     data.tier === 'basic' ? 'bg-blue-600 text-white' : 
                     'bg-slate-700 text-slate-400'
@@ -99,6 +105,7 @@ export default function Header() {
                 </div>
               </Link>
 
+              {/* Odhlásit */}
               <button
                 onClick={() => supabase.auth.signOut().then(() => window.location.href = "/")}
                 className="text-slate-500 hover:text-red-400 transition-colors p-2 rounded-xl hover:bg-red-500/10"
@@ -109,7 +116,10 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link href="/pricing" className="text-slate-400 hover:text-white font-bold text-sm px-3 transition-colors">
+              <Link
+                href="/pricing"
+                className="text-slate-400 hover:text-white font-bold text-sm px-3 transition-colors"
+              >
                 Ceník
               </Link>
               <Link
