@@ -10,12 +10,10 @@ export default function SuccessPage() {
   const [seconds, setSeconds] = useState(5);
 
   useEffect(() => {
-    // Odpočet vteřin pro vizuální efekt
     const timer = setInterval(() => {
       setSeconds((prev) => prev - 1);
     }, 1000);
 
-    // Samotné přesměrování po 5 vteřinách
     const timeout = setTimeout(() => {
       router.push('/');
     }, 5000);
@@ -28,7 +26,6 @@ export default function SuccessPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-      {/* Animovaná ikona */}
       <div className="relative mb-8">
         <CheckCircle2 className="w-24 h-24 text-green-500 animate-bounce" />
         <div className="absolute inset-0 bg-green-500/20 blur-3xl -z-10"></div>
@@ -39,11 +36,9 @@ export default function SuccessPage() {
       </h1>
       
       <p className="text-slate-400 text-lg mb-8 max-w-md leading-relaxed">
-        Díky za nákup. Kredity jsou na cestě do tvého profilu. 
-        Za chvíli tě tam vezmu...
+        Díky za nákup. Kredity jsou na cestě do tvého profilu. Za chvíli tě tam vezmu...
       </p>
 
-      {/* Indikátor automatického přesměrování */}
       <div className="flex flex-col items-center gap-6">
         <div className="px-6 py-2 bg-slate-900 border border-slate-800 rounded-full text-slate-500 text-sm font-medium">
           Přesměrování za <span className="text-white font-bold">{seconds}s</span>
