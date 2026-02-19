@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { createClient as createAdminClient } from "@supabase/supabase-js"; // ✅ Přidán admin import
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -20,25 +19,32 @@ export async function POST(req: Request) {
 
     if (!profile || profile.credits_remaining <= 0) {
       return NextResponse.json({ 
-        error: "Kredity vyčerpány. Přejdi na vyšší tarif pro další analýzy." 
+        risk: "LIMIT", 
+        verdict: "Kredity vyčerpány. Přejdi na vyšší tarif." 
       }, { status: 402 });
     }
 
     const { text } = await req.json();
-
     if (!text?.trim()) {
-      return NextResponse.json({ error: "Chybí text k analýze." }, { status: 400 });
+      return NextResponse.json({ error: "Chybí text" }, { status: 400 });
     }
 
     const tier = (profile.tier || "free").toLowerCase();
     const isPro = tier === "pro" || tier === "elite";
-
-    // 🧠 Model Routing: PRO platí, PRO dostane Sonnet
     const model = isPro ? "claude-sonnet-4-5-20250929" : "claude-haiku-4-5-20251001";
-    
+
     const systemPrompt = isPro
-      ? 'Jsi elitní expert na kyberbezpečnost. Vrať POUZE validní JSON: {"risk": 0-100, "verdict": "Popiš taktiky manipulace + 2 konkrétní kroky co dělat. Max 5 vět."}'
-      : 'Jsi expert na kyberbezpečnost. Vrať POUZE validní JSON: {"risk": 0-100, "verdict": "Stručně (max 2 věty) proč je to bezpečné/podvod."}';
+      ? `Jsi elitní expert na kyberbezpečnost a psychologii podvodů. 
+Analyzuj zprávu a vrať POUZE validní JSON bez jakéhokoliv textu navíc:
+{
+  "risk": 0-100,
+  "verdict": "Extrémně stručné shrnutí max 15 slov.",
+  "analysis": "Hloubkový rozbor textu, tónu a skrytých hrozeb. 3-4 věty.",
+  "threats": ["konkrétní detekovaná hrozba 1", "hrozba 2"],
+  "recommendation": "Jasné kroky co má uživatel udělat. 2-3 věty."
+}`
+      : `Jsi expert na kyberbezpečnost. Analyzuj zprávu a vrať POUZE validní JSON:
+{"risk": 0-100, "verdict": "Stručné vyhodnocení max 2 věty."}`;
 
     const msg = await anthropic.messages.create({
       model,
@@ -53,34 +59,28 @@ export async function POST(req: Request) {
       const match = raw.match(/\{[\s\S]*\}/);
       aiData = JSON.parse(match ? match[0] : raw);
     } catch {
-      aiData = { risk: 50, verdict: "Analýza proběhla, ale data jsou poškozená." };
+      aiData = { risk: 50, verdict: "Analýza proběhla." };
     }
 
-    // ✅ ODEČTI KREDIT (Bypass RLS přes Admin klienta)
-    const supabaseAdmin = createAdminClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
-    const { error: updateError } = await supabaseAdmin
+    // Odečti kredit
+    await supabase
       .from("user_profiles")
       .update({ credits_remaining: profile.credits_remaining - 1 })
       .eq("id", user.id);
 
-    if (updateError) {
-      // Když se tohle pokazí, chceme to okamžitě vidět v logu Vercelu
-      console.error("❌ Chyba při odečítání kreditu:", updateError);
-    }
-
-    // ✅ isLocked – Sladěno s frontendem
     return NextResponse.json({
       risk: aiData.risk ?? 50,
       verdict: tier === "free" ? "" : (aiData.verdict ?? ""),
       isLocked: tier === "free",
+      ...(isPro && {
+        analysis: aiData.analysis ?? null,
+        threats: aiData.threats ?? [],
+        recommendation: aiData.recommendation ?? null,
+      }),
     });
 
   } catch (error) {
     console.error("API Error:", error);
-    return NextResponse.json({ error: "Kritická chyba serveru." }, { status: 500 });
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 
 export default function Header() {
-  const [data, setData] = useState<{ tier: string, credits: number, email: string } | null>(null);
+  const [data, setData] = useState<{ id: string, tier: string, credits: number, email: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
   const router = useRouter();
@@ -22,30 +22,37 @@ export default function Header() {
           .single();
         
         setData({ 
+          id: user.id,
           tier: profile?.tier || 'free', 
           credits: profile?.credits_remaining || 0,
           email: user.email || "" 
         });
+
+        // ✅ Subscription s filtrem na konkrétního uživatele
+        const channel = supabase
+          .channel("profile-credits")
+          .on("postgres_changes", { 
+            event: "UPDATE", 
+            schema: "public", 
+            table: "user_profiles",
+            filter: `id=eq.${user.id}`
+          },
+            (payload) => {
+              const updated = payload.new as { tier: string; credits_remaining: number };
+              setData((prev) => prev ? {
+                ...prev,
+                tier: updated.tier ?? prev.tier,
+                credits: updated.credits_remaining ?? prev.credits,
+              } : prev);
+            }
+          )
+          .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
       }
       setLoading(false);
     }
     getStatus();
-
-    const channel = supabase
-      .channel("profile-credits")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "user_profiles" },
-        (payload) => {
-          const updated = payload.new as { tier: string; credits_remaining: number };
-          setData((prev) => prev ? {
-            ...prev,
-            tier: updated.tier ?? prev.tier,
-            credits: updated.credits_remaining ?? prev.credits,
-          } : prev);
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, [supabase]);
 
   return (
@@ -61,13 +68,11 @@ export default function Header() {
             <div className="h-8 w-32 animate-pulse bg-white/5 rounded-xl" />
           ) : data ? (
             <>
-              {/* Kredity */}
               <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl">
                 <Coins size={16} className="text-yellow-500" />
                 <span className="text-sm font-bold text-white tabular-nums">{data.credits}</span>
               </div>
 
-              {/* Dokoupit */}
               <Link
                 href="/pricing"
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-purple-500 text-slate-300 hover:text-purple-400 text-xs font-bold rounded-xl transition-all"
@@ -75,11 +80,9 @@ export default function Header() {
                 + Kredity
               </Link>
 
-              {/* 🚀 ODKAZ NA PROFIL (Klikatelný badge) */}
               <Link 
                 href="/profile"
                 className="group flex items-center gap-3 px-4 py-1.5 bg-slate-900/50 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900 transition-all rounded-2xl cursor-pointer"
-                title="Přejít do nastavení účtu"
               >
                 <UserCircle size={18} className="text-slate-500 group-hover:text-purple-400 transition-colors shrink-0" />
                 <div className="flex flex-col">
@@ -96,7 +99,6 @@ export default function Header() {
                 </div>
               </Link>
 
-              {/* Bleskové odhlášení (to se vždycky hodí mít po ruce) */}
               <button
                 onClick={() => supabase.auth.signOut().then(() => window.location.href = "/")}
                 className="text-slate-500 hover:text-red-400 transition-colors p-2 rounded-xl hover:bg-red-500/10"
@@ -107,10 +109,7 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link
-                href="/pricing"
-                className="text-slate-400 hover:text-white font-bold text-sm px-3 transition-colors"
-              >
+              <Link href="/pricing" className="text-slate-400 hover:text-white font-bold text-sm px-3 transition-colors">
                 Ceník
               </Link>
               <Link
