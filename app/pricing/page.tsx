@@ -14,7 +14,7 @@ export default function PricingPage() {
     setLoading(plan);
 
     try {
-      const res = await fetch("/api/checkout", { // ✅ Opraveno na správnou cestu
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),
@@ -60,14 +60,20 @@ export default function PricingPage() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-8 max-w-6xl w-full">
+        
         {/* EASY */}
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 flex flex-col">
           <div className="flex items-center gap-3 mb-4">
             <Zap className="text-blue-400" />
             <h2 className="text-2xl font-bold">EASY</h2>
           </div>
-          <div className="text-4xl font-black mb-2">29 Kč</div>
-          <p className="text-slate-400 text-sm mb-8">Jednorázová platba</p>
+          <div className="text-4xl font-black">29 Kč</div>
+          {/* ✅ DPH Informace */}
+          <p className="text-[10px] text-slate-500 mt-1 mb-2 font-medium uppercase tracking-wider">
+            včetně 21% DPH
+          </p>
+          <p className="text-slate-400 text-sm mb-8 font-medium">Jednorázová platba</p>
+          
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex gap-3"><Check className="text-green-400 shrink-0" /> 10 AI analýz</li>
             <li className="flex gap-3"><Check className="text-green-400 shrink-0" /> Rychlý model (Haiku)</li>
@@ -87,8 +93,13 @@ export default function PricingPage() {
             <Shield className="text-blue-400" />
             <h2 className="text-2xl font-bold">BASIC</h2>
           </div>
-          <div className="text-4xl font-black mb-2">99 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span></div>
-          <p className="text-blue-300/80 text-sm mb-8">Klid na celý měsíc</p>
+          <div className="text-4xl font-black">99 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span></div>
+          {/* ✅ DPH Informace */}
+          <p className="text-[10px] text-blue-400/60 mt-1 mb-2 font-medium uppercase tracking-wider">
+            včetně 21% DPH
+          </p>
+          <p className="text-blue-300/80 text-sm mb-8 font-medium">Klid na celý měsíc</p>
+          
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex gap-3"><Check className="text-blue-400 shrink-0" /> 50 analýz měsíčně</li>
             <li className="flex gap-3"><Check className="text-blue-400 shrink-0" /> Rychlý model (Haiku)</li>
@@ -105,11 +116,16 @@ export default function PricingPage() {
             <Crown className="text-purple-400" />
             <h2 className="text-2xl font-bold">PRO</h2>
           </div>
-          <div className="text-4xl font-black mb-2">199 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span></div>
-          <p className="text-slate-400 text-sm mb-8">Pro náročné uživatele</p>
+          <div className="text-4xl font-black">199 Kč<span className="text-lg text-slate-400 font-normal"> / měs.</span></div>
+          {/* ✅ DPH Informace */}
+          <p className="text-[10px] text-slate-500 mt-1 mb-2 font-medium uppercase tracking-wider">
+            včetně 21% DPH
+          </p>
+          <p className="text-slate-400 text-sm mb-8 font-medium">Pro náročné uživatele</p>
+          
           <ul className="space-y-4 mb-8 flex-1">
             <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> 200 analýz měsíčně</li>
-            <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> <b>Elitní model</b></li>
+            <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> <b>Elitní model Sonnet</b></li>
             <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> Hloubkový rozbor podvodu</li>
             <li className="flex gap-3"><Check className="text-purple-400 shrink-0" /> Až 12 000 znaků na zprávu</li>
           </ul>
