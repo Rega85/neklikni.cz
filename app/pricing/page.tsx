@@ -14,10 +14,10 @@ export default function PricingPage() {
     setLoading(plan);
 
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch("/api/create-checkout", { // ✅ Opraveno
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }), // ✅ POSÍLÁME PLAN
+        body: JSON.stringify({ plan }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -33,7 +33,7 @@ export default function PricingPage() {
       }
 
       if (data?.url) {
-        window.location.href = data.url; // ✅ přesměrování na Stripe
+        window.location.href = data.url;
         return;
       }
 
@@ -159,7 +159,7 @@ export default function PricingPage() {
           <button
             onClick={() => handleCheckout("pro")}
             disabled={disabled}
-            className="w-full py-4 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 transition-colors disabled:opacity-60"
+            className="w-full py-4 rounded-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 transition-colors shadow-lg shadow-purple-500/25 disabled:opacity-60"
           >
             {loading === "pro" ? "Načítám pokladnu..." : "Získat PRO"}
           </button>
