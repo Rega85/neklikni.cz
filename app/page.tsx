@@ -24,6 +24,7 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [result, setResult] = useState<z.infer<typeof AnalyzeResponseSchema> | null>(null);
 
+  // ✅ Kontrola přihlášení pro správný text tlačítka
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, [supabase]);
@@ -77,15 +78,15 @@ export default function Home() {
   const isHigh = riskNum > 50;
 
   return (
-    // ✅ Oprava mezery: Snížení paddingu a nastavení rozvržení
+    /* ✅ Snížený padding a min-height řeší mezeru před patičkou */
     <main className="min-h-[85vh] flex flex-col items-center px-6 pt-24 pb-12 relative">
 
       {showToast && (
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-top-4">
-          <div className="bg-slate-900 border border-purple-500/50 shadow-2xl px-6 py-4 rounded-2xl flex items-start gap-4 max-w-md text-left">
+          <div className="bg-slate-900 border border-purple-500/50 shadow-2xl px-6 py-4 rounded-2xl flex items-start gap-4 max-w-md text-left text-white">
             <Sparkles className="text-purple-400 shrink-0 mt-1" size={24} />
             <div>
-              <h4 className="font-bold text-white mb-1">Tuhle funkci právě trénujeme! 🚀</h4>
+              <h4 className="font-bold mb-1">Tuhle funkci právě trénujeme! 🚀</h4>
               <p className="text-sm text-slate-400">Rozpoznávání podvodů ze screenshotů brzy.</p>
             </div>
           </div>
@@ -127,7 +128,7 @@ export default function Home() {
               {loading ? "Analyzuji..." : (
                 <>
                   <ShieldAlert size={20} className="group-hover:scale-110 transition-transform" />
-                  {/* ✅ Dynamický text tlačítka */}
+                  {/* ✅ Dynamický text: Přihlášený uživatel už nevidí "zdarma" */}
                   {result ? "Prověřit znovu" : user ? "Prověřit zprávu" : "Prověřit zdarma"}
                 </>
               )}
@@ -135,10 +136,10 @@ export default function Home() {
           </div>
         </div>
 
-        {/* PRO ANALÝZA REPORT */}
         {result && (
           <div className={`rounded-3xl border overflow-hidden animate-in fade-in slide-in-from-top-4 shadow-2xl
             ${result.risk === "LIMIT" ? 'border-amber-500/50 bg-amber-500/10' : isHigh ? 'border-red-500/30 bg-red-950/20' : 'border-green-500/30 bg-green-950/20'}`}>
+            
             <div className="p-8 text-center border-b border-white/5">
               <div className={`text-7xl font-black mb-2 ${result.risk === "LIMIT" ? 'text-amber-500' : isHigh ? 'text-red-400' : 'text-green-400'}`}>
                 {result.risk === "LIMIT" ? "🔒 LIMIT" : `${result.risk}%`}
@@ -159,12 +160,14 @@ export default function Home() {
               ) : (
                 <div className="space-y-6 text-left">
                   <p className="text-slate-200 text-lg leading-relaxed font-medium italic text-center italic">"{result.verdict}"</p>
+                  
                   {result.analysis && (
                     <div className="space-y-8 pt-8 border-t border-white/5">
                       <div className="space-y-3">
                         <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400">Hloubková analýza Sonnet 3.5</h4>
                         <p className="text-slate-300 text-sm leading-relaxed">{result.analysis}</p>
                       </div>
+
                       {result.threats && result.threats.length > 0 && (
                         <div className="space-y-3">
                           <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400">Detekované hrozby</h4>
@@ -177,15 +180,17 @@ export default function Home() {
                           </div>
                         </div>
                       )}
+
                       {result.recommendation && (
                         <div className="p-5 bg-purple-500/10 border border-purple-500/20 rounded-2xl">
                           <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-2">Doporučený postup</h4>
                           <p className="text-sm text-purple-100/90 leading-relaxed font-medium">{result.recommendation}</p>
                         </div>
                       )}
+
                       <div className="flex items-center gap-2 pt-2 border-t border-white/5">
                         <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-1 rounded-md">PRO analýza</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">Elitní model Sonnet</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Elitní model Sonnet 3.5</span>
                       </div>
                     </div>
                   )}
