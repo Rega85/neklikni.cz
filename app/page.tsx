@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShieldAlert, Image as ImageIcon, Sparkles } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/utils/supabase/client";
+import { AnimatedCounter } from "@/app/components/AnimatedCounter"; // ✅ Přidán import počítadla
 
 const AnalyzeResponseSchema = z.object({
   risk: z.union([z.number(), z.literal("LIMIT")]),
@@ -23,11 +24,22 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [result, setResult] = useState<z.infer<typeof AnalyzeResponseSchema> | null>(null);
+  
+  // ✅ State pro počítadlo analýz
+  const [totalAnalyses, setTotalAnalyses] = useState(0);
 
   // ✅ Kontrola přihlášení pro správný text tlačítka
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, [supabase]);
+
+  // ✅ Načtení statistik pro počítadlo při startu
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(r => r.json())
+      .then(d => setTotalAnalyses(d.total))
+      .catch(err => console.error("Nelze načíst statistiky", err));
+  }, []);
 
   const analyzeScam = async () => {
     if (!input.trim()) return;
@@ -78,7 +90,6 @@ export default function Home() {
   const isHigh = riskNum > 50;
 
   return (
-    /* ✅ Snížený padding a min-height řeší mezeru před patičkou */
     <main className="min-h-[85vh] flex flex-col items-center px-6 pt-24 pb-12 relative">
 
       {showToast && (
@@ -102,6 +113,9 @@ export default function Home() {
             AI bodyguard pro tvůj klidný internet.
           </p>
         </div>
+
+        {/* ✅ Zde je vložené animované počítadlo */}
+        <AnimatedCounter endValue={totalAnalyses} />
 
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-2 shadow-2xl focus-within:border-purple-500/50 transition-all flex flex-col">
           <textarea
@@ -128,7 +142,6 @@ export default function Home() {
               {loading ? "Analyzuji..." : (
                 <>
                   <ShieldAlert size={20} className="group-hover:scale-110 transition-transform" />
-                  {/* ✅ Dynamický text: Přihlášený uživatel už nevidí "zdarma" */}
                   {result ? "Prověřit znovu" : user ? "Prověřit zprávu" : "Prověřit zdarma"}
                 </>
               )}
@@ -159,12 +172,12 @@ export default function Home() {
                 </div>
               ) : (
                 <div className="space-y-6 text-left">
-                  <p className="text-slate-200 text-lg leading-relaxed font-medium italic text-center italic">"{result.verdict}"</p>
+                  <p className="text-slate-200 text-lg leading-relaxed font-medium italic text-center">"{result.verdict}"</p>
                   
                   {result.analysis && (
                     <div className="space-y-8 pt-8 border-t border-white/5">
                       <div className="space-y-3">
-                        <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400">Hloubková analýza Sonnet 3.5</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400">Hloubková analýza</h4>
                         <p className="text-slate-300 text-sm leading-relaxed">{result.analysis}</p>
                       </div>
 
@@ -190,7 +203,7 @@ export default function Home() {
 
                       <div className="flex items-center gap-2 pt-2 border-t border-white/5">
                         <span className="text-[10px] font-black uppercase tracking-widest text-purple-400 bg-purple-500/10 px-2 py-1 rounded-md">PRO analýza</span>
-                        <span className="text-[10px] font-bold text-slate-500 uppercase">Elitní model Sonnet 3.5</span>
+                        <span className="text-[10px] font-bold text-slate-500 uppercase">Nejpokročilejší AI model</span>
                       </div>
                     </div>
                   )}
