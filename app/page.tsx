@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShieldAlert, Image as ImageIcon, Sparkles } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/utils/supabase/client";
-import { AnimatedCounter } from "./components/AnimatedCounter"; // ✅ Přidán import počítadla
+import { AnimatedCounter } from "./components/AnimatedCounter";
 
 const AnalyzeResponseSchema = z.object({
   risk: z.union([z.number(), z.literal("LIMIT")]),
@@ -25,15 +25,17 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false);
   const [result, setResult] = useState<z.infer<typeof AnalyzeResponseSchema> | null>(null);
   
+  // ✅ State pro sdílení
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  
   // ✅ State pro počítadlo analýz
   const [totalAnalyses, setTotalAnalyses] = useState(0);
 
-  // ✅ Kontrola přihlášení pro správný text tlačítka
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
   }, [supabase]);
 
-  // ✅ Načtení statistik pro počítadlo při startu
   useEffect(() => {
     fetch('/api/stats')
       .then(r => r.json())
@@ -45,6 +47,7 @@ export default function Home() {
     if (!input.trim()) return;
     setLoading(true);
     setResult(null);
+    setShareUrl(null); // Reset URL při nové analýze
 
     try {
       const response = await fetch('/api/analyze', {
@@ -86,6 +89,28 @@ export default function Home() {
     setTimeout(() => setShowToast(false), 5000);
   };
 
+  // ✅ CHYBĚJÍCÍ FUNKCE PRO SDÍLENÍ
+  const handleShare = async () => {
+    if (!result) return;
+    setSharing(true);
+    try {
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(result),
+      });
+      const data = await res.json();
+      if (data.url) {
+        setShareUrl(data.url);
+        await navigator.clipboard.writeText(data.url);
+      }
+    } catch (err) {
+      console.error("Chyba při sdílení:", err);
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const riskNum = result && !isNaN(Number(result.risk)) ? Number(result.risk) : 0;
   const isHigh = riskNum > 50;
 
@@ -114,7 +139,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* ✅ Zde je vložené animované počítadlo */}
         <AnimatedCounter endValue={totalAnalyses} />
 
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-2 shadow-2xl focus-within:border-purple-500/50 transition-all flex flex-col">
@@ -210,6 +234,30 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* ✅ CHYBĚJÍCÍ BLOK PRO TLAČÍTKO SDÍLET */}
+            {result.risk !== "LIMIT" && (
+              <div className="p-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/50">
+                <div className="text-sm text-slate-400 font-medium">
+                  Ukaž tohle ostatním a chraň je.
+                </div>
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  {shareUrl && (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-green-500/10 border border-green-500/30 rounded-xl text-sm text-green-400 font-bold animate-in fade-in">
+                      ✅ Odkaz zkopírován!
+                    </div>
+                  )}
+                  <button
+                    onClick={handleShare}
+                    disabled={sharing}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+                  >
+                    {sharing ? "Generuji..." : "🔗 Sdílet výsledek"}
+                  </button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>
