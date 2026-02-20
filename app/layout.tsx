@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next"; // ✅ Přidán Viewport
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Header from "./components/Header";
@@ -6,12 +6,17 @@ import Footer from "./components/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
-// ✅ SEO a Sociální sítě: Tohle prodává PK Virgine, s.r.o. navenek
+// ✅ Nastavení barev pro mobilní prohlížeče
+export const viewport: Viewport = {
+  themeColor: "#020617",
+};
+
+// ✅ SEO a Sociální sítě
 export const metadata: Metadata = {
   title: "NeKlikni.cz | AI bodyguard pro tvůj klidný internet",
   description: "Prověřte si podezřelou zprávu, SMS nebo odkaz dřív, než na něj kliknete. AI analýza phishingu s modelem Sonnet 3.5.",
   metadataBase: new URL('https://neklikni.cz'),
-  manifest: "/manifest.json", // Propojení "mobilní aplikace"
+  manifest: "/manifest.json", 
   alternates: {
     canonical: '/',
   },
@@ -24,7 +29,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: '/og-image.png', // ✅ Nezapomeň tento obrázek nahrát do složky /public
+        url: '/og-image.png', 
         width: 1200,
         height: 630,
         alt: 'NeKlikni.cz Analysis Preview',
@@ -40,8 +45,7 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-  },
-  themeColor: "#020617", // ✅ Ladí s tvým tmavým pozadím
+  }
 };
 
 export default function RootLayout({
@@ -52,13 +56,12 @@ export default function RootLayout({
   return (
     <html lang="cs" className="selection:bg-purple-500/30">
       <body className={`${inter.className} bg-slate-950 text-white antialiased`}>
-        {/* ✅ Fixní Header s navigací a kredity */}
+        {/* ✅ Fixní Header */}
         <Header />
         
-        {/* Hlavní obsah stránky */}
         {children}
 
-        {/* ✅ Vycentrovaný Footer s právním štítem */}
+        {/* ✅ Vycentrovaný Footer */}
         <Footer />
       </body>
     </html>
