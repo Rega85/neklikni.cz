@@ -6,14 +6,14 @@ export default function Footer() {
     <footer className="w-full border-t border-slate-800 bg-slate-950 py-16 px-6">
       <div className="max-w-7xl mx-auto">
         
-        {/* Omezení odpovědnosti - Právní štít */}
-        <div className="mb-12 pb-8 border-b border-slate-900/50 flex flex-col md:flex-row items-center gap-4 text-center md:text-left">
-          <div className="flex items-center gap-2 text-purple-500 shrink-0">
-            <Scale size={18} />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Omezení odpovědnosti</span>
+        {/* ✅ Omezení odpovědnosti - Právní štít (Zvětšeno a zvýrazněno) */}
+        <div className="mb-12 p-6 bg-slate-900/30 border border-white/5 rounded-2xl flex flex-col md:flex-row items-center gap-6 text-center md:text-left transition-all hover:border-purple-500/20">
+          <div className="flex items-center gap-3 text-purple-400 shrink-0">
+            <Scale size={24} className="opacity-80" />
+            <span className="text-xs font-black uppercase tracking-[0.2em]">Omezení odpovědnosti</span>
           </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed italic max-w-4xl">
-            Poslední rozhodnutí o interakci se zprávou je **vždy na vás**. AI je rádce, ne prorok. 
+          <p className="text-sm text-slate-400 leading-relaxed italic max-w-4xl">
+            Poslední rozhodnutí o interakci se zprávou je <strong className="text-white">vždy na vás</strong>. AI je rádce, ne prorok. 
             NeKlikni.cz negarantuje 100% přesnost analýzy a nenese odpovědnost za následná rozhodnutí uživatele.
           </p>
         </div>
@@ -41,9 +41,9 @@ export default function Footer() {
           {/* Legislativa a Kontakt */}
           <div className="flex flex-col md:items-end gap-3 text-sm">
             <h4 className="text-slate-300 font-bold mb-2 uppercase tracking-widest text-xs">Právní náležitosti</h4>
-            <Link href="/vop" className="text-slate-500 hover:text-purple-400 transition-colors">Obchodní podmínky (VOP)</Link>
-            <Link href="/gdpr" className="text-slate-500 hover:text-purple-400 transition-colors">Ochrana osobních údajů (GDPR)</Link>
-            <Link href="/cookies" className="text-slate-500 hover:text-purple-400 transition-colors">Nastavení cookies</Link>
+            <Link href="/vop" className="text-slate-500 hover:text-purple-400 transition-colors font-medium">Obchodní podmínky (VOP)</Link>
+            <Link href="/gdpr" className="text-slate-500 hover:text-purple-400 transition-colors font-medium">Ochrana osobních údajů (GDPR)</Link>
+            <Link href="/cookies" className="text-slate-500 hover:text-purple-400 transition-colors font-medium">Nastavení cookies</Link>
             <Link href="/kontakt" className="text-slate-500 hover:text-purple-400 transition-colors font-bold">Kontakt</Link>
             
             <div className="mt-8 pt-8 border-t border-slate-900 w-full md:w-auto text-center md:text-right">
