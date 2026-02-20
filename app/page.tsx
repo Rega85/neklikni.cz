@@ -89,7 +89,6 @@ export default function Home() {
     setTimeout(() => setShowToast(false), 5000);
   };
 
-  // ✅ CHYBĚJÍCÍ FUNKCE PRO SDÍLENÍ
   const handleShare = async () => {
     if (!result) return;
     setSharing(true);
@@ -235,25 +234,52 @@ export default function Home() {
               )}
             </div>
 
-            {/* ✅ CHYBĚJÍCÍ BLOK PRO TLAČÍTKO SDÍLET */}
+            {/* ✅ BLOK PRO SDÍLENÍ S FACEBOOKEM A X */}
             {result.risk !== "LIMIT" && (
               <div className="p-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-900/50">
                 <div className="text-sm text-slate-400 font-medium">
                   Ukaž tohle ostatním a chraň je.
                 </div>
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                  {shareUrl && (
-                    <div className="flex items-center gap-2 px-4 py-3 bg-green-500/10 border border-green-500/30 rounded-xl text-sm text-green-400 font-bold animate-in fade-in">
-                      ✅ Odkaz zkopírován!
-                    </div>
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                  
+                  {shareUrl ? (
+                    <>
+                      <div className="flex items-center gap-2 px-4 py-3 bg-green-500/10 border border-green-500/30 rounded-xl text-sm text-green-400 font-bold animate-in fade-in">
+                        ✅ Zkopírováno!
+                      </div>
+                      
+                      {/* Tlačítko Facebook */}
+                      <a 
+                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center px-4 py-3 bg-[#1877F2] hover:bg-[#1865f2] rounded-xl transition-all shadow-lg shadow-blue-500/20 animate-in fade-in zoom-in duration-300"
+                        title="Sdílet na Facebooku"
+                      >
+                        <span className="text-white font-bold text-sm">f</span>
+                      </a>
+                      
+                      {/* Tlačítko 𝕏 (Twitter) */}
+                      <a 
+                        href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent("Právě jsem prověřil podezřelou zprávu přes NeKlikni.cz. Tady je výsledek AI analýzy: ")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center px-4 py-3 bg-black hover:bg-zinc-800 border border-zinc-700 rounded-xl transition-all shadow-lg animate-in fade-in zoom-in duration-300 delay-75"
+                        title="Sdílet na X"
+                      >
+                        <span className="text-white font-bold text-sm">𝕏</span>
+                      </a>
+                    </>
+                  ) : (
+                    <button
+                      onClick={handleShare}
+                      disabled={sharing}
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
+                    >
+                      {sharing ? "Generuji odkaz..." : "🔗 Získat odkaz pro sdílení"}
+                    </button>
                   )}
-                  <button
-                    onClick={handleShare}
-                    disabled={sharing}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
-                  >
-                    {sharing ? "Generuji..." : "🔗 Sdílet výsledek"}
-                  </button>
+                  
                 </div>
               </div>
             )}
