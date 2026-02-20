@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ShieldAlert, Image as ImageIcon, Sparkles } from "lucide-react";
 import { z } from "zod";
 import { createClient } from "@/utils/supabase/client";
-import { AnimatedCounter } from "@/app/components/AnimatedCounter"; // ✅ Přidán import počítadla
+import { AnimatedCounter } from "./components/AnimatedCounter"; // ✅ Přidán import počítadla
 
 const AnalyzeResponseSchema = z.object({
   risk: z.union([z.number(), z.literal("LIMIT")]),
