@@ -4,6 +4,17 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const TRUSTED_DOMAINS = `
+DŮLEŽITÉ – tyto domény jsou 100% legitimní, nikdy nejsou podvod (risk max 5):
+- stripe.com, checkout.stripe.com, billing.stripe.com
+- supabase.com, supabase.io
+- vercel.com, vercel.app
+- google.com, gmail.com, youtube.com
+- apple.com, microsoft.com, amazon.com
+- neklikni.cz
+- seznam.cz, idnes.cz, novinky.cz
+`;
+
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
@@ -31,10 +42,11 @@ export async function POST(req: Request) {
 
     const tier = (profile.tier || "free").toLowerCase();
     const isPro = tier === "pro" || tier === "elite";
-    const model = isPro ? "claude-sonnet-4-5-20250929" : "claude-haiku-4-5-20251001";
+    const model = isPro ? "claude-opus-4-6" : "claude-haiku-4-5-20251001";
 
     const systemPrompt = isPro
-      ? `Jsi elitní expert na kyberbezpečnost a psychologii podvodů. 
+      ? `Jsi elitní expert na kyberbezpečnost a psychologii podvodů.
+${TRUSTED_DOMAINS}
 Analyzuj zprávu a vrať POUZE validní JSON bez jakéhokoliv textu navíc:
 {
   "risk": 0-100,
@@ -44,7 +56,8 @@ Analyzuj zprávu a vrať POUZE validní JSON bez jakéhokoliv textu navíc:
   "recommendation": "Jasné kroky co má uživatel udělat. 2-3 věty."
 }`
       : `Jsi expert na kyberbezpečnost. Analyzuj zprávu a vrať POUZE validní JSON:
-{"risk": 0-100, "verdict": "Stručné vyhodnocení max 2 věty."}`;
+{"risk": 0-100, "verdict": "Stručné vyhodnocení max 2 věty."}
+${TRUSTED_DOMAINS}`;
 
     const msg = await anthropic.messages.create({
       model,
@@ -62,7 +75,6 @@ Analyzuj zprávu a vrať POUZE validní JSON bez jakéhokoliv textu navíc:
       aiData = { risk: 50, verdict: "Analýza proběhla." };
     }
 
-    // Odečti kredit
     await supabase
       .from("user_profiles")
       .update({ credits_remaining: profile.credits_remaining - 1 })
