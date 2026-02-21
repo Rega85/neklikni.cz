@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 type Mode = "password" | "magic";
 
@@ -12,7 +13,9 @@ export default function LoginPage() {
   const [submitted, setSubmitted] = useState(false);
   const [mode, setMode] = useState<Mode>("password");
   const [error, setError] = useState('');
+  
   const supabase = createClient();
+  const router = useRouter(); // ✅ Přidán Next.js Router
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,22 +26,27 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         setError("Špatný e-mail nebo heslo.");
+        setLoading(false); // Vypneme loading jen při chybě
       } else {
-        window.location.href = '/';
+        // ✅ OPRAVA: Plynulé přesměrování
+        router.push('/');
+        router.refresh();
       }
     } else {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: `${location.origin}/auth/callback` },
       });
-      if (error) setError("Chyba: " + error.message);
-      else setSubmitted(true);
+      if (error) {
+        setError("Chyba: " + error.message);
+        setLoading(false);
+      } else {
+        setSubmitted(true);
+        setLoading(false);
+      }
     }
-
-    setLoading(false);
   };
 
-  // ✅ PŘIDÁNA FUNKCE PRO RESET HESLA
   const handleResetPassword = async () => {
     if (!email) {
       setError("Zadej nejdřív svůj e-mail do políčka nahoře.");
@@ -60,6 +68,7 @@ export default function LoginPage() {
     }
   };
 
+  // ... (TADY NECH PŘESNĚ TEN STEJNÝ RETURN JAKO JSI MĚL PRO HTML, NIC SE TAM NEMĚNÍ) ...
   if (submitted) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
       <CheckCircle2 className="w-20 h-20 text-green-400 mb-6 animate-bounce" />
@@ -122,7 +131,6 @@ export default function LoginPage() {
                   className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 outline-none transition-colors"
                 />
               </div>
-              {/* ✅ NENÁPADNÉ TLAČÍTKO NA RESET */}
               <div className="flex justify-end pr-2">
                 <button
                   type="button"

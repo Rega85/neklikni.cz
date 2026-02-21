@@ -10,7 +10,7 @@ export default function Home() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Opravený singleton klient
+  // Opravený klient
   const supabase = createClient();
   
   const [user, setUser] = useState<any>(null);
@@ -27,7 +27,6 @@ export default function Home() {
 
     const loadInitialData = async () => {
       try {
-        // Použití rychlého getSession
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
           setUser(session?.user || null);
@@ -115,7 +114,6 @@ export default function Home() {
     <main className="min-h-screen bg-[#020617] text-white pt-40 px-6 pb-20 flex flex-col items-center">
       <div className="max-w-3xl w-full space-y-16">
         
-        {/* HERO SECTION */}
         <div className="text-center space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
             <Zap size={12} fill="currentColor" /> AI Security Engine v4.6
@@ -130,7 +128,6 @@ export default function Home() {
 
         <AnimatedCounter endValue={totalAnalyses} />
 
-        {/* INPUT BOX - DARK GLASS LOOK */}
         <div className="relative group">
           <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-[32px] blur opacity-10 group-focus-within:opacity-25 transition duration-1000"></div>
           <div className="relative bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-3 shadow-2xl transition-all">
@@ -160,7 +157,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Error message */}
         {error && (
           <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3">
             <AlertCircle className="text-red-400 shrink-0" size={20} />
@@ -168,12 +164,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* ✅ PRO RESULT DASHBOARD */}
         {result && (
           <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
             <div className={`relative overflow-hidden rounded-[32px] border backdrop-blur-3xl shadow-2xl ${getRiskColor(result.risk)}`}>
               
-              {/* Risk Header */}
               <div className="p-10 flex flex-col items-center text-center space-y-6 relative border-b border-white/5">
                 <div className="absolute top-6 right-6 flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-slate-400">
                   <ShieldCheck size={12} /> Pro Analysis
@@ -195,7 +189,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Detailed Analysis Section */}
               <div className="p-10 bg-slate-950/40 space-y-10">
                 {result.analysis && (
                   <div className="space-y-4">
@@ -209,7 +202,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Threats Grid */}
                 {result.threats && result.threats.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {result.threats.map((threat: string, i: number) => (
@@ -221,7 +213,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Actionable Recommendation */}
                 {result.recommendation && (
                   <div className="p-6 rounded-[24px] bg-gradient-to-br from-purple-500/10 to-blue-500/10 border border-purple-500/20">
                     <div className="flex items-center gap-3 mb-3 text-purple-400">
@@ -233,13 +224,6 @@ export default function Home() {
                     </p>
                   </div>
                 )}
-              </div>
-
-              {/* Share Footer */}
-              <div className="p-6 bg-black/40 flex justify-center border-t border-white/5">
-                <button className="flex items-center gap-2 text-slate-400 hover:text-white text-xs font-bold transition-colors uppercase tracking-widest">
-                  <Share2 size={14} /> Sdílet bezpečnostní report
-                </button>
               </div>
             </div>
           </div>

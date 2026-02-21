@@ -15,7 +15,6 @@ export default function ProfilePage() {
   const [userEmail, setUserEmail] = useState<string>("");
   const [loading, setLoading] = useState(true);
   
-  // Stavy pro změnu hesla
   const [newPassword, setNewPassword] = useState("");
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState({ type: "", text: "" });
@@ -24,25 +23,32 @@ export default function ProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
+    let mounted = true;
+
     async function loadProfile() {
-      const { data: { user } } = await supabase.auth.getUser();
+      // ✅ OPRAVA: Rychlé getSession místo zasekávacího getUser
+      const { data: { session } } = await supabase.auth.getSession();
       
-      if (user) {
-        setUserEmail(user.email || "");
+      if (!mounted) return;
+
+      if (session?.user) {
+        setUserEmail(session.user.email || "");
         const { data, error } = await supabase
           .from('user_profiles')
           .select('*')
-          .eq('id', user.id)
+          .eq('id', session.user.id)
           .single();
 
-        if (!error) setProfile(data);
+        if (!error && mounted) setProfile(data);
       }
-      setLoading(false);
+      if (mounted) setLoading(false);
     }
+    
     loadProfile();
+
+    return () => { mounted = false; };
   }, [supabase]);
 
-  // 💳 Přesměrování do Stripe (Změna tarifu / Zrušení)
   const handlePortal = async () => {
     try {
       const res = await fetch("/api/portal", { method: "POST" });
@@ -54,7 +60,6 @@ export default function ProfilePage() {
     }
   };
 
-  // 🔐 Manuální změna hesla
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
@@ -71,7 +76,7 @@ export default function ProfilePage() {
       setPasswordMessage({ type: "error", text: "Chyba: " + error.message });
     } else {
       setPasswordMessage({ type: "success", text: "Heslo bylo úspěšně změněno!" });
-      setNewPassword(""); // Vymaže pole
+      setNewPassword(""); 
     }
     setPasswordLoading(false);
   };
@@ -95,6 +100,7 @@ export default function ProfilePage() {
     </div>
   );
 
+  // ... (TADY NECH PŘESNĚ TEN STEJNÝ RETURN JAKO JSI MĚL, HTML SE NEMĚNÍ) ...
   return (
     <div className="min-h-screen bg-slate-950 text-white p-6">
       <div className="max-w-4xl mx-auto pt-12 space-y-8">
