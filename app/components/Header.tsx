@@ -10,15 +10,14 @@ export default function Header() {
   const [profile, setProfile] = useState<{ credits_remaining: number; tier: string } | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Čisté vytvoření klienta bez useRef
-  const supabase = createClient();
+  // OPRAVA: Supabase klient se vytvoří jen jednou a drží se v paměti. Žádný spam.
+  const [supabase] = useState(() => createClient());
 
   useEffect(() => {
     let mounted = true;
 
     const loadData = async () => {
       try {
-        // Okamžité načtení bez čekání na server
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;

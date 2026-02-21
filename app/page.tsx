@@ -10,9 +10,11 @@ export default function Home() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  const supabase = createClient();
+  // OPRAVA: Stabilní klient
+  const [supabase] = useState(() => createClient());
   
   const [user, setUser] = useState<any>(null);
+  const [authSession, setAuthSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,6 +31,7 @@ export default function Home() {
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
           setUser(session?.user || null);
+          setAuthSession(session || null);
           setAuthLoading(false);
         }
       } catch (err) {
@@ -48,8 +51,10 @@ export default function Home() {
       if (!mounted) return;
       if (event === 'SIGNED_OUT') {
         setUser(null);
-      } else if (event === 'SIGNED_IN' && session?.user) {
+        setAuthSession(null);
+      } else if (event === 'SIGNED_IN' && session) {
         setUser(session.user);
+        setAuthSession(session);
       }
     });
 
@@ -60,17 +65,15 @@ export default function Home() {
   }, [supabase]);
 
   const handleAnalysis = async (payload: { text?: string, imageUrl?: string }) => {
-    // 🔴 1. OCHRANA PROTI PRÁZDNÉMU KLIKNUTÍ (Tohle ti tam chybělo)
     if (!payload.text?.trim() && !payload.imageUrl) {
       setError("Zadej text nebo nahraj obrázek k prověření.");
       return;
     }
 
     console.log("--- START ANALÝZY ---");
-    const { data: { session } } = await supabase.auth.getSession();
     
-    if (!session?.access_token) { 
-      console.log("Chybí token, jdeme na login.");
+    if (!authSession?.access_token) { 
+      console.log("Chybí token v paměti, jdeme na login.");
       router.push("/login"); 
       return; 
     }
@@ -85,14 +88,13 @@ export default function Home() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}` 
+          'Authorization': `Bearer ${authSession.access_token}` 
         },
         body: JSON.stringify(payload),
       });
       
       console.log("Status odpovědi:", res.status);
       
-      // Místo json() čteme text, abychom chytli pády serveru dřív, než to shodí frontend
       const textData = await res.text();
       console.log("RAW Odpověď ze serveru:", textData);
       
@@ -123,9 +125,9 @@ export default function Home() {
       } else {
         setError(data.error || "Něco se pokazilo na serveru.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Analysis error:", err);
-      setError("Chyba připojení. Zkontroluj internet a zkus to znovu.");
+      setError("Chyba: " + (err.message || "Nelze se spojit se serverem."));
     } finally { 
       setLoading(false); 
       console.log("--- KONEC ANALÝZY ---");
