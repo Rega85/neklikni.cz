@@ -14,7 +14,6 @@ export default function Header() {
   useEffect(() => {
     let mounted = true;
 
-    // ZÁCHRANNÁ BRZDA pro Header
     const timer = setTimeout(() => {
       if (mounted && loading) setLoading(false);
     }, 3000);
@@ -23,18 +22,13 @@ export default function Header() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
-        
         if (session?.user) {
           setUser(session.user);
-          const { data: profileData } = await supabase
-            .from("user_profiles")
-            .select("credits_remaining, tier")
-            .eq("id", session.user.id)
-            .single();
+          const { data: profileData } = await supabase.from("user_profiles").select("credits_remaining, tier").eq("id", session.user.id).single();
           if (mounted && profileData) setProfile(profileData);
         }
       } catch (err) {
-        console.error("Header error:", err);
+        console.error(err);
       } finally {
         if (mounted) {
           setLoading(false);
@@ -45,15 +39,10 @@ export default function Header() {
 
     loadData();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
-      if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setProfile(null);
-      } else if (session?.user) {
-        setUser(session.user);
-        setLoading(false);
-      }
+      setUser(session?.user || null);
+      setLoading(false);
     });
 
     return () => {
@@ -70,14 +59,11 @@ export default function Header() {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[100] bg-slate-950/90 backdrop-blur-md border-b border-white/10 h-20">
-      <div className="max-w-5xl mx-auto h-full px-6 flex items-center justify-between gap-4">
+      <div className="max-w-5xl mx-auto h-full px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
-          <div className="bg-purple-600 p-2 rounded-xl">
-            <Shield size={20} className="text-white" fill="white" />
-          </div>
-          <span className="font-black text-xl text-white uppercase hidden sm:block">NeKlikni</span>
+          <div className="bg-purple-600 p-2 rounded-xl"><Shield size={20} className="text-white" fill="white" /></div>
+          <span className="font-black text-xl text-white uppercase">NeKlikni</span>
         </Link>
-
         <div className="flex items-center gap-4">
           {loading ? (
             <div className="w-8 h-8 rounded-full bg-slate-800 animate-pulse" />
@@ -87,14 +73,10 @@ export default function Header() {
                 <Sparkles size={14} className="text-purple-400" />
                 <span className="text-sm font-black text-white">{profile?.credits_remaining ?? 0}</span>
               </div>
-              <button onClick={handleSignOut} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
-                <LogOut size={18} />
-              </button>
+              <button onClick={handleSignOut} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg"><LogOut size={18} /></button>
             </div>
           ) : (
-            <Link href="/login" className="text-sm font-bold text-white bg-purple-600 px-4 py-2 rounded-xl">
-              Přihlásit
-            </Link>
+            <Link href="/login" className="text-sm font-bold text-white bg-purple-600 px-4 py-2 rounded-xl">Přihlásit</Link>
           )}
         </div>
       </div>
