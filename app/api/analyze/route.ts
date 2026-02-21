@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     const { text, imageUrl } = await req.json();
     const tier = (profile.tier || "free").toLowerCase();
     const isPro = tier === "pro" || tier === "elite";
-    const model = isPro ? "claude-opus-4-6" : "claude-haiku-4-5-20251001";
+    const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
 
     let userContent: any[] = [];
     if (imageUrl) {
