@@ -1,74 +1,65 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js"; // Použijeme základní klient
+import { createClient } from "@supabase/supabase-js";
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-// Vytvoříme Super-klienta pro databázi (používá Service Role Key)
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+const PROMPT = `Jsi elitní kyberbezpečnostní analytik. Analyzuj vstup na phishing s matematickou přesností. 
+Vrať POUZE JSON:
+{
+  "risk": 0-100,
+  "verdict": "AGRESIVNÍ VERDIKT",
+  "analysis": "Expertní rozbor (2 věty).",
+  "threats": ["hrozba 1", "hrozba 2"],
+  "recommendation": "Bezpečnostní pokyn."
+}
+Skóre: 0-25 Safe, 26-60 Suspicious, 61-100 Malicious. Teplota 0 = buď konzistentní!`;
+
 export async function POST(req: Request) {
   try {
-    // 1. Ověříme usera přes token (tohle funguje i bez Cookies)
-    const authHeader = req.headers.get('Authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) return NextResponse.json({ error: "Missing token" }, { status: 401 });
+    const auth = req.headers.get("authorization") || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
+    if (userErr || !userData?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!user || authError) {
-      console.error("Auth Error:", authError);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const { data: profile } = await supabaseAdmin.from("user_profiles").select("credits_remaining, tier").eq("id", userData.user.id).single();
+    const isPro = (profile?.tier || "free").toLowerCase() === "pro";
+    const credits = profile?.credits_remaining ?? 0;
 
-    // 2. Teď vytáhneme profil s právy ADMINA (obejdeme RLS)
-    const { data: profile, error: profError } = await supabaseAdmin
-      .from("user_profiles")
-      .select("credits_remaining, tier")
-      .eq("id", user.id)
-      .single();
-
-    if (profError) {
-        console.error("Profil nenalezen:", profError);
-        return NextResponse.json({ error: "Profile error" }, { status: 500 });
-    }
-
-    const tier = (profile.tier || "free").toLowerCase();
-    const isPro = tier === "pro" || tier === "elite";
-
-    // 3. Kontrola kreditů
-    if (profile.credits_remaining <= 0 && !isPro) {
-      return NextResponse.json({ risk: "LIMIT", verdict: "Kredity vyčerpány." }, { status: 402 });
-    }
+    if (!isPro && credits <= 0) return NextResponse.json({ risk: "LIMIT", verdict: "Kredity vyčerpány." }, { status: 402 });
 
     const { text, imageUrl } = await req.json();
-    const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
+    const model = isPro ? "claude-3-5-sonnet-20241022" : "claude-3-haiku-20240307";
 
-    // ... ZBYTEK KÓDU (Antropic volání) ZŮSTÁVÁ STEJNÝ ...
     const msg = await anthropic.messages.create({
       model,
       max_tokens: 1000,
-      system: `Vrať POUZE JSON: {"risk": 0-100, "verdict": "...", "analysis": "...", "threats": [], "recommendation": "..."}`,
-      messages: [{ role: "user", content: [{ type: "text", text: imageUrl ? "Analyzuj screenshot: " + imageUrl : "Analyzuj: " + text }] }],
+      temperature: 0,
+      system: PROMPT,
+      messages: [{ 
+        role: "user", 
+        content: imageUrl 
+          ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageUrl.split(',')[1] } }, { type: "text", text: "Analyzuj screenshot." }] 
+          : [{ type: "text", text: `Analyzuj: "${text}"` }] 
+      }],
     });
 
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
-    const match = raw.match(/\{[\s\S]*\}/);
-    const aiData = JSON.parse(match ? match[0] : raw);
+    const aiData = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}");
 
-    // 4. Odečtení kreditu přes Admin klienta
-    if (!isPro) {
-        await supabaseAdmin.from("user_profiles").update({ credits_remaining: profile.credits_remaining - 1 }).eq("id", user.id);
+    if (!isPro && profile) {
+      await supabaseAdmin.from("user_profiles").update({ credits_remaining: credits - 1 }).eq("id", userData.user.id);
     }
+    await supabaseAdmin.rpc('increment_total_analyses');
 
-    return NextResponse.json({ ...aiData, isLocked: !isPro });
-
+    return NextResponse.json({ ...aiData, isLocked: !isPro, newCredits: isPro ? credits : credits - 1 });
   } catch (error) {
-    console.error("API Error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

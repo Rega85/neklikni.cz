@@ -10,195 +10,86 @@ export default function Home() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [supabase] = useState(() => createClient());
-  
-  const [user, setUser] = useState<any>(null);
   const [authSession, setAuthSession] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [totalAnalyses, setTotalAnalyses] = useState(0);
 
   useEffect(() => {
     let mounted = true;
-
-    // ZÁCHRANNÁ BRZDA: Pokud Supabase mlčí, po 3s odemkneme UI
-    const rescueTimer = setTimeout(() => {
-      if (mounted && authLoading) {
-        console.log("Auth timeout - odemykám UI");
-        setAuthLoading(false);
-      }
-    }, 3000);
-
-    const loadInitialData = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (mounted) {
-          setUser(session?.user || null);
-          setAuthSession(session || null);
-          setAuthLoading(false);
-          clearTimeout(rescueTimer);
-        }
-      } catch (err) {
-        console.error("Auth error:", err);
-        if (mounted) setAuthLoading(false);
-      }
+    const timer = setTimeout(() => { if (mounted && authLoading) setAuthLoading(false); }, 3000);
+    const load = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted) { setAuthSession(session); setAuthLoading(false); clearTimeout(timer); }
     };
-
-    loadInitialData();
-    
-    fetch('/api/stats')
-      .then(r => r.json())
-      .then(d => { if (mounted) setTotalAnalyses(d.total || 0); })
-      .catch(console.error);
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      setUser(session?.user || null);
-      setAuthSession(session || null);
-      setAuthLoading(false);
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-      clearTimeout(rescueTimer);
-    };
+    load();
+    fetch('/api/stats').then(r => r.json()).then(d => setTotalAnalyses(d.total || 0));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => { setAuthSession(s); setAuthLoading(false); });
+    return () => { mounted = false; subscription.unsubscribe(); clearTimeout(timer); };
   }, [supabase]);
 
   const handleAnalysis = async (payload: { text?: string, imageUrl?: string }) => {
-    if (!payload.text?.trim() && !payload.imageUrl) {
-      setError("Zadejte text nebo obrázek.");
-      return;
-    }
-
-    setLoading(true);
-    setResult(null);
-    setError(null);
-    
+    if (!payload.text?.trim() && !payload.imageUrl) return;
+    setLoading(true); setResult(null); setError(null);
     try {
-      // 🔴 KLÍČOVÝ FIX: Zkusíme vytáhnout čerstvý token přímo ze Supabase
-      let token = authSession?.access_token;
-      if (!token) {
-        const { data: { session } } = await supabase.auth.getSession();
-        token = session?.access_token;
-      }
-
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-      
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.push("/login"); return; }
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
         body: JSON.stringify(payload),
       });
-      
-      if (res.status === 402) {
-        setError("Kredity vyčerpány.");
-        router.push("/pricing");
-        return;
-      }
-
-      const textData = await res.text();
-      const data = JSON.parse(textData);
-      
-      if (res.ok) {
-        setResult(data);
-        setTotalAnalyses(prev => prev + 1);
-      } else {
-        setError(data.error || "Chyba analýzy.");
-      }
-    } catch (err) {
-      setError("Nepodařilo se spojit se serverem.");
-    } finally { 
-      setLoading(false); 
-    }
+      if (res.status === 402) { router.push("/pricing"); return; }
+      const data = await res.json();
+      if (res.ok) { setResult(data); setTotalAnalyses(p => p + 1); } else setError(data.error);
+    } catch (err) { setError("Chyba spojení."); } finally { setLoading(false); }
   };
 
-  const getRiskColor = (risk: number) => {
-    if (risk > 70) return "text-red-500 border-red-500/30 bg-red-500/5 shadow-red-500/20";
-    if (risk > 30) return "text-amber-500 border-amber-500/30 bg-amber-500/5 shadow-amber-500/20";
-    return "text-emerald-500 border-emerald-500/30 bg-emerald-500/5 shadow-emerald-500/20";
-  };
+  const getRiskColor = (r: number) => r > 60 ? "text-red-500 border-red-500/30 bg-red-500/5" : r > 25 ? "text-amber-500 border-amber-500/30 bg-amber-500/5" : "text-emerald-500 border-emerald-500/30 bg-emerald-500/5";
 
   return (
-    <main className="min-h-screen bg-[#020617] text-white pt-40 px-6 pb-20 flex flex-col items-center">
-      <div className="max-w-3xl w-full space-y-16">
-        <div className="text-center space-y-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-[0.2em] mb-4">
-            <Zap size={12} fill="currentColor" /> AI Security Engine v4.6
-          </div>
-          <h1 className="text-6xl sm:text-8xl font-black italic uppercase tracking-tighter leading-none">
-            Prověř <span className="text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700">než klikneš</span>
-          </h1>
+    <main className="min-h-screen bg-[#020617] text-white pt-32 px-6 pb-20 flex flex-col items-center">
+      <div className="max-w-4xl w-full space-y-12">
+        <div className="text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest"><Zap size={12} fill="currentColor" /> AI Security v2.0</div>
+          <h1 className="text-6xl font-black italic uppercase tracking-tighter">Prověř <span className="text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700">než klikneš</span></h1>
         </div>
-
         <AnimatedCounter endValue={totalAnalyses} />
-
-        <div className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-[32px] blur opacity-10 group-focus-within:opacity-25 transition duration-1000"></div>
-          <div className="relative bg-slate-900/50 backdrop-blur-xl border border-white/5 rounded-3xl p-3 shadow-2xl transition-all">
-            <textarea
-              id="phishing-input"
-              name="phishing-input"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Vložte podezřelý text, SMS nebo URL adresu..."
-              className="w-full bg-transparent p-6 outline-none text-white text-lg placeholder:text-slate-600 resize-none min-h-[180px]"
-            />
-            <div className="flex flex-col sm:flex-row justify-between items-center px-4 pb-4 gap-4 mt-2">
-              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={async (e) => {
-                  const file = e.target.files?.[0]; if (!file) return;
-                  setUploading(true);
-                  const fileName = `${crypto.randomUUID()}.jpg`;
-                  await supabase.storage.from('scam-screenshots').upload(fileName, file);
-                  const { data: { publicUrl } } = supabase.storage.from('scam-screenshots').getPublicUrl(fileName);
-                  await handleAnalysis({ imageUrl: publicUrl });
-                  setUploading(false);
-              }} />
-              <button onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto flex items-center justify-center gap-2 text-slate-400 hover:text-white font-bold px-5 py-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all">
-                {uploading ? <Loader2 className="animate-spin" /> : <ImageIcon size={20} />} <span>Vizuální analýza</span>
-              </button>
-              <button onClick={() => handleAnalysis({ text: input })} disabled={loading || authLoading} className="w-full sm:w-auto bg-white text-black px-10 py-4 rounded-2xl shadow-xl hover:bg-slate-200 disabled:opacity-50 font-black flex items-center justify-center gap-2 transition-transform active:scale-95">
-                {loading ? <Loader2 className="animate-spin" /> : <ShieldAlert size={20} />} Prověřit hrozbu
-              </button>
-            </div>
+        <div className="relative group bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] p-2 shadow-2xl">
+          <textarea id="analysis-input" name="analysis-input" value={input} onChange={(e) => setInput(e.target.value)} placeholder="Vložte text nebo URL..." className="w-full bg-transparent p-6 outline-none text-white text-lg min-h-[160px]" />
+          <div className="flex justify-between p-4 gap-4">
+            <button onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 text-slate-400 font-bold px-6 py-3 bg-white/5 rounded-2xl transition-all hover:bg-white/10"><ImageIcon size={20} /><span>Sken</span></button>
+            <button onClick={() => handleAnalysis({ text: input })} disabled={loading || authLoading} className="bg-white text-black px-12 py-4 rounded-2xl font-black flex items-center gap-2 transition-all active:scale-95">{loading ? <Loader2 className="animate-spin" /> : <ShieldAlert size={20} />} ANALÝZA</button>
           </div>
         </div>
-
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center gap-3">
-            <AlertCircle className="text-red-400 shrink-0" size={20} />
-            <p className="text-red-300 text-sm font-medium">{error}</p>
-          </div>
-        )}
-
         {result && (
-          <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className={`relative overflow-hidden rounded-[32px] border backdrop-blur-3xl shadow-2xl ${getRiskColor(result.risk)}`}>
-              <div className="p-10 flex flex-col items-center text-center space-y-6 relative border-b border-white/5">
-                <div className="absolute top-6 right-6 flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                  <ShieldCheck size={12} /> AI Verified
+          <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000">
+            <div className={`rounded-[40px] border-2 backdrop-blur-3xl ${getRiskColor(result.risk)} shadow-2xl overflow-hidden`}>
+              <div className="p-10 flex flex-col md:flex-row items-center gap-10 border-b border-white/5 relative">
+                <div className="relative flex items-center justify-center">
+                  <svg className="w-32 h-32 transform -rotate-90"><circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" className="opacity-10" /><circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="12" fill="transparent" strokeDasharray={364} strokeDashoffset={364 - (364 * result.risk) / 100} className="transition-all duration-1000 ease-out" /></svg>
+                  <span className="absolute text-3xl font-black">{result.risk}%</span>
                 </div>
-                <div className="text-8xl font-black tracking-tighter">
-                  {result.risk}<span className="text-3xl opacity-50">%</span>
-                </div>
-                <h3 className="text-2xl font-bold text-white">{result.verdict}</h3>
+                <div className="text-center md:text-left"><h2 className="text-4xl font-black uppercase italic tracking-tighter text-white mb-2">{result.verdict}</h2><div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><ShieldCheck size={12}/> Security Report</div></div>
               </div>
-              <div className="p-10 bg-slate-950/40 space-y-10 text-center">
-                <p className="text-slate-200 text-lg">{result.analysis}</p>
+              <div className="p-10 bg-slate-950/40 space-y-8">
+                <div className="grid md:grid-cols-2 gap-10">
+                  <div className="space-y-4"><h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><Info size={14}/> Rozbor</h4><p className="text-slate-300 leading-relaxed text-sm">{result.analysis}</p></div>
+                  <div className="space-y-4"><h4 className="text-red-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><ShieldAlert size={14}/> Hrozby</h4><div className="flex flex-wrap gap-2">{result.threats?.map((t: any, i: number) => <span key={i} className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-bold text-slate-300"># {t}</span>)}</div></div>
+                </div>
+                <div className="p-4 rounded-2xl bg-white/5 text-center italic text-slate-400 text-sm">"{result.recommendation}"</div>
               </div>
             </div>
           </div>
         )}
       </div>
+      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={async (e) => {
+        const file = e.target.files?.[0]; if (!file) return;
+        const r = new FileReader(); r.onloadend = () => handleAnalysis({ imageUrl: r.result as string }); r.readAsDataURL(file);
+      }} />
     </main>
   );
 }
