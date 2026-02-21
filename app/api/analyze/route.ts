@@ -7,9 +7,21 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 export async function POST(req: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    
+    // 1. Záchyt Bearer tokenu (přímo z hlavičky od frontendu)
+    const authHeader = req.headers.get('Authorization');
+    const token = authHeader?.replace('Bearer ', '');
 
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // 2. Ověření usera primárně přes TOKEN, ne přes Cookies
+    const { data: { user }, error: authError } = token 
+      ? await supabase.auth.getUser(token)
+      : await supabase.auth.getUser();
+
+    // 3. Pokud je user i s tokenem null, až pak letí ven
+    if (!user || authError) {
+      console.error("Auth Error:", authError);
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { data: profile } = await supabase
       .from("user_profiles")
@@ -24,6 +36,8 @@ export async function POST(req: Request) {
     const { text, imageUrl } = await req.json();
     const tier = (profile.tier || "free").toLowerCase();
     const isPro = tier === "pro" || tier === "elite";
+    
+    // Modely pro rok 2026 šlapou jak hodinky
     const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
 
     let userContent: any[] = [];

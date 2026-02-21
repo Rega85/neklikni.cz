@@ -10,7 +10,6 @@ export default function Home() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
-  // Opravený klient
   const supabase = createClient();
   
   const [user, setUser] = useState<any>(null);
@@ -61,7 +60,11 @@ export default function Home() {
   }, [supabase]);
 
   const handleAnalysis = async (payload: { text?: string, imageUrl?: string }) => {
-    if (!user) { 
+    // 1. Místo spoléhání na state 'user' si bleskově vytáhneme tvrdá data a token
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // 2. Kontrola, zda máme token. Pokud ne, až pak vyhazujeme.
+    if (!session?.access_token) { 
       router.push("/login"); 
       return; 
     }
@@ -73,7 +76,11 @@ export default function Home() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          // 3. TADY JE TEN FIX - Tvrdé narvání tokenu do hlavičky
+          'Authorization': `Bearer ${session.access_token}` 
+        },
         body: JSON.stringify(payload),
       });
       
