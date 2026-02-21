@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, Sparkles, LogOut, Home, Settings, CreditCard, ChevronDown, User } from "lucide-react";
+import { Shield, Sparkles, LogOut, Home, CreditCard, ChevronDown, User } from "lucide-react";
 
 export default function Header() {
   const [user, setUser] = useState<any>(null);
@@ -12,7 +12,6 @@ export default function Header() {
   const [loading, setLoading] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
   
-  // Vytvoříme klienta jednou
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
 
@@ -47,8 +46,7 @@ export default function Header() {
 
     loadData();
 
-    // Auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
       if (!mounted) return;
       
       if (event === 'SIGNED_OUT') {
@@ -56,7 +54,6 @@ export default function Header() {
         setProfile(null);
       } else if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
-        // Reload profile
         const { data: profileData } = await supabase
           .from("user_profiles")
           .select("credits_remaining, tier")
@@ -68,13 +65,12 @@ export default function Header() {
       }
     });
 
-    // Realtime subscription pro kredity
     const channel = supabase.channel('header-credits')
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'user_profiles' }, 
-        (payload) => {
+        (payload: any) => {
           if (mounted && payload.new) {
-            setProfile(prev => prev ? { 
+            setProfile((prev: any) => prev ? { 
               ...prev, 
               credits_remaining: payload.new.credits_remaining,
               tier: payload.new.tier || prev.tier
@@ -84,7 +80,6 @@ export default function Header() {
       )
       .subscribe();
 
-    // Click outside to close menu
     const handleClickOutside = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
@@ -117,7 +112,6 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-[100] bg-slate-950/90 backdrop-blur-md border-b border-white/10 h-20">
       <div className="max-w-5xl mx-auto h-full px-6 flex items-center justify-between gap-4">
         
-        {/* Logo a navigace */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="bg-purple-600 p-2 rounded-xl">
@@ -132,13 +126,11 @@ export default function Header() {
           </Link>
         </div>
 
-        {/* Pravá strana */}
         <div className="flex items-center gap-3 sm:gap-4">
           {loading ? (
             <div className="w-8 h-8 rounded-full bg-slate-800 animate-pulse" />
           ) : user ? (
             <>
-              {/* Kredity */}
               <Link 
                 href="/pricing" 
                 className="flex items-center gap-2 bg-slate-900 border border-purple-500/30 hover:border-purple-500/60 px-3 py-2 rounded-xl transition-colors group"
@@ -149,7 +141,6 @@ export default function Header() {
                 </span>
               </Link>
 
-              {/* User dropdown */}
               <div className="relative" ref={menuRef}>
                 <button 
                   onClick={() => setMenuOpen(!menuOpen)}
@@ -171,7 +162,6 @@ export default function Header() {
                   <ChevronDown size={14} className={`text-slate-500 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown menu */}
                 {menuOpen && (
                   <div className="absolute right-0 top-full mt-2 w-56 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl shadow-black/50 overflow-hidden z-50">
                     <div className="p-3 border-b border-slate-800">
