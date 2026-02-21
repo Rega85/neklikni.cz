@@ -16,7 +16,6 @@ export async function POST(req: Request) {
       : await supabase.auth.getUser();
 
     if (!user || authError) {
-      console.error("Auth Error:", authError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -26,16 +25,15 @@ export async function POST(req: Request) {
       .eq("id", user.id)
       .single();
 
-    // --- OPRAVA TADY ---
+    // --- KLÍČOVÝ FIX: Kontrola Tieru ---
     const tier = (profile?.tier || "free").toLowerCase();
     const isPro = tier === "pro" || tier === "elite";
-    
-    // Pokud nemá profil, nebo nemá kredity A ZÁROVEŇ není Pro, tak ho vyhodíme
-    if (!profile || (profile.credits_remaining <= 0 && !isPro)) {
-      console.log(`User ${user.id} limitován: ${profile?.credits_remaining} credits, tier: ${tier}`);
+    const hasCredits = (profile?.credits_remaining || 0) > 0;
+
+    // Pokud není PRO a zároveň nemá kredity, teprve pak ho vyhodíme
+    if (!isPro && !hasCredits) {
       return NextResponse.json({ risk: "LIMIT", verdict: "Kredity vyčerpány." }, { status: 402 });
     }
-    // -------------------
 
     const { text, imageUrl } = await req.json();
     const model = isPro ? "claude-sonnet-4-20250514" : "claude-haiku-4-5-20251001";
@@ -64,9 +62,9 @@ export async function POST(req: Request) {
     const match = raw.match(/\{[\s\S]*\}/);
     const aiData = JSON.parse(match ? match[0] : raw);
 
-    // ✅ Odečítáme kredity jen pokud to není Pro (nebo podle tvé logiky)
+    // Kredity odečítáme, jen pokud uživatel není PRO
     try {
-      if (!isPro) {
+      if (!isPro && profile) {
         await supabase.from("user_profiles").update({ credits_remaining: profile.credits_remaining - 1 }).eq("id", user.id);
       }
       await supabase.rpc('increment_total_analyses');
@@ -77,7 +75,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ...aiData,
       isLocked: !isPro,
-      newCredits: isPro ? profile.credits_remaining : profile.credits_remaining - 1
+      newCredits: isPro ? (profile?.credits_remaining || 0) : (profile?.credits_remaining || 1) - 1
     });
 
   } catch (error) {
