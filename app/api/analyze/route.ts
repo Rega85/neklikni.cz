@@ -9,7 +9,7 @@ const supabaseAdmin = createClient(
 );
 
 const PROMPT = `Jsi elitní kyberbezpečnostní analytik. Analyzuj vstup na phishing. 
-Vrať POUZE ČISTÝ JSON v tomto formátu:
+Vrať POUZE ČISTÝ JSON v tomto formátu bez jakýchkoliv keců okolo:
 {
   "risk": 0-100,
   "verdict": "STRUČNÝ VERDIKT",
@@ -29,26 +29,21 @@ export async function POST(req: Request) {
     const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(token);
     if (userErr || !user) return NextResponse.json({ error: "Neplatný token" }, { status: 401 });
 
-    const { data: profile, error: profErr } = await supabaseAdmin
+    const { data: profile } = await supabaseAdmin
       .from("user_profiles")
       .select("*")
       .eq("id", user.id)
       .single();
 
-    if (profErr || !profile) {
-      console.error("Profil nenalezen:", profErr);
-      return NextResponse.json({ error: "Profil nenalezen" }, { status: 404 });
-    }
-
-    const tier = (profile.tier || "free").toLowerCase();
+    const tier = (profile?.tier || "free").toLowerCase();
     const isPro = tier === "pro" || tier === "elite";
-    const credits = profile.credits_remaining ?? 0;
+    const credits = profile?.credits_remaining ?? 0;
 
     if (!isPro && credits <= 0) {
       return NextResponse.json({ error: "Kredity vyčerpány" }, { status: 402 });
     }
 
-    const { text, imageUrl } = await req.json();
+    const body = await req.json();
     const model = isPro ? "claude-3-5-sonnet-20241022" : "claude-3-haiku-20240307";
 
     const msg = await anthropic.messages.create({
@@ -58,17 +53,18 @@ export async function POST(req: Request) {
       system: PROMPT,
       messages: [{ 
         role: "user", 
-        content: imageUrl 
-          ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: imageUrl.split(',')[1] } }, { type: "text", text: "Analyzuj screenshot." }] 
-          : [{ type: "text", text: `Analyzuj: "${text}"` }] 
+        content: body.imageUrl 
+          ? [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: body.imageUrl.split(',')[1] } }, { type: "text", text: "Analyzuj screenshot." }] 
+          : [{ type: "text", text: `Analyzuj: "${body.text}"` }] 
       }],
     });
 
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
-    const aiData = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}");
+    const match = raw.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("AI nevrátila validní data.");
+    const aiData = JSON.parse(match[0]);
 
-    // Aktualizace kreditů pouze pro free uživatele
-    if (!isPro) {
+    if (!isPro && profile) {
       await supabaseAdmin
         .from("user_profiles")
         .update({ credits_remaining: credits - 1 })
@@ -77,14 +73,9 @@ export async function POST(req: Request) {
     
     await supabaseAdmin.rpc('increment_total_analyses');
 
-    return NextResponse.json({ 
-      ...aiData, 
-      tier: profile.tier, 
-      credits: isPro ? profile.credits_remaining : profile.credits_remaining - 1 
-    });
-
+    return NextResponse.json({ ...aiData, credits: profile?.credits_remaining });
   } catch (error: any) {
-    console.error("API CRASH:", error);
-    return NextResponse.json({ error: error.message || "Server Error" }, { status: 500 });
+    console.error("API Error:", error);
+    return NextResponse.json({ error: "Analýza selhala. Zkuste to za chvíli." }, { status: 500 });
   }
 }
