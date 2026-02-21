@@ -46,7 +46,7 @@ export default function Home() {
       .catch(console.error);
 
     // Auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
       if (!mounted) return;
       if (event === 'SIGNED_OUT') {
         setUser(null);
