@@ -60,11 +60,17 @@ export default function Home() {
   }, [supabase]);
 
   const handleAnalysis = async (payload: { text?: string, imageUrl?: string }) => {
-    // 1. Místo spoléhání na state 'user' si bleskově vytáhneme tvrdá data a token
+    // 🔴 1. OCHRANA PROTI PRÁZDNÉMU KLIKNUTÍ (Tohle ti tam chybělo)
+    if (!payload.text?.trim() && !payload.imageUrl) {
+      setError("Zadej text nebo nahraj obrázek k prověření.");
+      return;
+    }
+
+    console.log("--- START ANALÝZY ---");
     const { data: { session } } = await supabase.auth.getSession();
     
-    // 2. Kontrola, zda máme token. Pokud ne, až pak vyhazujeme.
     if (!session?.access_token) { 
+      console.log("Chybí token, jdeme na login.");
       router.push("/login"); 
       return; 
     }
@@ -74,17 +80,21 @@ export default function Home() {
     setError(null);
     
     try {
+      console.log("Odesílám request na API...");
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          // 3. TADY JE TEN FIX - Tvrdé narvání tokenu do hlavičky
           'Authorization': `Bearer ${session.access_token}` 
         },
         body: JSON.stringify(payload),
       });
       
-      const data = await res.json();
+      console.log("Status odpovědi:", res.status);
+      
+      // Místo json() čteme text, abychom chytli pády serveru dřív, než to shodí frontend
+      const textData = await res.text();
+      console.log("RAW Odpověď ze serveru:", textData);
       
       if (res.status === 401) {
         router.push("/login");
@@ -96,18 +106,29 @@ export default function Home() {
         router.push("/pricing");
         return;
       }
+
+      let data;
+      try {
+        data = JSON.parse(textData);
+      } catch (e) {
+        console.error("Chyba při čtení JSONu:", e);
+        setError("API nevrátilo platná data. Zkontroluj konzoli (F12).");
+        return;
+      }
       
       if (res.ok) {
+        console.log("Analýza úspěšná, vykresluji UI.");
         setResult(data);
         setTotalAnalyses(prev => prev + 1);
       } else {
-        setError(data.error || "Něco se pokazilo. Zkus to znovu.");
+        setError(data.error || "Něco se pokazilo na serveru.");
       }
     } catch (err) {
       console.error("Analysis error:", err);
       setError("Chyba připojení. Zkontroluj internet a zkus to znovu.");
     } finally { 
       setLoading(false); 
+      console.log("--- KONEC ANALÝZY ---");
     }
   };
 
