@@ -35,37 +35,56 @@ export async function POST(req: Request) {
       }, { status: 402 });
     }
 
-    const { text } = await req.json();
-    if (!text?.trim()) {
-      return NextResponse.json({ error: "Chybí text" }, { status: 400 });
+    const { text, imageUrl } = await req.json();
+    if (!text?.trim() && !imageUrl) {
+      return NextResponse.json({ error: "Chybí vstup" }, { status: 400 });
     }
 
     const tier = (profile.tier || "free").toLowerCase();
     const isPro = tier === "pro" || tier === "elite";
     const model = isPro ? "claude-opus-4-6" : "claude-haiku-4-5-20251001";
 
+    let userContent: any[] = [];
+
+    // ✅ VISION LOGIKA: Pokud je tam URL obrázku, stáhneme ho a pošleme Claudovi
+    if (imageUrl) {
+      const imageRes = await fetch(imageUrl);
+      const arrayBuffer = await imageRes.arrayBuffer();
+      const base64Image = Buffer.from(arrayBuffer).toString('base64');
+      const mediaType = imageRes.headers.get('content-type') || 'image/jpeg';
+
+      userContent.push({
+        type: "image",
+        source: { type: "base64", media_type: mediaType as any, data: base64Image },
+      });
+      userContent.push({
+        type: "text",
+        text: "Analyzuj tento screenshot. Je na něm podvod?"
+      });
+    } else {
+      userContent.push({ type: "text", text: `Analyzuj tuto zprávu: "${text}"` });
+    }
+
     const systemPrompt = isPro
-      ? `Jsi elitní expert na kyberbezpečnost a psychologii podvodů.
-${TRUSTED_DOMAINS}
-Analyzuj zprávu a vrať POUZE validní JSON bez jakéhokoliv textu navíc:
-{
-  "risk": 0-100,
-  "verdict": "Extrémně stručné shrnutí max 15 slov.",
-  "analysis": "Hloubkový rozbor textu, tónu a skrytých hrozeb. 3-4 věty.",
-  "threats": ["konkrétní detekovaná hrozba 1", "hrozba 2"],
-  "recommendation": "Jasné kroky co má uživatel udělat. 2-3 věty."
-}`
-      : `Jsi expert na kyberbezpečnost. Analyzuj zprávu a vrať POUZE validní JSON:
-{"risk": 0-100, "verdict": "Stručné vyhodnocení max 2 věty."}
-${TRUSTED_DOMAINS}`;
+      ? `Jsi elitní expert na kyberbezpečnost. ${TRUSTED_DOMAINS}
+        Vrať POUZE validní JSON:
+        {
+          "risk": 0-100,
+          "verdict": "Max 15 slov.",
+          "analysis": "Hloubkový rozbor (3-4 věty).",
+          "threats": ["seznam hrozeb"],
+          "recommendation": "Kroky (2-3 věty)."
+        }`
+      : `Jsi expert na kyberbezpečnost. Vrať POUZE JSON: {"risk": 0-100, "verdict": "Stručné."} ${TRUSTED_DOMAINS}`;
 
     const msg = await anthropic.messages.create({
       model,
       max_tokens: 1000,
       system: systemPrompt,
-      messages: [{ role: "user", content: text }],
+      messages: [{ role: "user", content: userContent }],
     });
 
+    // ✅ PARSOVÁNÍ JSONU (Pojištěno proti "kecům" okolo)
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     let aiData: any;
     try {
@@ -75,15 +94,19 @@ ${TRUSTED_DOMAINS}`;
       aiData = { risk: 50, verdict: "Analýza proběhla." };
     }
 
-    await supabase
-      .from("user_profiles")
-      .update({ credits_remaining: profile.credits_remaining - 1 })
-      .eq("id", user.id);
+    // ✅ DATABÁZOVÁ MAGIE: Odečtení kreditu + Globální počítadlo
+    const newCredits = profile.credits_remaining - 1;
+    
+    await Promise.all([
+      supabase.from("user_profiles").update({ credits_remaining: newCredits }).eq("id", user.id),
+      supabase.rpc('increment_total_analyses') // Volá SQL funkci, co jsme dělali minule
+    ]);
 
     return NextResponse.json({
       risk: aiData.risk ?? 50,
-      verdict: tier === "free" ? "" : (aiData.verdict ?? ""),
-      isLocked: tier === "free",
+      verdict: aiData.verdict ?? "",
+      isLocked: !isPro,
+      newCredits, // Posíláme nové kredity pro okamžitý update v UI
       ...(isPro && {
         analysis: aiData.analysis ?? null,
         threats: aiData.threats ?? [],

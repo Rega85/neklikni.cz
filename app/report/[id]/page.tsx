@@ -1,8 +1,34 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { Metadata } from 'next';
 
-// Oprava: V nejnovějším Next.js musí být params Promise
+// ✅ Tato funkce opravuje to, co vidíš v Debuggeru. 
+// Vnutí Facebooku správnou Canonical URL a OG tagy.
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const resolvedParams = await params;
+  const url = `https://www.neklikni.cz/report/${resolvedParams.id}`;
+
+  return {
+    title: 'Výsledek analýzy hrozby | NeKlikni.cz',
+    description: 'Detailní AI rozbor podezřelé zprávy. Podívejte se, než na cokoli kliknete.',
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      title: 'Pozor! Analýza hrozby odhalena ⚠️',
+      description: 'AI bodyguard prověřil tuto zprávu. Podívejte se na výsledek.',
+      url: url,
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: 'Analýza hrozby | NeKlikni.cz',
+      description: 'AI rozbor podezřelé zprávy.',
+    }
+  };
+}
+
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const supabase = await createClient();
@@ -54,7 +80,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                   <p className="text-slate-300 text-sm leading-relaxed">{report.analysis}</p>
                 </div>
 
-                {report.threats?.length > 0 && (
+                {report.threats && report.threats.length > 0 && (
                   <div>
                     <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-3">
                       Detekované hrozby
