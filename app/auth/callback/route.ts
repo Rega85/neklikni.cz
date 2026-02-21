@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -8,17 +9,43 @@ export async function GET(request: Request) {
   const type = searchParams.get('type')
   const next = searchParams.get('next') ?? '/'
 
+  const cookieStore = await cookies()
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options)
+          })
+        },
+      },
+    }
+  )
+
   if (code) {
-    const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+    console.error('Code exchange error:', error)
   }
 
   if (token_hash && type) {
-    const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as any })
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    const { error } = await supabase.auth.verifyOtp({ 
+      token_hash, 
+      type: type as any 
+    })
+    if (!error) {
+      return NextResponse.redirect(`${origin}${next}`)
+    }
+    console.error('OTP verify error:', error)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=Neco_se_pokazilo`)
+  return NextResponse.redirect(`${origin}/login?error=Prihlaseni_selhalo`)
 }
