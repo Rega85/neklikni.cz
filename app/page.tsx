@@ -9,8 +9,9 @@ import { AnimatedCounter } from "./components/AnimatedCounter";
 export default function Home() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabaseRef = useRef(createClient());
-  const supabase = supabaseRef.current;
+  
+  // Opravený singleton klient
+  const supabase = createClient();
   
   const [user, setUser] = useState<any>(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -26,9 +27,10 @@ export default function Home() {
 
     const loadInitialData = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        // Použití rychlého getSession
+        const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
-          setUser(user);
+          setUser(session?.user || null);
           setAuthLoading(false);
         }
       } catch (err) {
@@ -39,14 +41,12 @@ export default function Home() {
 
     loadInitialData();
     
-    // Načti stats
     fetch('/api/stats')
       .then(r => r.json())
       .then(d => { if (mounted) setTotalAnalyses(d.total || 0); })
       .catch(console.error);
 
-    // Auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) return;
       if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -62,7 +62,6 @@ export default function Home() {
   }, [supabase]);
 
   const handleAnalysis = async (payload: { text?: string, imageUrl?: string }) => {
-    // Kontrola přihlášení
     if (!user) { 
       router.push("/login"); 
       return; 
@@ -82,13 +81,11 @@ export default function Home() {
       const data = await res.json();
       
       if (res.status === 401) {
-        // Session expired
         router.push("/login");
         return;
       }
       
       if (res.status === 402) {
-        // No credits
         setError("Nemáš dostatek kreditů. Přikup si je v ceníku.");
         router.push("/pricing");
         return;
@@ -108,7 +105,6 @@ export default function Home() {
     }
   };
 
-  // Dynamické barvy podle rizika
   const getRiskColor = (risk: number) => {
     if (risk > 70) return "text-red-500 border-red-500/30 bg-red-500/5 shadow-red-500/20";
     if (risk > 30) return "text-amber-500 border-amber-500/30 bg-amber-500/5 shadow-amber-500/20";
@@ -157,7 +153,7 @@ export default function Home() {
               <button onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto flex items-center justify-center gap-2 text-slate-400 hover:text-white font-bold px-5 py-3 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 transition-all">
                 {uploading ? <Loader2 className="animate-spin" /> : <ImageIcon size={20} />} <span>Analyzovat vizuálně</span>
               </button>
-              <button onClick={() => handleAnalysis({ text: input })} disabled={loading} className="w-full sm:w-auto bg-white text-black px-10 py-4 rounded-2xl shadow-xl hover:bg-slate-200 disabled:opacity-50 font-black flex items-center justify-center gap-2 transition-transform active:scale-95">
+              <button onClick={() => handleAnalysis({ text: input })} disabled={loading || authLoading} className="w-full sm:w-auto bg-white text-black px-10 py-4 rounded-2xl shadow-xl hover:bg-slate-200 disabled:opacity-50 font-black flex items-center justify-center gap-2 transition-transform active:scale-95">
                 {loading ? <Loader2 className="animate-spin" /> : <ShieldAlert size={20} />} {result ? "Nová analýza" : "Prověřit hrozbu"}
               </button>
             </div>
