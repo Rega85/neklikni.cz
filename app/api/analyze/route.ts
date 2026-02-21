@@ -8,31 +8,45 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const PROMPT = `Jsi elitní kyberbezpečnostní analytik. Analyzuj vstup na phishing s matematickou přesností. 
-Vrať POUZE JSON:
+const PROMPT = `Jsi elitní kyberbezpečnostní analytik. Analyzuj vstup na phishing. 
+Vrať POUZE ČISTÝ JSON v tomto formátu:
 {
   "risk": 0-100,
-  "verdict": "AGRESIVNÍ VERDIKT",
-  "analysis": "Expertní rozbor (2 věty).",
+  "verdict": "STRUČNÝ VERDIKT",
+  "analysis": "Expertní rozbor (max 3 věty).",
   "threats": ["hrozba 1", "hrozba 2"],
-  "recommendation": "Bezpečnostní pokyn."
+  "recommendation": "Co má uživatel udělat."
 }
-Skóre: 0-25 Safe, 26-60 Suspicious, 61-100 Malicious. Teplota 0 = buď konzistentní!`;
+Skóre: 0-25 Safe, 26-60 Suspicious, 61-100 Malicious. Teplota 0.`;
 
 export async function POST(req: Request) {
   try {
     const auth = req.headers.get("authorization") || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    
+    if (!token) return NextResponse.json({ error: "Chybí autorizace" }, { status: 401 });
 
-    const { data: userData, error: userErr } = await supabaseAdmin.auth.getUser(token);
-    if (userErr || !userData?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(token);
+    if (userErr || !user) return NextResponse.json({ error: "Neplatný token" }, { status: 401 });
 
-    const { data: profile } = await supabaseAdmin.from("user_profiles").select("credits_remaining, tier").eq("id", userData.user.id).single();
-    const isPro = (profile?.tier || "free").toLowerCase() === "pro";
-    const credits = profile?.credits_remaining ?? 0;
+    const { data: profile, error: profErr } = await supabaseAdmin
+      .from("user_profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
 
-    if (!isPro && credits <= 0) return NextResponse.json({ risk: "LIMIT", verdict: "Kredity vyčerpány." }, { status: 402 });
+    if (profErr || !profile) {
+      console.error("Profil nenalezen:", profErr);
+      return NextResponse.json({ error: "Profil nenalezen" }, { status: 404 });
+    }
+
+    const tier = (profile.tier || "free").toLowerCase();
+    const isPro = tier === "pro" || tier === "elite";
+    const credits = profile.credits_remaining ?? 0;
+
+    if (!isPro && credits <= 0) {
+      return NextResponse.json({ error: "Kredity vyčerpány" }, { status: 402 });
+    }
 
     const { text, imageUrl } = await req.json();
     const model = isPro ? "claude-3-5-sonnet-20241022" : "claude-3-haiku-20240307";
@@ -53,13 +67,24 @@ export async function POST(req: Request) {
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
     const aiData = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}");
 
-    if (!isPro && profile) {
-      await supabaseAdmin.from("user_profiles").update({ credits_remaining: credits - 1 }).eq("id", userData.user.id);
+    // Aktualizace kreditů pouze pro free uživatele
+    if (!isPro) {
+      await supabaseAdmin
+        .from("user_profiles")
+        .update({ credits_remaining: credits - 1 })
+        .eq("id", user.id);
     }
+    
     await supabaseAdmin.rpc('increment_total_analyses');
 
-    return NextResponse.json({ ...aiData, isLocked: !isPro, newCredits: isPro ? credits : credits - 1 });
-  } catch (error) {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ 
+      ...aiData, 
+      tier: profile.tier, 
+      credits: isPro ? profile.credits_remaining : profile.credits_remaining - 1 
+    });
+
+  } catch (error: any) {
+    console.error("API CRASH:", error);
+    return NextResponse.json({ error: error.message || "Server Error" }, { status: 500 });
   }
 }
