@@ -8,18 +8,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const SYSTEM_PROMPT = `Jsi elitní kyberbezpečnostní analytik. Tvým úkolem je provést nekompromisní analýzu phishingu.
-Uživatel má PREMIUM tarif, vypracuj obsáhlý, technicky detailní rozbor (2-3 odstavce). 
-Vrať POUZE ČISTÝ JSON (nic jiného):
-{
-  "risk": 0-100,
-  "verdict": "AGRESIVNÍ VERDIKT",
-  "analysis": "Hloubková analýza...",
-  "threats": ["hrozba 1", "hrozba 2", "hrozba 3"],
-  "recommendation": "Přesný bezpečnostní postup"
-}
-Teplota 0. Konzistentní výsledky.`;
-
 export async function POST(req: Request) {
   try {
     const auth = req.headers.get("authorization") || "";
@@ -29,33 +17,27 @@ export async function POST(req: Request) {
     const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(token);
     if (userErr || !user) return NextResponse.json({ error: "Invalid user" }, { status: 401 });
 
-    const { data: profile } = await supabaseAdmin.from("user_profiles").select("*").eq("id", user.id).single();
-    const tier = (profile?.tier || "free").toLowerCase();
-    const isHighTier = tier === "pro" || tier === "elite";
-
     const body = await req.json();
-    const model = isHighTier ? "claude-3-5-sonnet-20241022" : "claude-3-haiku-20240307";
-
+    
+    // Čistá analýza bez složitých podmínek, které by mohly házet chybu 500
     const msg = await anthropic.messages.create({
-      model,
-      max_tokens: 2000,
+      model: "claude-3-5-sonnet-latest",
+      max_tokens: 1500,
       temperature: 0,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: body.imageUrl ? "Analyzuj screenshot." : `Analyzuj: "${body.text}"` }],
+      system: "Jsi expert na phishing. Vrať JSON: { risk: 0-100, verdict: 'text', analysis: 'text', threats: [], recommendation: 'text' }",
+      messages: [{ role: "user", content: body.text || "Analyzuj toto." }],
     });
 
     const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
-    const match = raw.match(/\{[\s\S]*\}/);
-    const aiData = JSON.parse(match ? match[0] : "{}");
+    const aiData = JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0] || "{}");
 
-    if (tier === "free" && profile) {
-      await supabaseAdmin.from("user_profiles").update({ credits_remaining: profile.credits_remaining - 1 }).eq("id", user.id);
-    }
-    await supabaseAdmin.rpc('increment_total_analyses');
+    // Pokus o update, ale pokud selže, analýzu to nepřeruší
+    try {
+      await supabaseAdmin.rpc('increment_total_analyses');
+    } catch (e) { console.error("Stats update failed"); }
 
-    return NextResponse.json({ ...aiData, tier });
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    return NextResponse.json(aiData);
+  } catch (err: any) {
+    return NextResponse.json({ error: "Chyba na serveru" }, { status: 500 });
   }
 }

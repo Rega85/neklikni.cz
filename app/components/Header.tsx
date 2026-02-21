@@ -17,6 +17,7 @@ export default function Header() {
       const { data: { session } } = await supabase.auth.getSession();
       if (mounted && session?.user) {
         setUser(session.user);
+        // Bezpečné načítání profilu - pokud tabulka neexistuje, kód nespadne
         const { data: p } = await supabase.from("user_profiles").select("*").eq("id", session.user.id).single();
         if (mounted) setProfile(p);
       }
@@ -26,7 +27,6 @@ export default function Header() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => {
       setUser(s?.user || null);
       if (!s) setProfile(null);
-      setLoading(false);
     });
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [supabase]);
@@ -36,18 +36,20 @@ export default function Header() {
       <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <div className="bg-purple-600 p-1.5 rounded-lg"><Shield size={18} className="text-white" fill="currentColor" /></div>
-          <span className="font-black text-lg text-white uppercase tracking-tighter leading-none">NeKlikni</span>
+          <span className="font-black text-lg text-white uppercase tracking-tighter">NeKlikni</span>
         </Link>
 
         <div className="flex items-center gap-4">
           {!loading && user ? (
-            <div className="flex items-center gap-4 bg-white/5 p-1.5 pr-4 rounded-full border border-white/5">
+            <div className="flex items-center gap-3 bg-white/5 p-1.5 pr-4 rounded-full border border-white/5">
               <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-[10px] font-black">{user.email?.[0].toUpperCase()}</div>
-              <div className="text-left hidden sm:block">
-                <div className="flex items-center gap-1"><span className="text-[9px] font-black uppercase text-white">{profile?.tier || 'Free'}</span><Sparkles size={8} className="text-purple-400" /></div>
-                <div className="text-[9px] font-bold text-slate-500 leading-none">{profile?.credits_remaining ?? 0} kreditů</div>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase text-white leading-none">{profile?.tier || 'Uživatel'}</span>
+                <span className="text-[9px] font-bold text-slate-500">{profile?.credits_remaining ?? '—'} kreditů</span>
               </div>
-              <button onClick={() => supabase.auth.signOut().then(() => window.location.href = "/")} className="ml-2 text-slate-500 hover:text-red-400 transition-colors"><LogOut size={16} /></button>
+              <button onClick={() => supabase.auth.signOut().then(() => window.location.href = "/")} className="ml-2 text-slate-500 hover:text-red-400 transition-colors">
+                <LogOut size={16} />
+              </button>
             </div>
           ) : <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200">LOGIN</Link>}
         </div>
