@@ -1,40 +1,47 @@
+import { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Metadata } from 'next';
+import { Shield, AlertTriangle, CheckCircle, ArrowLeft, Share2 } from "lucide-react";
 
-// ✅ Tato funkce opravuje to, co vidíš v Debuggeru. 
-// Vnutí Facebooku správnou Canonical URL a OG tagy.
+// ✅ 1. METADATA PRO FACEBOOK
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const resolvedParams = await params;
   const url = `https://www.neklikni.cz/report/${resolvedParams.id}`;
 
   return {
-    title: 'Výsledek analýzy hrozby | NeKlikni.cz',
-    description: 'Detailní AI rozbor podezřelé zprávy. Podívejte se, než na cokoli kliknete.',
-    alternates: {
-      canonical: url,
-    },
+    title: 'Analýza hrozby | NeKlikni.cz',
+    alternates: { canonical: url },
     openGraph: {
-      title: 'Pozor! Analýza hrozby odhalena ⚠️',
+      title: 'Pozor! AI analýza odhalila riziko ⚠️',
       description: 'AI bodyguard prověřil tuto zprávu. Podívejte se na výsledek.',
       url: url,
       type: 'article',
+      images: [
+        {
+          url: `${url}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          type: 'image/png',
+          alt: 'AI analýza hrozby NeKlikni.cz',
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Analýza hrozby | NeKlikni.cz',
-      description: 'AI rozbor podezřelé zprávy.',
+      title: 'AI analýza odhalila riziko ⚠️',
+      images: [`${url}/opengraph-image`],
     }
   };
 }
 
+// ✅ 2. SAMOTNÁ STRÁNKA REPORTU
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
   const supabase = await createClient();
-  
+
   const { data: report } = await supabase
-    .from("shared_results")
+    .from("analyses")
     .select("*")
     .eq("id", resolvedParams.id)
     .single();
@@ -44,81 +51,57 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const isHigh = report.risk > 50;
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white flex flex-col items-center px-6 pt-32 pb-20">
-      <div className="max-w-2xl w-full space-y-8">
+    <main className="min-h-screen bg-slate-950 text-white pt-32 pb-20 px-6">
+      <div className="max-w-3xl mx-auto space-y-8">
         
-        {/* Hlavička */}
-        <div className="text-center space-y-2">
-          <p className="text-slate-500 text-sm uppercase tracking-widest">Sdílený report · NeKlikni.cz</p>
-          <h1 className="text-3xl font-black">Výsledek AI analýzy</h1>
-        </div>
+        <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors group">
+          <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-sm font-bold uppercase tracking-widest">Zpět na prověření</span>
+        </Link>
 
-        {/* Výsledek */}
-        <div className={`rounded-3xl border overflow-hidden shadow-2xl
-          ${isHigh ? 'border-red-500/30 bg-red-950/20' : 'border-green-500/30 bg-green-950/20'}`}>
-          
-          <div className="p-8 text-center border-b border-white/5">
-            <div className={`text-7xl font-black mb-2 ${isHigh ? 'text-red-400' : 'text-green-400'}`}>
+        <div className={`rounded-3xl border overflow-hidden shadow-2xl ${isHigh ? 'border-red-500/30 bg-red-950/20' : 'border-green-500/30 bg-green-950/20'}`}>
+          <div className="p-12 text-center border-b border-white/5">
+            <div className={`text-8xl font-black mb-4 ${isHigh ? 'text-red-400' : 'text-green-400'}`}>
               {report.risk}%
             </div>
-            <div className={`text-xs font-black uppercase tracking-widest ${isHigh ? 'text-red-500' : 'text-green-500'}`}>
-              {isHigh ? '⚠️ Vysoké riziko' : '✅ Nízké riziko'}
+            <div className="flex items-center justify-center gap-2">
+              {isHigh ? <AlertTriangle className="text-red-500" /> : <CheckCircle className="text-green-500" />}
+              <span className={`text-xs font-black uppercase tracking-[0.3em] ${isHigh ? 'text-red-500' : 'text-green-500'}`}>
+                {isHigh ? 'Vysoké riziko hrozby' : 'Nízké riziko hrozby'}
+              </span>
             </div>
           </div>
 
-          <div className="p-8 space-y-6">
-            <p className="text-slate-200 text-lg leading-relaxed font-medium text-center italic">
-              "{report.verdict}"
-            </p>
+          <div className="p-10 space-y-8">
+            <div className="text-center">
+              <p className="text-2xl font-medium text-slate-200 italic leading-relaxed">
+                "{report.verdict}"
+              </p>
+            </div>
 
-            {report.analysis && (
-              <div className="space-y-6 pt-6 border-t border-white/5">
-                <div>
-                  <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-3">
-                    Hloubková analýza
-                  </h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">{report.analysis}</p>
-                </div>
-
-                {report.threats && report.threats.length > 0 && (
-                  <div>
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-3">
-                      Detekované hrozby
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {report.threats.map((threat: string, i: number) => (
-                        <div key={i} className="flex items-center gap-2 p-3 bg-white/5 rounded-xl text-xs text-slate-300 border border-white/5">
-                          <span>⚠️</span> {threat}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {report.recommendation && (
-                  <div className="p-5 bg-purple-500/10 border border-purple-500/20 rounded-2xl">
-                    <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-2">
-                      Doporučený postup
-                    </h4>
-                    <p className="text-sm text-purple-100/90 leading-relaxed font-medium">{report.recommendation}</p>
-                  </div>
-                )}
+            <div className="space-y-6 pt-8 border-t border-white/5">
+              <div>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-3">Hloubková analýza</h4>
+                <p className="text-slate-300 leading-relaxed italic opacity-90">
+                  {report.analysis || "Analýza není pro tento typ reportu k dispozici."}
+                </p>
               </div>
-            )}
+
+              {report.threats && report.threats.length > 0 && (
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-red-400 mb-3">Detekované hrozby</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {report.threats.map((threat: string, i: number) => (
+                      <span key={i} className="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded-lg text-[11px] font-bold text-red-400">
+                        ⚠️ {threat}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* CTA do akce */}
-        <div className="text-center space-y-4 pt-8">
-          <p className="text-slate-400 text-sm">Chceš prověřit vlastní zprávu nebo odkaz?</p>
-          <Link 
-            href="/"
-            className="inline-block bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-4 rounded-2xl font-black text-white shadow-lg shadow-purple-500/20 hover:scale-105 transition-all"
-          >
-            Prověřit zdarma na NeKlikni.cz →
-          </Link>
-        </div>
-
       </div>
     </main>
   );
