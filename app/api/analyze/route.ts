@@ -12,8 +12,8 @@ const supabaseAdmin = createClient(
 const TIER_MODELS: Record<string, string> = {
   free:  "claude-haiku-4-5-20251001",
   easy:  "claude-haiku-4-5-20251001",
-  basic: "claude-sonnet-4-6",
-  pro:   "claude-opus-4-6",
+  basic: "claude-sonnet-4-5",
+  pro:   "claude-opus-4-5",
 };
 
 const SYSTEM_PROMPT_FREE = `Jsi expert na kybernetickou bezpečnost a phishing. 
@@ -81,9 +81,7 @@ export async function POST(req: Request) {
       }
 
       const result = await runAnalysis(text, "free");
-
       await supabaseAdmin.rpc("upsert_anonymous_usage", { p_ip: ip, p_date: today });
-
       const shareId = await saveResult(null, text, result, "free");
 
       return NextResponse.json({
@@ -108,10 +106,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Neplatná session. Přihlaste se znovu." }, { status: 401 });
     }
 
-    // Načti profil — správná tabulka a sloupce
     const { data: profile, error: profileErr } = await supabaseAdmin
-      .from("user_profiles")                          // ← správná tabulka
-      .select("tier, credits_remaining")              // ← správné sloupce
+      .from("user_profiles")
+      .select("tier, credits_remaining")
       .eq("id", user.id)
       .single();
 
@@ -120,7 +117,7 @@ export async function POST(req: Request) {
     }
 
     const tier = profile.tier || "free";
-    const credits = profile.credits_remaining ?? 0;  // ← správný sloupec
+    const credits = profile.credits_remaining ?? 0;
 
     if (credits <= 0) {
       return NextResponse.json(
@@ -137,7 +134,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Atomicky odečti kredit
     const { data: deductResult, error: deductErr } = await supabaseAdmin.rpc(
       "deduct_credit",
       { p_user_id: user.id }
@@ -151,8 +147,7 @@ export async function POST(req: Request) {
     const result = await runAnalysis(text, tier);
     const shareId = await saveResult(user.id, text, result, tier);
 
-    // Statistiky non-blocking
-    void (async () => { try { await supabaseAdmin.rpc("increment_total_analyses") } catch {} })();
+    void (async () => { try { await supabaseAdmin.rpc("increment_total_analyses"); } catch {} })();
 
     return NextResponse.json({
       ...result,
@@ -203,7 +198,7 @@ async function saveResult(userId: string | null, text: string, result: any, tier
         threats:        result.threats ?? [],
         recommendation: result.recommendation,
         tier,
-        created_at: new Date().toISOString(),
+        created_at:     new Date().toISOString(),
       })
       .select("id")
       .single();
