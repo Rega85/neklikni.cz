@@ -11,7 +11,6 @@ export function createClient() {
         flowType: 'pkce',
         detectSessionInUrl: true,
         persistSession: true,
-        storageKey: 'neklikni-auth',
       },
     }
   )
