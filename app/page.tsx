@@ -46,23 +46,11 @@ export default function Home() {
     setError(null);
 
     try {
-      // Timeout 3s na getUser aby se nezaseklo
-      const userResult = await Promise.race([
-        supabase.auth.getUser(),
-        new Promise<any>((resolve) => setTimeout(() => resolve({ data: { user: null } }), 3000))
-      ]);
-      const user = userResult.data?.user ?? null;
+      // getSession() čte z localStorage — rychlé, bez síťového requestu
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? null;
       const isAnonymous = !user;
-
-      // Získej access_token ze session pokud přihlášen
-      let accessToken: string | null = null;
-      if (user) {
-        const sessionResult = await Promise.race([
-          supabase.auth.getSession(),
-          new Promise<any>((resolve) => setTimeout(() => resolve({ data: { session: null } }), 2000))
-        ]);
-        accessToken = sessionResult.data?.session?.access_token ?? null;
-      }
+      const accessToken = session?.access_token ?? null;
 
       const res = await fetch("/api/analyze", {
         method: "POST",
