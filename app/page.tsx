@@ -32,7 +32,6 @@ export default function Home() {
   const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Načti skutečný počet analýz ze serveru
   useEffect(() => {
     fetch("/api/stats")
       .then((r) => r.json())
@@ -47,14 +46,20 @@ export default function Home() {
     setError(null);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const isAnonymous = !session;
+      // getUser() místo getSession() — ověří token na serveru
+      const { data: { user } } = await supabase.auth.getUser();
+      const isAnonymous = !user;
+      
+      // Pokud je přihlášen, získej access_token ze session
+      const accessToken = user
+        ? (await supabase.auth.getSession()).data.session?.access_token
+        : null;
 
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({ text: input, isAnonymous }),
       });
@@ -95,14 +100,12 @@ export default function Home() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const riskColor =
-    !result ? ""
+  const riskColor = !result ? ""
     : result.risk >= 70 ? "text-red-400"
     : result.risk >= 40 ? "text-yellow-400"
     : "text-green-400";
 
-  const riskBorderColor =
-    !result ? ""
+  const riskBorderColor = !result ? ""
     : result.risk >= 70 ? "border-red-500/30"
     : result.risk >= 40 ? "border-yellow-500/30"
     : "border-green-500/30";
@@ -116,27 +119,20 @@ export default function Home() {
     <main className="min-h-screen bg-[#020617] text-white pt-28 px-4 sm:px-6 pb-20 flex flex-col items-center">
       <div className="max-w-4xl w-full space-y-10 text-center">
 
-        {/* Hero sekce */}
         <div className="space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest">
             <Zap size={10} fill="currentColor" /> AI Security v4.6
           </div>
-
-          {/* Nadpis — dva bloky aby se neoříznul */}
           <h1 className="font-black italic uppercase leading-[0.9] tracking-tighter">
             <span className="block text-5xl sm:text-6xl md:text-7xl text-white">PROVĚŘ</span>
             <span className="block text-5xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700">
               NEŽ KLIKNEŠ
             </span>
           </h1>
-
-          {/* Komunitní štít — reálná data nebo skeleton */}
           <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
             Komunitní štít:{" "}
             {totalAnalyses !== null ? (
-              <span className="text-white text-lg font-black">
-                {totalAnalyses.toLocaleString("cs-CZ")}
-              </span>
+              <span className="text-white text-lg font-black">{totalAnalyses.toLocaleString("cs-CZ")}</span>
             ) : (
               <span className="inline-block w-16 h-5 bg-slate-800 rounded animate-pulse align-middle" />
             )}{" "}
@@ -144,7 +140,6 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Input area */}
         <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] p-2 shadow-2xl mx-auto max-w-3xl">
           <textarea
             value={input}
@@ -165,35 +160,26 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Error stav */}
         {error && (
           <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">
             {error}
           </div>
         )}
 
-        {/* Výsledek analýzy */}
         {result && (
           <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left max-w-3xl mx-auto w-full`}>
-
-            {/* Risk score */}
             <div className="text-center mb-8">
-              <div className={`text-7xl font-black mb-2 ${riskColor}`}>
-                {result.risk}%
-              </div>
+              <div className={`text-7xl font-black mb-2 ${riskColor}`}>{result.risk}%</div>
               <div className={`inline-flex items-center gap-2 mb-3 ${riskColor}`}>
                 <RiskIcon size={20} />
                 <span className="font-black uppercase text-sm tracking-widest">
                   {result.risk >= 70 ? "Vysoké riziko" : result.risk >= 40 ? "Střední riziko" : "Nízké riziko"}
                 </span>
               </div>
-              <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter text-white">
-                {result.verdict}
-              </h2>
+              <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter text-white">{result.verdict}</h2>
             </div>
 
             <div className="space-y-6">
-              {/* Analýza */}
               <div className="space-y-2">
                 <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
                   <Info size={14} /> Analýza
@@ -201,7 +187,6 @@ export default function Home() {
                 <p className="text-slate-300 text-sm leading-relaxed">{result.analysis}</p>
               </div>
 
-              {/* Identifikované hrozby */}
               {result.threats && result.threats.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
@@ -217,7 +202,6 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Taktiky útočníka — pouze PRO/BASIC */}
               {result.tactics && result.tactics.length > 0 && (
                 <div className="space-y-2">
                   <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
@@ -233,14 +217,10 @@ export default function Home() {
                 </div>
               )}
 
-              {/* Doporučení */}
               <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                <p className="italic text-slate-300 text-sm text-center">
-                  "{result.recommendation}"
-                </p>
+                <p className="italic text-slate-300 text-sm text-center">"{result.recommendation}"</p>
               </div>
 
-              {/* Footer: kredity + sdílení */}
               <div className="flex items-center justify-between pt-2">
                 <div className="text-slate-600 text-xs">
                   {result.tier && result.tier !== "free" && result.credits !== undefined && (
@@ -260,11 +240,9 @@ export default function Home() {
                   }
                 </button>
               </div>
-
             </div>
           </div>
         )}
-
       </div>
     </main>
   );
