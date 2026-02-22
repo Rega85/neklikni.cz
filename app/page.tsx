@@ -46,14 +46,23 @@ export default function Home() {
     setError(null);
 
     try {
-      // getUser() místo getSession() — ověří token na serveru
-      const { data: { user } } = await supabase.auth.getUser();
+      // Timeout 3s na getUser aby se nezaseklo
+      const userResult = await Promise.race([
+        supabase.auth.getUser(),
+        new Promise<any>((resolve) => setTimeout(() => resolve({ data: { user: null } }), 3000))
+      ]);
+      const user = userResult.data?.user ?? null;
       const isAnonymous = !user;
-      
-      // Pokud je přihlášen, získej access_token ze session
-      const accessToken = user
-        ? (await supabase.auth.getSession()).data.session?.access_token
-        : null;
+
+      // Získej access_token ze session pokud přihlášen
+      let accessToken: string | null = null;
+      if (user) {
+        const sessionResult = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<any>((resolve) => setTimeout(() => resolve({ data: { session: null } }), 2000))
+        ]);
+        accessToken = sessionResult.data?.session?.access_token ?? null;
+      }
 
       const res = await fetch("/api/analyze", {
         method: "POST",
@@ -63,6 +72,12 @@ export default function Home() {
         },
         body: JSON.stringify({ text: input, isAnonymous }),
       });
+
+      // Zachytit ne-JSON odpovědi (timeout od Vercelu apod.)
+      const contentType = res.headers.get("content-type");
+      if (!contentType?.includes("application/json")) {
+        throw new Error("Server neodpověděl správně. Zkuste to znovu.");
+      }
 
       const data = await res.json();
 
@@ -79,9 +94,9 @@ export default function Home() {
 
       setResult(data);
       setTotalAnalyses((prev) => (prev !== null ? prev + 1 : null));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Nepodařilo se připojit k serveru. Zkontrolujte připojení.");
+      setError(err.message || "Nepodařilo se připojit k serveru. Zkontrolujte připojení.");
     } finally {
       setLoading(false);
     }
