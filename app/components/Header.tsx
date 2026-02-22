@@ -1,9 +1,8 @@
 "use client";
-
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, LogOut, Zap, Crown, ChevronDown, User, Receipt, KeyRound } from "lucide-react";
+import { Shield, LogOut, Zap, ChevronDown, User, Receipt, KeyRound } from "lucide-react";
 
 type Profile = { tier: string; credits_remaining: number; };
 
@@ -22,32 +21,56 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const loadProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from("user_profiles")
-      .select("tier, credits_remaining")
-      .eq("id", userId)
-      .single();
-    if (!error && data) setProfile(data as Profile);
-  };
-
   useEffect(() => {
     let mounted = true;
+
     const init = async () => {
-      const { data: { user: u } } = await supabase.auth.getUser();
-      if (!mounted) return;
-      if (u) { setUser(u); await loadProfile(u.id); }
-      setLoading(false);
+      try {
+        // Timeout 3s — pokud Supabase neodpoví, zobrazíme PŘIHLÁSIT
+        const timeoutPromise = new Promise<null>((resolve) => 
+          setTimeout(() => resolve(null), 3000)
+        );
+        
+        const userPromise = supabase.auth.getUser().then(r => r.data.user);
+        const u = await Promise.race([userPromise, timeoutPromise]);
+
+        if (!mounted) return;
+
+        if (u) {
+          setUser(u);
+          // Načti profil s timeoutem
+          const profilePromise = supabase
+            .from("user_profiles")
+            .select("tier, credits_remaining")
+            .eq("id", u.id)
+            .single()
+            .then(r => r.data);
+          
+          const p = await Promise.race([profilePromise, new Promise<null>(res => setTimeout(() => res(null), 3000))]);
+          if (mounted && p) setProfile(p as Profile);
+        }
+      } catch (e) {
+        console.warn("Header auth error:", e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
     };
+
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
       if (!mounted) return;
       const u = session?.user || null;
       setUser(u);
-      if (u) { await loadProfile(u.id); } else { setProfile(null); }
+      if (u) {
+        const { data } = await supabase.from("user_profiles").select("tier, credits_remaining").eq("id", u.id).single();
+        if (mounted) setProfile(data as Profile || null);
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
     });
+
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [supabase]);
 
@@ -84,7 +107,7 @@ export default function Header() {
           </Link>
 
           {loading ? (
-            <div className="w-36 h-9 bg-white/5 rounded-full animate-pulse" />
+            <div className="w-24 h-9 bg-white/5 rounded-full animate-pulse" />
           ) : user ? (
             <div className="relative" ref={menuRef}>
               <button
@@ -105,7 +128,6 @@ export default function Header() {
 
               {menuOpen && (
                 <div className="absolute right-0 top-12 w-72 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50">
-                  {/* Profil hlavička */}
                   <div className="p-4 border-b border-white/5">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-sm font-black">
@@ -120,7 +142,6 @@ export default function Header() {
                     </div>
                   </div>
 
-                  {/* Kredity */}
                   <div className="p-4 border-b border-white/5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Kredity</span>
@@ -136,17 +157,13 @@ export default function Header() {
                         />
                       </div>
                     )}
-                    <Link
-                      href="/pricing"
-                      onClick={() => setMenuOpen(false)}
-                      className="mt-1 w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase py-2 rounded-xl transition-colors"
-                    >
+                    <Link href="/pricing" onClick={() => setMenuOpen(false)}
+                      className="mt-1 w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase py-2 rounded-xl transition-colors">
                       <Zap size={12} fill="currentColor" />
                       {tier === "free" ? "Koupit kredity" : "Dobít kredity"}
                     </Link>
                   </div>
 
-                  {/* Navigace — všechno vede na /profile */}
                   <div className="p-2">
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
                       <User size={16} className="text-slate-500" /> Můj profil & kredity
@@ -159,7 +176,6 @@ export default function Header() {
                     </Link>
                   </div>
 
-                  {/* Odhlášení */}
                   <div className="p-2 border-t border-white/5">
                     <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors text-sm">
                       <LogOut size={16} /> Odhlásit se
@@ -171,7 +187,9 @@ export default function Header() {
           ) : (
             <div className="flex items-center gap-2">
               <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-xs font-black uppercase tracking-widest transition-colors sm:hidden">Ceník</Link>
-              <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">PŘIHLÁSIT</Link>
+              <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">
+                PŘIHLÁSIT
+              </Link>
             </div>
           )}
         </div>
