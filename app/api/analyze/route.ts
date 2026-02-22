@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -41,6 +43,8 @@ Analyzuj zprávu detailně a vrať POUZE validní JSON bez markdown bloků:
     "technical_indicators": ["technický indikátor"]
   }
 }`;
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   try {
@@ -92,24 +96,44 @@ export async function POST(req: Request) {
       });
     }
 
-    // ── PŘIHLÁŠENÝ UŽIVATEL ────────────────────────────────────────────────
-    const auth = req.headers.get("authorization") || "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+    // ── PŘIHLÁŠENÝ UŽIVATEL — zkus cookies i Bearer token ─────────────────
+    let userId: string | null = null;
 
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Metoda 1: cookies (spolehlivější)
+    try {
+      const cookieStore = await cookies();
+      const supabaseCookies = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll() { return cookieStore.getAll(); },
+            setAll() {},
+          },
+        }
+      );
+      const { data: { user } } = await supabaseCookies.auth.getUser();
+      if (user) userId = user.id;
+    } catch {}
+
+    // Metoda 2: Bearer token jako fallback
+    if (!userId) {
+      const auth = req.headers.get("authorization") || "";
+      const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
+      if (token) {
+        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+        if (user) userId = user.id;
+      }
     }
 
-    const { data: { user }, error: userErr } = await supabaseAdmin.auth.getUser(token);
-
-    if (userErr || !user) {
-      return NextResponse.json({ error: "Neplatná session. Přihlaste se znovu." }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ error: "Přihlaste se prosím znovu." }, { status: 401 });
     }
 
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from("user_profiles")
       .select("tier, credits_remaining")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single();
 
     if (profileErr || !profile) {
@@ -136,7 +160,7 @@ export async function POST(req: Request) {
 
     const { data: deductResult, error: deductErr } = await supabaseAdmin.rpc(
       "deduct_credit",
-      { p_user_id: user.id }
+      { p_user_id: userId }
     );
 
     if (deductErr || !deductResult) {
@@ -145,7 +169,7 @@ export async function POST(req: Request) {
     }
 
     const result = await runAnalysis(text, tier);
-    const shareId = await saveResult(user.id, text, result, tier);
+    const shareId = await saveResult(userId, text, result, tier);
 
     void (async () => { try { await supabaseAdmin.rpc("increment_total_analyses"); } catch {} })();
 
