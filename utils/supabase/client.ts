@@ -1,11 +1,9 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
-let client: ReturnType<typeof createSupabaseClient> | null = null;
-
+// OPRAVA: Žádný singleton! Každé volání vrátí fresh client
+// který správně načte aktuální session z cookies/localStorage
 export function createClient() {
-  if (client) return client;
-  
-  client = createSupabaseClient(
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
@@ -16,7 +14,5 @@ export function createClient() {
         storageKey: 'neklikni-auth',
       },
     }
-  );
-  
-  return client;
+  )
 }

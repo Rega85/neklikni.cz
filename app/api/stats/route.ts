@@ -1,18 +1,33 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc('get_total_analyses');
-    
+    const { data, error } = await supabaseAdmin
+      .from("site_stats")
+      .select("value")
+      .eq("key", "total_analyses")
+      .single();
+
     if (error) throw error;
-    
-    // Tady přičítáme ten základ 1000, ať to na startu nevypadá jako město duchů
-    return NextResponse.json({ total: (data || 0) + 1000 });
+
+    return NextResponse.json(
+      { total: data?.value ?? 0 },
+      {
+        headers: {
+          // Cache 60 sekund — nemusíme číst DB při každém page loadu
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
   } catch (err) {
-    console.error("Chyba při načítání statistik:", err);
-    // Pokud se něco pokazí, ať aspoň ukážeme to magické číslo
-    return NextResponse.json({ total: 1000 }); 
+    console.error("Stats error:", err);
+    // Při chybě vrátíme null — frontend zobrazí skeleton místo falešného čísla
+    return NextResponse.json({ total: null });
   }
 }
