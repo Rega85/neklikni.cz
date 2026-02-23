@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
@@ -80,13 +80,13 @@ export default function Header() {
           </Link>
           <nav className="hidden sm:flex items-center gap-4">
             <Link href="/" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
-              <Home size={13} /> Domů
+              <Home size={13} /> Domu
             </Link>
           </nav>
         </div>
 
         <div className="flex items-center gap-3">
-          <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors hidden sm:block">Ceník</Link>
+          <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors hidden sm:block">Cenik</Link>
 
           {initialLoading ? (
             <div className="w-28 h-9 bg-white/5 rounded-full animate-pulse" />
@@ -98,7 +98,7 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col leading-none text-left hidden sm:flex">
                   <span className={`text-[9px] font-black uppercase ${tc.color}`}>{tc.label}</span>
-                  <span className="text-[10px] font-bold text-slate-400 mt-0.5">{profile !== null ? `${credits.toLocaleString("cs-CZ")} kreditů` : "načítám..."}</span>
+                  <span className="text-[10px] font-bold text-slate-400 mt-0.5">{profile !== null ? `${credits.toLocaleString("cs-CZ")} kreditu` : "nacitam..."}</span>
                 </div>
                 <ChevronDown size={14} className={`text-slate-500 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
               </button>
@@ -117,7 +117,7 @@ export default function Header() {
 
                   <div className="p-4 border-b border-white/5">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Zbývající kredity</span>
+                      <span className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Zbyvajici kredity</span>
                       <span className="text-white font-black text-xl">{credits.toLocaleString("cs-CZ")}</span>
                     </div>
                     {maxCredits > 0 && (
@@ -126,35 +126,35 @@ export default function Header() {
                       </div>
                     )}
                     <Link href="/pricing" onClick={() => setMenuOpen(false)} className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase py-2.5 rounded-xl transition-colors">
-                      <Zap size={12} fill="currentColor" /> {tier === "free" ? "Koupit kredity" : "Dobít kredity"}
+                      <Zap size={12} fill="currentColor" /> {tier === "free" ? "Koupit kredity" : "Dobit kredity"}
                     </Link>
                   </div>
 
                   <div className="p-2 space-y-0.5">
                     <Link href="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <Home size={16} className="text-slate-500 shrink-0" /><span>Hlavní stránka</span>
+                      <Home size={16} className="text-slate-500 shrink-0" /><span>Hlavni stranka</span>
                     </Link>
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <User size={16} className="text-slate-500 shrink-0" /><span>Můj profil</span>
+                      <User size={16} className="text-slate-500 shrink-0" /><span>Muj profil</span>
                     </Link>
                     <Link href="/billing" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <Receipt size={16} className="text-slate-500 shrink-0" /><span>Fakturace & předplatné</span>
+                      <Receipt size={16} className="text-slate-500 shrink-0" /><span>Fakturace a predplatne</span>
                     </Link>
                     <Link href="/update-password" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <KeyRound size={16} className="text-slate-500 shrink-0" /><span>Změna hesla</span>
+                      <KeyRound size={16} className="text-slate-500 shrink-0" /><span>Zmena hesla</span>
                     </Link>
                   </div>
 
                   <div className="p-2 border-t border-white/5">
                     <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors text-sm">
-                      <LogOut size={16} className="shrink-0" /><span>Odhlásit se</span>
+                      <LogOut size={16} className="shrink-0" /><span>Odhlasit se</span>
                     </button>
                   </div>
                 </div>
               )}
             </div>
           ) : (
-            <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">PŘIHLÁSIT</Link>
+            <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">PRIHLASIT</Link>
           )}
         </div>
       </div>
