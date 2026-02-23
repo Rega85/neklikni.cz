@@ -76,7 +76,7 @@ export default function Header() {
             <div className="bg-purple-600 p-1.5 rounded-lg">
               <Shield size={18} className="text-white" fill="currentColor" />
             </div>
-            <span className="font-black text-lg text-white uppercase tracking-tighter">NEKLIKNI<span className="text-purple-400"> .CZ</span></span>
+            <span className="font-black text-lg text-white uppercase tracking-tighter">NEKLIKNI<span className="text-purple-400">.CZ</span></span>
           </Link>
           <nav className="hidden sm:flex items-center gap-4">
             <Link href="/" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
