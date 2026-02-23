@@ -29,20 +29,20 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    // Nejdrive zkus sessionStorage - zustane pri navigaci zpet
+    // 1. Nejdrive zkus localStorage - zustane pri navigaci zpet
     try {
-      const cached = sessionStorage.getItem("neklikni_total");
+      const cached = localStorage.getItem("neklikni_total");
       if (cached) setTotalAnalyses(parseInt(cached, 10));
     } catch {}
 
-    // Vzdy fetch aktualni cislo (no-store = zadne cachovani)
+    // 2. Vzdy fetch aktualni cislo (no-store = zadne cachovani)
     fetch("/api/stats", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         const total = d.total ?? null;
         if (total !== null) {
           setTotalAnalyses(total);
-          try { sessionStorage.setItem("neklikni_total", String(total)); } catch {}
+          try { localStorage.setItem("neklikni_total", String(total)); } catch {}
         }
       })
       .catch(() => {});
@@ -55,7 +55,7 @@ export default function Home() {
     setError(null);
 
     try {
-      // Header posle credentialy (cookies) automaticky - server je precte pres createClient()
+      // ČISTÝ FETCH BEZ HACKŮ - backend si cookie přebere sám díky credentials: "include"
       const res = await fetch("/api/analyze", {
         method: "POST",
         credentials: "include",
@@ -82,14 +82,12 @@ export default function Home() {
       }
 
       setResult(data);
-      // Credity aktualizuje Header pres /api/me
       window.dispatchEvent(new CustomEvent("creditsUpdated"));
 
-      // Komunitni pocitadlo
       setTotalAnalyses((prev) => {
         const next = prev !== null ? prev + 1 : null;
         if (next !== null) {
-          try { sessionStorage.setItem("neklikni_total", String(next)); } catch {}
+          try { localStorage.setItem("neklikni_total", String(next)); } catch {}
         }
         return next;
       });
@@ -142,7 +140,6 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest">
               <Zap size={10} fill="currentColor" /> AI Security v4.6
             </div>
-            {/* Vetsi padding aby se neorezavala diakritika (š, ě, š) */}
             <h1 className="font-black italic uppercase leading-none tracking-tighter pt-2 pb-6">
               <span className="block text-5xl sm:text-6xl md:text-7xl text-white">PROVĚŘ</span>
               <span className="block text-5xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700">
@@ -171,7 +168,6 @@ export default function Home() {
             <div className="flex items-center justify-between p-4 border-t border-white/5 bg-white/[0.02] rounded-b-[32px]">
               <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter · Esc pro smazání</span>
               <div className="flex items-center gap-2 ml-auto">
-                {/* Tlacitko Vymazat - zobrazuje se jen kdyz je co mazat */}
                 {(input || result || error) && (
                   <button
                     onClick={handleClear}
