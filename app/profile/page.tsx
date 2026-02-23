@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
-import { Loader2, Shield, Zap, CreditCard } from "lucide-react";
+import { Loader2, CreditCard, Zap } from "lucide-react";
 import Link from "next/link";
+
+function getTokenFromCookie(): string | null {
+  try {
+    const all = document.cookie.split("; ");
+    const c = all.find((r) => r.includes("sb-") && r.includes("-auth-token="));
+    if (!c) return null;
+    const raw = c.split("=").slice(1).join("=");
+    return JSON.parse(atob(raw.replace("base64-", ""))).access_token ?? null;
+  } catch { return null; }
+}
 
 export default function ProfilePage() {
   const [supabase] = useState(() => createClient());
@@ -13,46 +23,38 @@ export default function ProfilePage() {
 
   useEffect(() => {
     let mounted = true;
-    const loadData = async () => {
+    (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          if (mounted) setEmail(session.user.email ?? null);
-          const { data } = await supabase
-            .from("user_profiles")
-            .select("*")
-            .eq("id", session.user.id)
-            .maybeSingle();
-          if (mounted && data) setProfile(data);
-        }
-      } catch (err) {
-        console.error("Chyba načítání profilu:", err);
+        const token = getTokenFromCookie();
+        if (!token) return;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/user`, {
+          headers: { Authorization: `Bearer ${token}`, apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+        });
+        if (!res.ok) return;
+        const u = await res.json();
+        if (!mounted) return;
+        setEmail(u.email ?? null);
+        const { data } = await supabase.from("user_profiles").select("*").eq("id", u.id).maybeSingle();
+        if (mounted && data) setProfile(data);
+      } catch (e) {
+        console.error(e);
       } finally {
         if (mounted) setLoading(false);
       }
-    };
-    loadData();
+    })();
     return () => { mounted = false; };
   }, [supabase]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-        <Loader2 className="animate-spin text-purple-500" size={32} />
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen bg-[#020617] flex items-center justify-center"><Loader2 className="animate-spin text-purple-500" size={32} /></div>;
 
-  if (!profile) {
-    return (
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">
-        <div className="text-center space-y-4">
-          <p className="text-slate-400">Nejste přihlášeni.</p>
-          <Link href="/login" className="bg-white text-black px-6 py-2 rounded-lg font-black text-xs">PŘIHLÁSIT SE</Link>
-        </div>
+  if (!profile) return (
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center text-white">
+      <div className="text-center space-y-4">
+        <p className="text-slate-400">Nejste přihlášeni.</p>
+        <Link href="/login" className="bg-white text-black px-6 py-2 rounded-lg font-black text-xs">PŘIHLÁSIT SE</Link>
       </div>
-    );
-  }
+    </div>
+  );
 
   const tier = profile.tier || "free";
   const credits = profile.credits_remaining ?? 0;
@@ -84,14 +86,10 @@ export default function ProfilePage() {
           </div>
           {maxCredits > 0 && (
             <div className="w-full bg-slate-800 rounded-full h-2">
-              <div
-                className="bg-purple-500 h-2 rounded-full transition-all"
-                style={{ width: `${Math.min(100, (credits / maxCredits) * 100)}%` }}
-              />
+              <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${Math.min(100, (credits / maxCredits) * 100)}%` }} />
             </div>
           )}
-          <Link href="/pricing"
-            className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase py-3 rounded-xl transition-colors">
+          <Link href="/pricing" className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase py-3 rounded-xl transition-colors">
             <Zap size={14} fill="currentColor" />
             {tier === "free" ? "Koupit kredity" : "Dobít kredity"}
           </Link>
