@@ -1,20 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, CreditCard, Zap, Receipt } from "lucide-react";
+import { Loader2, CreditCard, Zap, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 export default function BillingPage() {
   const [loading, setLoading] = useState(true);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [data, setData] = useState<{user: any, profile: any} | null>(null);
 
   useEffect(() => {
-    fetch('/api/me', { cache: 'no-store' })
+    fetch(`/api/me?t=${Date.now()}`, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(d => setData(d))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, []);
+
+  const handlePortal = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/portal", { method: "POST" });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } catch (e) {
+      console.error("Chyba portálu", e);
+    } finally {
+      setPortalLoading(false);
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center">
@@ -37,6 +51,7 @@ export default function BillingPage() {
     <main className="min-h-screen bg-[#020617] text-white pt-28 px-4 sm:px-6 pb-20">
       <div className="max-w-2xl mx-auto space-y-6">
         <h1 className="text-3xl font-black uppercase italic tracking-tighter">Fakturace & Předplatné</h1>
+
         <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -50,15 +65,21 @@ export default function BillingPage() {
             <p className="text-white font-black text-2xl">{(data.profile.credits_remaining ?? 0).toLocaleString("cs-CZ")}</p>
           </div>
         </div>
+
         <Link href="/pricing" className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-black uppercase py-4 rounded-2xl transition-colors">
           <Zap size={16} fill="currentColor" /> Změnit tarif nebo dobít
         </Link>
-        <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl">
-          <div className="flex items-center gap-3 mb-3">
-            <Receipt size={20} className="text-purple-400" />
-            <p className="text-white font-bold">Historie plateb</p>
-          </div>
-          <p className="text-slate-500 text-sm">Historie plateb bude dostupná brzy.</p>
+
+        <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl flex flex-col items-center text-center space-y-4">
+          <p className="text-slate-400 text-sm leading-relaxed">Faktury, historii plateb a nastavení platební karty spravujeme bezpečně přes službu Stripe.</p>
+          <button
+            onClick={handlePortal}
+            disabled={portalLoading}
+            className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 font-bold text-sm transition-colors disabled:opacity-50"
+          >
+            {portalLoading ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}
+            Spravovat platby ve Stripe
+          </button>
         </div>
       </div>
     </main>

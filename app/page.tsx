@@ -29,14 +29,12 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    // 1. Nejdrive zkus localStorage - zustane pri navigaci zpet
     try {
       const cached = localStorage.getItem("neklikni_total");
       if (cached) setTotalAnalyses(parseInt(cached, 10));
     } catch {}
 
-    // 2. Vzdy fetch aktualni cislo (no-store = zadne cachovani)
-    fetch("/api/stats", { cache: "no-store" })
+    fetch(`/api/stats?t=${Date.now()}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         const total = d.total ?? null;
@@ -55,7 +53,6 @@ export default function Home() {
     setError(null);
 
     try {
-      // ČISTÝ FETCH BEZ HACKŮ - backend si cookie přebere sám díky credentials: "include"
       const res = await fetch("/api/analyze", {
         method: "POST",
         credentials: "include",
@@ -65,19 +62,15 @@ export default function Home() {
 
       const contentType = res.headers.get("content-type");
       if (!contentType?.includes("application/json")) {
-        throw new Error("Server neodpověděl správně. Možná je přetížen, zkuste to znovu.");
+        throw new Error("Server neodpověděl. Možná je přetížen, zkuste to znovu.");
       }
 
       const data = await res.json();
 
       if (!res.ok) {
-        if (res.status === 429 && data.limitReached) {
-          setError(data.message || "Denní limit vyčerpán. Zaregistrujte se.");
-        } else if (res.status === 402) {
-          setError(data.message || "Nedostatek kreditů. Kupte si balíček.");
-        } else {
-          setError(data.error || "Něco se pokazilo. Zkuste to znovu.");
-        }
+        if (res.status === 429 && data.limitReached) setError(data.message || "Denní limit vyčerpán.");
+        else if (res.status === 402) setError(data.message || "Nedostatek kreditů.");
+        else setError(data.error || "Něco se pokazilo. Zkuste to znovu.");
         return;
       }
 
@@ -92,18 +85,13 @@ export default function Home() {
         return next;
       });
     } catch (err: any) {
-      console.error(err);
       setError(err.message || "Nepodařilo se připojit k serveru.");
     } finally {
       setLoading(false);
     }
   }, [input, loading]);
 
-  const handleClear = () => {
-    setInput("");
-    setResult(null);
-    setError(null);
-  };
+  const handleClear = () => { setInput(""); setResult(null); setError(null); };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") handleAnalysis();
@@ -111,24 +99,14 @@ export default function Home() {
   };
 
   const handleShare = async () => {
-    const url = result?.shareId
-      ? `${window.location.origin}/result/${result.shareId}`
-      : window.location.href;
+    const url = result?.shareId ? `${window.location.origin}/result/${result.shareId}` : window.location.href;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const riskColor = !result ? ""
-    : result.risk >= 70 ? "text-red-400"
-    : result.risk >= 40 ? "text-yellow-400"
-    : "text-green-400";
-
-  const riskBorderColor = !result ? ""
-    : result.risk >= 70 ? "border-red-500/30"
-    : result.risk >= 40 ? "border-yellow-500/30"
-    : "border-green-500/30";
-
+  const riskColor = !result ? "" : result.risk >= 70 ? "text-red-400" : result.risk >= 40 ? "text-yellow-400" : "text-green-400";
+  const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
   const RiskIcon = !result ? Shield : result.risk >= 40 ? AlertTriangle : CheckCircle;
 
   return (
@@ -136,17 +114,19 @@ export default function Home() {
       <main className="flex-grow text-white pt-28 px-4 sm:px-6 pb-20 flex flex-col items-center">
         <div className="max-w-4xl w-full space-y-10 text-center">
 
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest">
               <Zap size={10} fill="currentColor" /> AI Security v4.6
             </div>
-            <h1 className="font-black italic uppercase leading-none tracking-tighter pt-2 pb-6">
-              <span className="block text-5xl sm:text-6xl md:text-7xl text-white">PROVĚŘ</span>
-              <span className="block text-5xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700">
+
+            <h1 className="flex flex-col items-center justify-center font-black italic uppercase tracking-tighter">
+              <span className="text-5xl sm:text-6xl md:text-7xl text-white leading-tight">PROVĚŘ</span>
+              <span className="text-5xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight">
                 NEŽ KLIKNEŠ
               </span>
             </h1>
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-2">
               Komunitní štít:{" "}
               {totalAnalyses !== null ? (
                 <span className="text-white text-lg font-black">{totalAnalyses.toLocaleString("cs-CZ")}</span>
@@ -169,10 +149,7 @@ export default function Home() {
               <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter · Esc pro smazání</span>
               <div className="flex items-center gap-2 ml-auto">
                 {(input || result || error) && (
-                  <button
-                    onClick={handleClear}
-                    className="flex items-center gap-1.5 px-4 py-3 rounded-2xl font-black text-xs text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 transition-all"
-                  >
+                  <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-3 rounded-2xl font-black text-xs text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 transition-all">
                     <X size={13} /> Vymazat
                   </button>
                 )}
@@ -187,11 +164,7 @@ export default function Home() {
             </div>
           </div>
 
-          {error && (
-            <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">
-              {error}
-            </div>
-          )}
+          {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
           {result && (
             <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left max-w-3xl mx-auto w-full`}>
@@ -199,31 +172,23 @@ export default function Home() {
                 <div className={`text-7xl font-black mb-2 ${riskColor}`}>{result.risk}%</div>
                 <div className={`inline-flex items-center gap-2 mb-3 ${riskColor}`}>
                   <RiskIcon size={20} />
-                  <span className="font-black uppercase text-sm tracking-widest">
-                    {result.risk >= 70 ? "Vysoké riziko" : result.risk >= 40 ? "Střední riziko" : "Nízké riziko"}
-                  </span>
+                  <span className="font-black uppercase text-sm tracking-widest">{result.risk >= 70 ? "Vysoké riziko" : result.risk >= 40 ? "Střední riziko" : "Nízké riziko"}</span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter text-white">{result.verdict}</h2>
               </div>
 
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                    <Info size={14} /> Analýza
-                  </h4>
+                  <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><Info size={14} /> Analýza</h4>
                   <p className="text-slate-300 text-sm leading-relaxed">{result.analysis}</p>
                 </div>
 
                 {result.threats && result.threats.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                      <AlertTriangle size={14} /> Identifikované hrozby
-                    </h4>
+                    <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><AlertTriangle size={14} /> Identifikované hrozby</h4>
                     <ul className="space-y-1">
                       {result.threats.map((threat, i) => (
-                        <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
-                          <span className="text-red-400 mt-0.5 shrink-0">•</span> {threat}
-                        </li>
+                        <li key={i} className="flex items-start gap-2 text-slate-300 text-sm"><span className="text-red-400 mt-0.5 shrink-0">•</span> {threat}</li>
                       ))}
                     </ul>
                   </div>
@@ -231,14 +196,10 @@ export default function Home() {
 
                 {result.tactics && result.tactics.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                      <Shield size={14} /> Taktiky útočníka
-                    </h4>
+                    <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><Shield size={14} /> Taktiky útočníka</h4>
                     <ul className="space-y-1">
                       {result.tactics.map((tactic, i) => (
-                        <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
-                          <span className="text-yellow-400 mt-0.5 shrink-0">▸</span> {tactic}
-                        </li>
+                        <li key={i} className="flex items-start gap-2 text-slate-300 text-sm"><span className="text-yellow-400 mt-0.5 shrink-0">▸</span> {tactic}</li>
                       ))}
                     </ul>
                   </div>
@@ -254,13 +215,8 @@ export default function Home() {
                       <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/3</span></span>
                     )}
                   </div>
-                  <button
-                    onClick={handleShare}
-                    className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl"
-                  >
-                    {copied
-                      ? <><Check size={14} className="text-green-400" /> Zkopírováno!</>
-                      : <><Share2 size={14} /> Sdílet varování</>}
+                  <button onClick={handleShare} className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
+                    {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}
                   </button>
                 </div>
               </div>
@@ -278,7 +234,6 @@ export default function Home() {
             </div>
             <p>© {new Date().getFullYear()} Všechna práva vyhrazena.</p>
           </div>
-
           <div className="flex flex-col md:flex-row gap-8 md:gap-16">
             <div className="space-y-1 leading-relaxed">
               <p className="text-slate-300 font-bold mb-2 uppercase text-[10px] tracking-widest">Provozovatel</p>
@@ -296,7 +251,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
         <div className="max-w-7xl mx-auto px-6 mt-6 pt-4 border-t border-white/5 text-[10px] text-slate-600 text-center leading-relaxed">
           Výsledky analýzy vygenerované umělou inteligencí mají informativní charakter. Technologie se může mýlit — poslední rozhodnutí je vždy na Vás. Provozovatel nenese právní odpovědnost za případné škody způsobené kybernetickým útokem.
         </div>
