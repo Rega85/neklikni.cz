@@ -121,7 +121,7 @@ export default function Home() {
 
             <h1 className="flex flex-col items-center justify-center font-black italic uppercase tracking-tighter">
               <span className="text-5xl sm:text-6xl md:text-7xl text-white leading-tight">PROVĚŘ</span>
-              <span className="text-5xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight">
+              <span className="text-4xl sm:text-5xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight">
                 NEŽ KLIKNEŠ
               </span>
             </h1>
