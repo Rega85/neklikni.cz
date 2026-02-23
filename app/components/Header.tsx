@@ -24,33 +24,22 @@ export default function Header() {
   const userRef = useRef<any>(null);
 
   const loadProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase
-      .from("user_profiles")
-      .select("tier, credits_remaining")
-      .eq("id", userId)
-      .single();
+    const { data } = await supabase.from("user_profiles").select("tier, credits_remaining").eq("id", userId).single();
     if (data) setProfile(data as Profile);
   }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
-
     const init = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-
         if (error || (session && !session.user)) {
-          // Zkažená session - vyčisti
           await supabase.auth.signOut();
           if (mounted) { setUser(null); setProfile(null); }
           return;
         }
-
         if (session?.user) {
-          if (mounted) {
-            setUser(session.user);
-            userRef.current = session.user;
-          }
+          if (mounted) { setUser(session.user); userRef.current = session.user; }
           await loadProfile(session.user.id);
         }
       } catch (e) {
@@ -60,18 +49,14 @@ export default function Header() {
         if (mounted) setLoading(false);
       }
     };
-
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
       if (event === 'SIGNED_OUT' || !session) {
-        setUser(null);
-        setProfile(null);
-        userRef.current = null;
+        setUser(null); setProfile(null); userRef.current = null;
       } else if (session?.user) {
-        setUser(session.user);
-        userRef.current = session.user;
+        setUser(session.user); userRef.current = session.user;
         await loadProfile(session.user.id);
       }
       setLoading(false);
@@ -114,14 +99,16 @@ export default function Header() {
           <div className="bg-purple-600 p-1.5 rounded-lg">
             <Shield size={18} className="text-white" fill="currentColor" />
           </div>
-          <span className="font-black text-lg text-white uppercase tracking-tighter">NeKlikni</span>
+          <span className="font-black text-lg text-white uppercase tracking-tighter">Neklikni.cz</span>
         </Link>
 
-        <div className="flex items-center gap-3">
-          <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors hidden sm:block">
-            Cen&#237;k
-          </Link>
+        <nav className="flex items-center gap-6">
+          <Link href="/" className="text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors hidden sm:block">Domů</Link>
+          <Link href="/" className="text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors hidden sm:block">Analýza</Link>
+          <Link href="/pricing" className="text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors hidden sm:block">Ceník</Link>
+        </nav>
 
+        <div className="flex items-center gap-3">
           {loading ? (
             <div className="w-24 h-9 bg-white/5 rounded-full animate-pulse" />
           ) : user ? (
@@ -136,7 +123,7 @@ export default function Header() {
                 <div className="flex flex-col leading-none text-left hidden sm:flex">
                   <span className={`text-[9px] font-black uppercase ${tierConfig.color}`}>{tierConfig.label}</span>
                   <span className="text-[10px] font-bold text-slate-400 mt-0.5">
-                    {profile !== null ? `${profile.credits_remaining.toLocaleString("cs-CZ")} kredit&#367;` : "na&#269;&#237;t&#225;m&#8230;"}
+                    {profile !== null ? `${profile.credits_remaining.toLocaleString("cs-CZ")} kreditů` : "načítám..."}
                   </span>
                 </div>
                 <ChevronDown size={14} className={`text-slate-500 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
@@ -151,9 +138,7 @@ export default function Header() {
                       </div>
                       <div>
                         <p className="text-white text-sm font-bold truncate max-w-[180px]">{user.email}</p>
-                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${tierConfig.color} ${tierConfig.bg}`}>
-                          {tierConfig.label}
-                        </span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${tierConfig.color} ${tierConfig.bg}`}>{tierConfig.label}</span>
                       </div>
                     </div>
                   </div>
@@ -161,9 +146,7 @@ export default function Header() {
                   <div className="p-4 border-b border-white/5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Kredity</span>
-                      <span className="text-white font-black text-lg">
-                        {profile?.credits_remaining.toLocaleString("cs-CZ") ?? "&#8212;"}
-                      </span>
+                      <span className="text-white font-black text-lg">{profile?.credits_remaining.toLocaleString("cs-CZ") ?? "—"}</span>
                     </div>
                     {profile && tier !== "free" && (
                       <div className="w-full bg-slate-800 rounded-full h-1.5 mb-3">
@@ -176,25 +159,25 @@ export default function Header() {
                     <Link href="/pricing" onClick={() => setMenuOpen(false)}
                       className="mt-1 w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase py-2 rounded-xl transition-colors">
                       <Zap size={12} fill="currentColor" />
-                      {tier === "free" ? "Koupit kredity" : "Dob&#237;t kredity"}
+                      {tier === "free" ? "Koupit kredity" : "Dobít kredity"}
                     </Link>
                   </div>
 
                   <div className="p-2">
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <User size={16} className="text-slate-500" /> M&#367;j profil &amp; kredity
+                      <User size={16} className="text-slate-500" /> Můj profil & kredity
+                    </Link>
+                    <Link href="/billing" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
+                      <Receipt size={16} className="text-slate-500" /> Fakturace & předplatné
                     </Link>
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <Receipt size={16} className="text-slate-500" /> Fakturace &amp; p&#345;edplatn&#233;
-                    </Link>
-                    <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <KeyRound size={16} className="text-slate-500" /> Zm&#283;na hesla
+                      <KeyRound size={16} className="text-slate-500" /> Změna hesla
                     </Link>
                   </div>
 
                   <div className="p-2 border-t border-white/5">
                     <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors text-sm">
-                      <LogOut size={16} /> Odhl&#225;sit se
+                      <LogOut size={16} /> Odhlásit se
                     </button>
                   </div>
                 </div>
@@ -202,9 +185,9 @@ export default function Header() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-xs font-black uppercase tracking-widest transition-colors sm:hidden">Cen&#237;k</Link>
+              <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-xs font-black uppercase tracking-widest transition-colors sm:hidden">Ceník</Link>
               <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">
-                P&#344;IHLÁSIT
+                PŘIHLÁSIT
               </Link>
             </div>
           )}

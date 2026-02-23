@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
@@ -12,11 +12,6 @@ type AnalysisResult = {
   threats: string[];
   tactics?: string[];
   recommendation: string;
-  details?: {
-    sender_analysis?: string;
-    urgency_indicators?: string[];
-    technical_indicators?: string[];
-  };
   shareId?: string;
   credits?: number;
   tier?: string;
@@ -47,17 +42,21 @@ export default function Home() {
     setError(null);
 
     try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // Ochrana proti zaseknutí na mrtvé síti
+      const authPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<any>((_, reject) => setTimeout(() => reject(new Error("Timeout sítě")), 5000));
+      
+      const { data: { session }, error: sessionError } = await Promise.race([authPromise, timeoutPromise]);
 
       if (sessionError) {
         await supabase.auth.signOut();
-        throw new Error("Relace vypr&#353;ela. Zkus se znovu p&#345;ihl&#225;sit.");
+        throw new Error("Relace vypršela. Zkus se znovu přihlásit.");
       }
 
       const isAnonymous = !session?.user;
       const accessToken = session?.access_token ?? null;
 
-      const res = await fetch("/api/analyze", {
+      const fetchPromise = fetch("/api/analyze", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -66,20 +65,23 @@ export default function Home() {
         body: JSON.stringify({ text: input, isAnonymous }),
       });
 
+      // Znovu timeout proti mrtvému serveru
+      const res = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+
       const contentType = res.headers.get("content-type");
       if (!contentType?.includes("application/json")) {
-        throw new Error("Server neodpov&#283;d&#283;l spr&#225;vn&#283;. Zkuste to znovu.");
+        throw new Error("Server neodpověděl správně (Timeout). Zkuste to znovu.");
       }
 
       const data = await res.json();
 
       if (!res.ok) {
         if (res.status === 429 && data.limitReached) {
-          setError(data.message || "Denn&#237; limit vy&#269;erp&#225;n. Zaregistrujte se pro v&#237;ce anal&#253;z.");
+          setError(data.message || "Denní limit vyčerpán. Zaregistrujte se pro více analýz.");
         } else if (res.status === 402) {
-          setError(data.message || "Nedostatek kredit&#367;. Kupte si bal&#237;&#269;ek.");
+          setError(data.message || "Nedostatek kreditů. Kupte si balíček.");
         } else {
-          setError(data.error || "N&#283;co se pokazilo. Zkuste to znovu.");
+          setError(data.error || "Něco se pokazilo. Zkuste to znovu.");
         }
         return;
       }
@@ -89,7 +91,7 @@ export default function Home() {
       setTotalAnalyses((prev) => (prev !== null ? prev + 1 : null));
     } catch (err: any) {
       console.error(err);
-      setError(err.message || "Nepoda&#345;ilo se p&#345;ipojit k serveru.");
+      setError(err.message || "Nepodařilo se připojit k serveru.");
     } finally {
       setLoading(false);
     }
@@ -100,24 +102,14 @@ export default function Home() {
   };
 
   const handleShare = async () => {
-    const url = result?.shareId
-      ? `${window.location.origin}/result/${result.shareId}`
-      : window.location.href;
+    const url = result?.shareId ? `${window.location.origin}/result/${result.shareId}` : window.location.href;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const riskColor = !result ? ""
-    : result.risk >= 70 ? "text-red-400"
-    : result.risk >= 40 ? "text-yellow-400"
-    : "text-green-400";
-
-  const riskBorderColor = !result ? ""
-    : result.risk >= 70 ? "border-red-500/30"
-    : result.risk >= 40 ? "border-yellow-500/30"
-    : "border-green-500/30";
-
+  const riskColor = !result ? "" : result.risk >= 70 ? "text-red-400" : result.risk >= 40 ? "text-yellow-400" : "text-green-400";
+  const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
   const RiskIcon = !result ? Shield : result.risk >= 40 ? AlertTriangle : CheckCircle;
 
   return (
@@ -130,13 +122,13 @@ export default function Home() {
               <Zap size={10} fill="currentColor" /> AI Security v4.6
             </div>
             <h1 className="font-black italic uppercase leading-[0.9] tracking-tighter">
-              <span className="block text-5xl sm:text-6xl md:text-7xl text-white">PROV&#282;&#344;</span>
+              <span className="block text-5xl sm:text-6xl md:text-7xl text-white">PROVĚŘ</span>
               <span className="block text-5xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700">
-                NE&#381; KLIKNE&#352;
+                NEŽ KLIKNEŠ
               </span>
             </h1>
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-              Komunitn&#237; &#353;t&#237;t:{" "}
+              Komunitní štít:{" "}
               {totalAnalyses !== null ? (
                 <span className="text-white text-lg font-black">{totalAnalyses.toLocaleString("cs-CZ")}</span>
               ) : (
@@ -146,22 +138,23 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] p-2 shadow-2xl mx-auto max-w-3xl">
+          <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Vlo&#382;te podez&#345;el&#253; text, SMS, email nebo URL..."
-              className="w-full bg-transparent p-6 outline-none text-white text-base sm:text-lg min-h-[160px] resize-none placeholder:text-slate-600"
+              placeholder="Vložte podezřelý text, SMS, email nebo URL..."
+              className="w-full bg-transparent p-6 outline-none text-white text-base sm:text-lg min-h-[160px] resize-none placeholder:text-slate-600 rounded-t-[32px]"
             />
-            <div className="flex items-center justify-between p-3 border-t border-white/5">
-              <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter pro odesl&#225;n&#237;</span>
+            {/* Opravené tlačítko a flex layout */}
+            <div className="flex items-center justify-between p-4 border-t border-white/5 bg-white/[0.02] rounded-b-[32px]">
+              <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter pro odeslání</span>
               <button
                 onClick={handleAnalysis}
                 disabled={loading || !input.trim()}
-                className="bg-white text-black px-12 py-3 rounded-2xl font-black text-xs flex items-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
+                className="bg-white text-black px-12 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
               >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : "PROV&#282;&#344;IT"}
+                {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}
               </button>
             </div>
           </div>
@@ -179,7 +172,7 @@ export default function Home() {
                 <div className={`inline-flex items-center gap-2 mb-3 ${riskColor}`}>
                   <RiskIcon size={20} />
                   <span className="font-black uppercase text-sm tracking-widest">
-                    {result.risk >= 70 ? "Vysok&#233; riziko" : result.risk >= 40 ? "St&#345;edn&#237; riziko" : "N&#237;zk&#233; riziko"}
+                    {result.risk >= 70 ? "Vysoké riziko" : result.risk >= 40 ? "Střední riziko" : "Nízké riziko"}
                   </span>
                 </div>
                 <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter text-white">{result.verdict}</h2>
@@ -188,7 +181,7 @@ export default function Home() {
               <div className="space-y-6">
                 <div className="space-y-2">
                   <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                    <Info size={14} /> Anal&#253;za
+                    <Info size={14} /> Analýza
                   </h4>
                   <p className="text-slate-300 text-sm leading-relaxed">{result.analysis}</p>
                 </div>
@@ -196,12 +189,12 @@ export default function Home() {
                 {result.threats && result.threats.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                      <AlertTriangle size={14} /> Identifikovan&#233; hrozby
+                      <AlertTriangle size={14} /> Identifikované hrozby
                     </h4>
                     <ul className="space-y-1">
                       {result.threats.map((threat, i) => (
                         <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
-                          <span className="text-red-400 mt-0.5 shrink-0">&#8226;</span> {threat}
+                          <span className="text-red-400 mt-0.5 shrink-0">•</span> {threat}
                         </li>
                       ))}
                     </ul>
@@ -211,12 +204,12 @@ export default function Home() {
                 {result.tactics && result.tactics.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                      <Shield size={14} /> Taktiky &#250;to&#269;n&#237;ka
+                      <Shield size={14} /> Taktiky útočníka
                     </h4>
                     <ul className="space-y-1">
                       {result.tactics.map((tactic, i) => (
                         <li key={i} className="flex items-start gap-2 text-slate-300 text-sm">
-                          <span className="text-yellow-400 mt-0.5 shrink-0">&#9658;</span> {tactic}
+                          <span className="text-yellow-400 mt-0.5 shrink-0">▸</span> {tactic}
                         </li>
                       ))}
                     </ul>
@@ -224,25 +217,23 @@ export default function Home() {
                 )}
 
                 <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                  <p className="italic text-slate-300 text-sm text-center">&#8220;{result.recommendation}&#8221;</p>
+                  <p className="italic text-slate-300 text-sm text-center">"{result.recommendation}"</p>
                 </div>
 
                 <div className="flex items-center justify-between pt-2">
                   <div className="text-slate-600 text-xs">
                     {result.tier && result.tier !== "free" && result.credits !== undefined && (
-                      <span>Zb&#253;v&#225; kredit&#367;: <span className="text-slate-400 font-bold">{result.credits}</span></span>
+                      <span>Zbývá kreditů: <span className="text-slate-400 font-bold">{result.credits}</span></span>
                     )}
                     {result.remainingChecks !== undefined && (
-                      <span>Zb&#253;v&#225; dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/3</span></span>
+                      <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/3</span></span>
                     )}
                   </div>
                   <button
                     onClick={handleShare}
                     className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl"
                   >
-                    {copied
-                      ? <><Check size={14} className="text-green-400" /> Zkop&#237;rov&#225;no!</>
-                      : <><Share2 size={14} /> Sd&#237;let varov&#225;n&#237;</>}
+                    {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}
                   </button>
                 </div>
               </div>
@@ -251,21 +242,45 @@ export default function Home() {
         </div>
       </main>
 
-      <footer className="w-full border-t border-white/5 py-8 bg-[#020617]">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <Shield size={14} className="text-purple-500" />
-            <span className="font-black text-white uppercase tracking-tighter">NeKlikni.cz</span>
-            <span>&#8212; PK Virgine, s.r.o.</span>
+      {/* PROFI FOOTER S PRÁVNÍ DOLOŽKOU A FIREMNÍMI ÚDAJI */}
+      <footer className="w-full bg-[#020617] mt-auto">
+        <div className="w-full bg-red-950/20 border-y border-red-500/10 py-6 mb-8">
+          <div className="max-w-7xl mx-auto px-6 text-center space-y-2">
+            <div className="flex items-center justify-center gap-2 text-red-500">
+              <AlertTriangle size={16} />
+              <p className="font-black uppercase tracking-widest text-[10px]">Právní doložka & Vyloučení odpovědnosti</p>
+            </div>
+            <p className="text-red-200/60 text-xs max-w-3xl mx-auto leading-relaxed">
+              Výsledky analýzy vygenerované umělou inteligencí mají výhradně informativní charakter a neslouží jako absolutní záruka bezpečnosti. Technologie AI se může mýlit. Rozhodnutí o kliknutí na odkaz nebo poskytnutí osobních údajů je vždy na Vaší vlastní zodpovědnosti. Provozovatel nenese právní odpovědnost za případné škody způsobené kybernetickým útokem.
+            </p>
           </div>
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link href="/privacy" className="hover:text-white transition-colors">Ochrana osobn&#237;ch &#250;daj&#367;</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Obchodn&#237; podm&#237;nky</Link>
-            <Link href="/contact" className="hover:text-white transition-colors">Kontakt</Link>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 pb-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-8 text-xs text-slate-500">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Shield size={16} className="text-purple-500" />
+              <span className="font-black text-white uppercase tracking-tighter text-sm">Neklikni.cz</span>
+            </div>
+            <p>© {new Date().getFullYear()} Všechna práva vyhrazena.</p>
           </div>
-          <div className="text-center sm:text-right">
-            <p>V&#253;sledky AI maj&#237; informativn&#237; charakter.</p>
-            <p>Posledn&#237; rozhodnut&#237; je v&#382;dy na V&#225;s.</p>
+          
+          <div className="flex flex-col md:flex-row gap-8 md:gap-16">
+            <div className="space-y-1 leading-relaxed">
+              <p className="text-slate-300 font-bold mb-2 uppercase text-[10px] tracking-widest">Provozovatel</p>
+              <p>PK Virgine, s.r.o.</p>
+              <p>IČO: 12345678, DIČ: CZ12345678</p> {/* ZDE UPRAV REÁLNÁ DATA */}
+              <p>Sídlo: Tvoje Ulice 123, 110 00 Praha</p> {/* ZDE UPRAV REÁLNÁ DATA */}
+              <p>Datová schránka: abcdefg</p> {/* ZDE UPRAV REÁLNÁ DATA */}
+            </div>
+
+            <div className="space-y-2 flex flex-col">
+              <p className="text-slate-300 font-bold mb-1 uppercase text-[10px] tracking-widest">Informace</p>
+              {/* PREFETCH=FALSE ŘEŠÍ 404 V KONZOLI */}
+              <Link href="/privacy" prefetch={false} className="hover:text-white transition-colors">Ochrana osobních údajů</Link>
+              <Link href="/terms" prefetch={false} className="hover:text-white transition-colors">Obchodní podmínky</Link>
+              <Link href="/contact" prefetch={false} className="hover:text-white transition-colors">Kontakt</Link>
+            </div>
           </div>
         </div>
       </footer>
