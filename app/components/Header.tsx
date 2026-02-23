@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+
+import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { Shield, LogOut, Zap, ChevronDown, User, Receipt, KeyRound } from "lucide-react";
@@ -15,42 +16,46 @@ const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 
 export default function Header() {
   const [supabase] = useState(() => createClient());
-  const [user, setUser]         = useState<any>(null);
-  const [profile, setProfile]   = useState<Profile | null>(null);
-  const [loading, setLoading]   = useState(true);
+  const [user, setUser]       = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const userRef = useRef<any>(null);
+
+  const loadProfile = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("tier, credits_remaining")
+      .eq("id", userId)
+      .single();
+    if (data) setProfile(data as Profile);
+  }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
 
     const init = async () => {
       try {
-        // Timeout 3s — pokud Supabase neodpoví, zobrazíme PŘIHLÁSIT
-        const timeoutPromise = new Promise<null>((resolve) => 
-          setTimeout(() => resolve(null), 3000)
-        );
-        
-        const userPromise = supabase.auth.getUser().then(r => r.data.user);
-        const u = await Promise.race([userPromise, timeoutPromise]);
+        const { data: { session }, error } = await supabase.auth.getSession();
 
-        if (!mounted) return;
+        if (error || (session && !session.user)) {
+          // Zkažená session - vyčisti
+          await supabase.auth.signOut();
+          if (mounted) { setUser(null); setProfile(null); }
+          return;
+        }
 
-        if (u) {
-          setUser(u);
-          // Načti profil s timeoutem
-          const profilePromise = supabase
-            .from("user_profiles")
-            .select("tier, credits_remaining")
-            .eq("id", u.id)
-            .single()
-            .then(r => r.data);
-          
-          const p = await Promise.race([profilePromise, new Promise<null>(res => setTimeout(() => res(null), 3000))]);
-          if (mounted && p) setProfile(p as Profile);
+        if (session?.user) {
+          if (mounted) {
+            setUser(session.user);
+            userRef.current = session.user;
+          }
+          await loadProfile(session.user.id);
         }
       } catch (e) {
-        console.warn("Header auth error:", e);
+        console.warn("Auth init error:", e);
+        await supabase.auth.signOut();
       } finally {
         if (mounted) setLoading(false);
       }
@@ -58,21 +63,32 @@ export default function Header() {
 
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_e, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      const u = session?.user || null;
-      setUser(u);
-      if (u) {
-        const { data } = await supabase.from("user_profiles").select("tier, credits_remaining").eq("id", u.id).single();
-        if (mounted) setProfile(data as Profile || null);
-      } else {
+      if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
         setProfile(null);
+        userRef.current = null;
+      } else if (session?.user) {
+        setUser(session.user);
+        userRef.current = session.user;
+        await loadProfile(session.user.id);
       }
       setLoading(false);
     });
 
-    return () => { mounted = false; subscription.unsubscribe(); };
-  }, [supabase]);
+    const handleCreditsUpdated = async () => {
+      const u = userRef.current;
+      if (u) await loadProfile(u.id);
+    };
+    window.addEventListener("creditsUpdated", handleCreditsUpdated);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      window.removeEventListener("creditsUpdated", handleCreditsUpdated);
+    };
+  }, [supabase, loadProfile]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -103,7 +119,7 @@ export default function Header() {
 
         <div className="flex items-center gap-3">
           <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors hidden sm:block">
-            Ceník
+            Cen&#237;k
           </Link>
 
           {loading ? (
@@ -120,7 +136,7 @@ export default function Header() {
                 <div className="flex flex-col leading-none text-left hidden sm:flex">
                   <span className={`text-[9px] font-black uppercase ${tierConfig.color}`}>{tierConfig.label}</span>
                   <span className="text-[10px] font-bold text-slate-400 mt-0.5">
-                    {profile !== null ? `${profile.credits_remaining.toLocaleString("cs-CZ")} kreditů` : "načítám…"}
+                    {profile !== null ? `${profile.credits_remaining.toLocaleString("cs-CZ")} kredit&#367;` : "na&#269;&#237;t&#225;m&#8230;"}
                   </span>
                 </div>
                 <ChevronDown size={14} className={`text-slate-500 transition-transform ${menuOpen ? "rotate-180" : ""}`} />
@@ -146,7 +162,7 @@ export default function Header() {
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Kredity</span>
                       <span className="text-white font-black text-lg">
-                        {profile?.credits_remaining.toLocaleString("cs-CZ") ?? "—"}
+                        {profile?.credits_remaining.toLocaleString("cs-CZ") ?? "&#8212;"}
                       </span>
                     </div>
                     {profile && tier !== "free" && (
@@ -160,25 +176,25 @@ export default function Header() {
                     <Link href="/pricing" onClick={() => setMenuOpen(false)}
                       className="mt-1 w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-black uppercase py-2 rounded-xl transition-colors">
                       <Zap size={12} fill="currentColor" />
-                      {tier === "free" ? "Koupit kredity" : "Dobít kredity"}
+                      {tier === "free" ? "Koupit kredity" : "Dob&#237;t kredity"}
                     </Link>
                   </div>
 
                   <div className="p-2">
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <User size={16} className="text-slate-500" /> Můj profil & kredity
+                      <User size={16} className="text-slate-500" /> M&#367;j profil &amp; kredity
                     </Link>
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <Receipt size={16} className="text-slate-500" /> Fakturace & předplatné
+                      <Receipt size={16} className="text-slate-500" /> Fakturace &amp; p&#345;edplatn&#233;
                     </Link>
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <KeyRound size={16} className="text-slate-500" /> Změna hesla
+                      <KeyRound size={16} className="text-slate-500" /> Zm&#283;na hesla
                     </Link>
                   </div>
 
                   <div className="p-2 border-t border-white/5">
                     <button onClick={handleSignOut} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors text-sm">
-                      <LogOut size={16} /> Odhlásit se
+                      <LogOut size={16} /> Odhl&#225;sit se
                     </button>
                   </div>
                 </div>
@@ -186,9 +202,9 @@ export default function Header() {
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-xs font-black uppercase tracking-widest transition-colors sm:hidden">Ceník</Link>
+              <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-xs font-black uppercase tracking-widest transition-colors sm:hidden">Cen&#237;k</Link>
               <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">
-                PŘIHLÁSIT
+                P&#344;IHLÁSIT
               </Link>
             </div>
           )}
