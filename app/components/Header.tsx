@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, LogOut, Zap, ChevronDown, User, Receipt, KeyRound } from "lucide-react";
+import { Shield, LogOut, Zap, ChevronDown, User, Receipt, KeyRound, Home } from "lucide-react";
 
 type Profile = { tier: string; credits_remaining: number; };
 
@@ -13,6 +13,20 @@ const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> 
   basic: { label: "BASIC", color: "text-purple-400", bg: "bg-purple-500/10" },
   pro:   { label: "PRO",   color: "text-yellow-400", bg: "bg-yellow-500/10" },
 };
+
+function getTokenFromCookie(): string | null {
+  try {
+    const cookie = document.cookie
+      .split("; ")
+      .find((row) => row.includes("sb-") && row.includes("-auth-token="));
+    if (!cookie) return null;
+    const value = cookie.split("=").slice(1).join("=");
+    const json = JSON.parse(atob(value.replace("base64-", "")));
+    return json.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export default function Header() {
   const [supabase] = useState(() => createClient());
@@ -24,36 +38,43 @@ export default function Header() {
   const userRef = useRef<any>(null);
 
   const loadProfile = useCallback(async (userId: string) => {
-    const { data } = await supabase.from("user_profiles").select("tier, credits_remaining").eq("id", userId).single();
+    const { data } = await supabase
+      .from("user_profiles")
+      .select("tier, credits_remaining")
+      .eq("id", userId)
+      .single();
     if (data) setProfile(data as Profile);
   }, [supabase]);
 
   useEffect(() => {
     let mounted = true;
+
     const init = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error || (session && !session.user)) {
-          await supabase.auth.signOut();
-          if (mounted) { setUser(null); setProfile(null); }
+        const token = getTokenFromCookie();
+        if (!token) {
+          if (mounted) setLoading(false);
           return;
         }
-        if (session?.user) {
-          if (mounted) { setUser(session.user); userRef.current = session.user; }
-          await loadProfile(session.user.id);
+        const { data: { user: u } } = await supabase.auth.getUser();
+        if (!mounted) return;
+        if (u) {
+          setUser(u);
+          userRef.current = u;
+          await loadProfile(u.id);
         }
       } catch (e) {
-        console.warn("Auth init error:", e);
-        await supabase.auth.signOut();
+        console.warn("Header auth error:", e);
       } finally {
         if (mounted) setLoading(false);
       }
     };
+
     init();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      if (event === 'SIGNED_OUT' || !session) {
+      if (event === "SIGNED_OUT" || !session) {
         setUser(null); setProfile(null); userRef.current = null;
       } else if (session?.user) {
         setUser(session.user); userRef.current = session.user;
@@ -102,10 +123,13 @@ export default function Header() {
           <span className="font-black text-lg text-white uppercase tracking-tighter">Neklikni.cz</span>
         </Link>
 
-        <nav className="flex items-center gap-6">
-          <Link href="/" className="text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors hidden sm:block">Domů</Link>
-          <Link href="/" className="text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors hidden sm:block">Analýza</Link>
-          <Link href="/pricing" className="text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors hidden sm:block">Ceník</Link>
+        <nav className="hidden md:flex items-center gap-8">
+          <Link href="/" className="text-white hover:text-purple-400 text-[11px] font-black uppercase tracking-widest transition-colors flex items-center gap-1.5">
+            <Home size={13} /> Domů
+          </Link>
+          <Link href="/pricing" className="text-slate-400 hover:text-white text-[11px] font-black uppercase tracking-widest transition-colors">
+            Ceník
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -138,7 +162,9 @@ export default function Header() {
                       </div>
                       <div>
                         <p className="text-white text-sm font-bold truncate max-w-[180px]">{user.email}</p>
-                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${tierConfig.color} ${tierConfig.bg}`}>{tierConfig.label}</span>
+                        <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${tierConfig.color} ${tierConfig.bg}`}>
+                          {tierConfig.label}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -146,7 +172,9 @@ export default function Header() {
                   <div className="p-4 border-b border-white/5">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-slate-400 text-xs font-bold uppercase tracking-widest">Kredity</span>
-                      <span className="text-white font-black text-lg">{profile?.credits_remaining.toLocaleString("cs-CZ") ?? "—"}</span>
+                      <span className="text-white font-black text-lg">
+                        {profile?.credits_remaining.toLocaleString("cs-CZ") ?? "—"}
+                      </span>
                     </div>
                     {profile && tier !== "free" && (
                       <div className="w-full bg-slate-800 rounded-full h-1.5 mb-3">
@@ -164,6 +192,9 @@ export default function Header() {
                   </div>
 
                   <div className="p-2">
+                    <Link href="/" onClick={() => setMenuOpen(false)} className="md:hidden flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-white transition-colors text-sm font-bold">
+                      <Home size={16} className="text-purple-400" /> Domů
+                    </Link>
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
                       <User size={16} className="text-slate-500" /> Můj profil & kredity
                     </Link>
@@ -184,8 +215,8 @@ export default function Header() {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
-              <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-xs font-black uppercase tracking-widest transition-colors sm:hidden">Ceník</Link>
+            <div className="flex items-center gap-4">
+              <Link href="/" className="text-white hover:text-purple-400 text-[10px] font-black uppercase tracking-widest transition-colors md:hidden">Domů</Link>
               <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">
                 PŘIHLÁSIT
               </Link>
