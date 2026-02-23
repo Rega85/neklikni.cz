@@ -95,8 +95,17 @@ export default function Header() {
       setLoading(false);
     });
 
-    const onCreditsUpdated = async () => {
-      if (userIdRef.current) await loadProfile(userIdRef.current);
+    // Poslouchej creditsUpdated - pokud event obsahuje novy pocet, pouzij ho primo
+    // jinak fetchni z DB
+    const onCreditsUpdated = async (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.credits !== undefined) {
+        // Okamzita aktualizace bez DB dotazu
+        setProfile((prev) => prev ? { ...prev, credits_remaining: detail.credits } : prev);
+      } else if (userIdRef.current) {
+        // Fallback: refetch z DB
+        await loadProfile(userIdRef.current);
+      }
     };
     window.addEventListener("creditsUpdated", onCreditsUpdated);
 
@@ -128,12 +137,13 @@ export default function Header() {
     <header className="fixed top-0 left-0 right-0 z-[100] bg-slate-950/80 backdrop-blur-xl border-b border-white/5 h-16">
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
 
+        {/* Logo - klikatelné, vede na homepage */}
         <div className="flex items-center gap-6">
           <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="bg-purple-600 p-1.5 rounded-lg">
               <Shield size={18} className="text-white" fill="currentColor" />
             </div>
-            <span className="font-black text-lg text-white uppercase tracking-tighter">Neklikni.cz</span>
+            <span className="font-black text-lg text-white uppercase tracking-tighter">NeKlikni.cz</span>
           </Link>
           <nav className="hidden sm:flex items-center gap-4">
             <Link href="/" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-black uppercase tracking-widest transition-colors">

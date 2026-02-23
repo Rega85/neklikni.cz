@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check } from "lucide-react";
+import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 type AnalysisResult = {
@@ -19,22 +19,6 @@ type AnalysisResult = {
   limitReached?: boolean;
 };
 
-// Cte access_token primo z Supabase cookie
-// Funguje spolehliave i kdyz je localStorage prazdny (SSR HttpOnly cookie)
-function getTokenFromCookie(): string | null {
-  try {
-    const cookie = document.cookie
-      .split("; ")
-      .find((row) => row.includes("sb-") && row.includes("-auth-token="));
-    if (!cookie) return null;
-    const value = cookie.split("=").slice(1).join("=");
-    const json = JSON.parse(atob(value.replace("base64-", "")));
-    return json.access_token ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [input, setInput] = useState("");
@@ -45,10 +29,23 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    fetch("/api/stats")
+    // Nejdrive zkus sessionStorage - zustane pri navigaci zpet
+    try {
+      const cached = sessionStorage.getItem("neklikni_total");
+      if (cached) setTotalAnalyses(parseInt(cached, 10));
+    } catch {}
+
+    // Vzdy fetch aktualni cislo (no-store = zadne cachovani)
+    fetch("/api/stats", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => setTotalAnalyses(d.total ?? null))
-      .catch(() => setTotalAnalyses(null));
+      .then((d) => {
+        const total = d.total ?? null;
+        if (total !== null) {
+          setTotalAnalyses(total);
+          try { sessionStorage.setItem("neklikni_total", String(total)); } catch {}
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const handleAnalysis = useCallback(async () => {
@@ -58,18 +55,12 @@ export default function Home() {
     setError(null);
 
     try {
-      // Cist token primo z cookie - nejspolehlivejsi, zadne timeouty, zadny SDK
-      const accessToken = getTokenFromCookie();
-      const isAnonymous = !accessToken;
-
-      // Zadny timeout - AI potrebuje 6-15s na odpoved
+      // Header posle credentialy (cookies) automaticky - server je precte pres createClient()
       const res = await fetch("/api/analyze", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({ text: input, isAnonymous }),
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: input }),
       });
 
       const contentType = res.headers.get("content-type");
@@ -91,18 +82,34 @@ export default function Home() {
       }
 
       setResult(data);
+      // Credity aktualizuje Header pres /api/me
       window.dispatchEvent(new CustomEvent("creditsUpdated"));
-      setTotalAnalyses((prev) => (prev !== null ? prev + 1 : null));
+
+      // Komunitni pocitadlo
+      setTotalAnalyses((prev) => {
+        const next = prev !== null ? prev + 1 : null;
+        if (next !== null) {
+          try { sessionStorage.setItem("neklikni_total", String(next)); } catch {}
+        }
+        return next;
+      });
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Nepodařilo se připojit k serveru.");
     } finally {
       setLoading(false);
     }
-  }, [input, loading, supabase]);
+  }, [input, loading]);
+
+  const handleClear = () => {
+    setInput("");
+    setResult(null);
+    setError(null);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") handleAnalysis();
+    if (e.key === "Escape") handleClear();
   };
 
   const handleShare = async () => {
@@ -135,7 +142,8 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest">
               <Zap size={10} fill="currentColor" /> AI Security v4.6
             </div>
-            <h1 className="font-black italic uppercase leading-none py-2 tracking-tighter">
+            {/* Vetsi padding aby se neorezavala diakritika (š, ě, š) */}
+            <h1 className="font-black italic uppercase leading-none tracking-tighter pt-2 pb-6">
               <span className="block text-5xl sm:text-6xl md:text-7xl text-white">PROVĚŘ</span>
               <span className="block text-5xl sm:text-6xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700">
                 NEŽ KLIKNEŠ
@@ -161,14 +169,25 @@ export default function Home() {
               className="w-full bg-transparent p-6 outline-none text-white text-base sm:text-lg min-h-[160px] resize-none placeholder:text-slate-600 rounded-t-[32px]"
             />
             <div className="flex items-center justify-between p-4 border-t border-white/5 bg-white/[0.02] rounded-b-[32px]">
-              <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter pro odeslání</span>
-              <button
-                onClick={handleAnalysis}
-                disabled={loading || !input.trim()}
-                className="bg-white text-black px-12 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed ml-auto"
-              >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}
-              </button>
+              <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter · Esc pro smazání</span>
+              <div className="flex items-center gap-2 ml-auto">
+                {/* Tlacitko Vymazat - zobrazuje se jen kdyz je co mazat */}
+                {(input || result || error) && (
+                  <button
+                    onClick={handleClear}
+                    className="flex items-center gap-1.5 px-4 py-3 rounded-2xl font-black text-xs text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 transition-all"
+                  >
+                    <X size={13} /> Vymazat
+                  </button>
+                )}
+                <button
+                  onClick={handleAnalysis}
+                  disabled={loading || !input.trim()}
+                  className="bg-white text-black px-12 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -235,9 +254,6 @@ export default function Home() {
 
                 <div className="flex items-center justify-between pt-2">
                   <div className="text-slate-600 text-xs">
-                    {result.tier && result.tier !== "free" && result.credits !== undefined && (
-                      <span>Zbývá kreditů: <span className="text-slate-400 font-bold">{result.credits}</span></span>
-                    )}
                     {result.remainingChecks !== undefined && (
                       <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/3</span></span>
                     )}
