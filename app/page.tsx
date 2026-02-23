@@ -119,7 +119,7 @@ export default function Home() {
               <Zap size={10} fill="currentColor" /> AI Security v4.6
             </div>
 
-            <h1 className="flex flex-col items-center justify-center font-black italic uppercase tracking-tighter">
+            <h1 className="flex flex-col items-center justify-center font-black italic uppercase tracking-normal">
               <span className="text-5xl sm:text-6xl md:text-7xl text-white leading-tight">PROVĚŘ</span>
               <span className="text-4xl sm:text-5xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight">
                 NEŽ KLIKNEŠ
