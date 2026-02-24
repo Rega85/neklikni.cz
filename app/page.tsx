@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
@@ -29,6 +29,14 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    // Bookmarklet handler - přečte ?q= parametr z URL
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get("q");
+    if (query) {
+      setInput(query);
+      window.history.replaceState({}, '', '/');
+    }
+
     try {
       const cached = localStorage.getItem("neklikni_total");
       if (cached) setTotalAnalyses(parseInt(cached, 10));
