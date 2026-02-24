@@ -1,7 +1,6 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
@@ -232,37 +231,6 @@ export default function Home() {
           )}
         </div>
       </main>
-
-      <footer className="w-full bg-[#020617] mt-auto border-t border-white/5 pt-8 pb-4">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-start justify-between gap-8 text-xs text-slate-500">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Shield size={16} className="text-purple-500" />
-              <span className="font-black text-white uppercase tracking-tighter text-sm">Neklikni.cz</span>
-            </div>
-            <p>© {new Date().getFullYear()} Všechna práva vyhrazena.</p>
-          </div>
-          <div className="flex flex-col md:flex-row gap-8 md:gap-16">
-            <div className="space-y-1 leading-relaxed">
-              <p className="text-slate-300 font-bold mb-2 uppercase text-[10px] tracking-widest">Provozovatel</p>
-              <p>PK Virgine, s.r.o.</p>
-              <p>IČO: 21448507, DIČ: CZ21448507</p>
-              <p>Korunní 2569/108, Vinohrady, 101 00 Praha</p>
-              <p>Datová schránka: bty8mey</p>
-              <p>Spisová značka: C 401405/MSPH Městský soud v Praze</p>
-            </div>
-            <div className="space-y-2 flex flex-col">
-              <p className="text-slate-300 font-bold mb-1 uppercase text-[10px] tracking-widest">Informace</p>
-              <Link href="/privacy" prefetch={false} className="hover:text-white transition-colors">Ochrana osobních údajů</Link>
-              <Link href="/terms" prefetch={false} className="hover:text-white transition-colors">Obchodní podmínky</Link>
-              <Link href="/contact" prefetch={false} className="hover:text-white transition-colors">Kontakt</Link>
-            </div>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-6 mt-6 pt-4 border-t border-white/5 text-[10px] text-slate-600 text-center leading-relaxed">
-          Výsledky analýzy vygenerované umělou inteligencí mají informativní charakter. Technologie se může mýlit — poslední rozhodnutí je vždy na Vás. Provozovatel nenese právní odpovědnost za případné škody způsobené kybernetickým útokem.
-        </div>
-      </footer>
     </div>
   );
 }
