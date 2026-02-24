@@ -46,6 +46,46 @@ Analyzuj zprávu detailně a vrať POUZE validní JSON bez markdown bloků:
 
 export const dynamic = "force-dynamic";
 
+async function handleAnonymousAnalysis(req: Request, text: string) {
+  const ip =
+    req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("x-real-ip") ||
+    "unknown";
+
+  const today = new Date().toISOString().split("T")[0];
+  const { data: ipRecord } = await supabaseAdmin
+    .from("anonymous_usage")
+    .select("count")
+    .eq("ip_address", ip)
+    .eq("date", today)
+    .single();
+
+  const currentCount = ipRecord?.count ?? 0;
+  const ANON_DAILY_LIMIT = 3;
+
+  if (currentCount >= ANON_DAILY_LIMIT) {
+    return NextResponse.json(
+      {
+        error: "Denní limit",
+        message: `Denní limit ${ANON_DAILY_LIMIT} kontrol vyčerpán. Zaregistrujte se pro více analýz.`,
+        limitReached: true,
+      },
+      { status: 429 }
+    );
+  }
+
+  const result = await runAnalysis(text, "free");
+  await supabaseAdmin.rpc("upsert_anonymous_usage", { p_ip: ip, p_date: today });
+  const shareId = await saveResult(null, text, result, "free");
+
+  return NextResponse.json({
+    ...result,
+    shareId,
+    remainingChecks: ANON_DAILY_LIMIT - currentCount - 1,
+    tier: "free",
+  });
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -55,45 +95,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Zadejte text ke kontrole." }, { status: 400 });
     }
 
-    // ── ANONYMNÍ UŽIVATEL ──────────────────────────────────────────────────
+    // ── EXPLICITNĚ ANONYMNÍ UŽIVATEL ───────────────────────────────────────
     if (isAnonymous) {
-      const ip =
-        req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-        req.headers.get("x-real-ip") ||
-        "unknown";
-
-      const today = new Date().toISOString().split("T")[0];
-      const { data: ipRecord } = await supabaseAdmin
-        .from("anonymous_usage")
-        .select("count")
-        .eq("ip_address", ip)
-        .eq("date", today)
-        .single();
-
-      const currentCount = ipRecord?.count ?? 0;
-      const ANON_DAILY_LIMIT = 3;
-
-      if (currentCount >= ANON_DAILY_LIMIT) {
-        return NextResponse.json(
-          {
-            error: "Denní limit",
-            message: `Anonymní uživatelé mohou provést ${ANON_DAILY_LIMIT} kontroly denně. Zaregistrujte se pro více analýz.`,
-            limitReached: true,
-          },
-          { status: 429 }
-        );
-      }
-
-      const result = await runAnalysis(text, "free");
-      await supabaseAdmin.rpc("upsert_anonymous_usage", { p_ip: ip, p_date: today });
-      const shareId = await saveResult(null, text, result, "free");
-
-      return NextResponse.json({
-        ...result,
-        shareId,
-        remainingChecks: ANON_DAILY_LIMIT - currentCount - 1,
-        tier: "free",
-      });
+      return handleAnonymousAnalysis(req, text);
     }
 
     // ── PŘIHLÁŠENÝ UŽIVATEL — zkus cookies i Bearer token ─────────────────
@@ -126,8 +130,9 @@ export async function POST(req: Request) {
       }
     }
 
+    // ── FALLBACK NA ANONYMNÍ REŽIM ─────────────────────────────────────────
     if (!userId) {
-      return NextResponse.json({ error: "Přihlaste se prosím znovu." }, { status: 401 });
+      return handleAnonymousAnalysis(req, text);
     }
 
     const { data: profile, error: profileErr } = await supabaseAdmin
