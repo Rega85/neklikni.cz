@@ -1,7 +1,7 @@
 ﻿"use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 type AnalysisResult = {
@@ -27,6 +27,10 @@ export default function Home() {
   const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [ctaCopied, setCtaCopied] = useState(false);
+  const [image, setImage] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [profile, setProfile] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Bookmarklet handler - přečte ?q= parametr z URL
@@ -52,10 +56,35 @@ export default function Home() {
         }
       })
       .catch(() => {});
+
+    fetch('/api/me', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d?.profile) setProfile(d.profile); })
+      .catch(() => {});
   }, []);
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) {
+      setError("Obrázek je příliš velký. Maximum jsou 4 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const b64 = ev.target?.result as string;
+      setImage(b64);
+      setImagePreview(b64);
+      setInput("");
+      setResult(null);
+      setError(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleAnalysis = useCallback(async () => {
-    if (!input.trim() || loading) return;
+    if ((!input.trim() && !image) || loading) return;
     setLoading(true);
     setResult(null);
     setError(null);
@@ -65,7 +94,7 @@ export default function Home() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input }),
+        body: JSON.stringify(image ? { image } : { text: input }),
       });
 
       const contentType = res.headers.get("content-type");
@@ -97,9 +126,9 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [input, loading]);
+  }, [input, image, loading]);
 
-  const handleClear = () => { setInput(""); setResult(null); setError(null); };
+  const handleClear = () => { setInput(""); setResult(null); setError(null); setImage(null); setImagePreview(null); };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") handleAnalysis();
@@ -114,6 +143,8 @@ export default function Home() {
   };
 
   const DISCLAIMER = "Výsledky analýzy vygenerované umělou inteligencí mají informativní charakter. Technologie se může mýlit — poslední rozhodnutí je vždy na Vás.";
+
+  const canUploadImage = profile?.tier === "basic" || profile?.tier === "pro";
 
   const riskColor = !result ? "" : result.risk >= 70 ? "text-red-400" : result.risk >= 40 ? "text-yellow-400" : "text-green-400";
   const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
@@ -191,17 +222,51 @@ export default function Home() {
               placeholder="Vložte podezřelý text, SMS, email nebo URL..."
               className="w-full bg-transparent p-6 outline-none text-white text-base sm:text-lg min-h-[160px] resize-none placeholder:text-slate-600 rounded-t-[32px]"
             />
+
+            {/* Image upload strip */}
+            <div className="px-6 py-3 border-t border-white/5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              {imagePreview ? (
+                <div className="flex items-center gap-3">
+                  <img src={imagePreview} alt="Náhled" className="w-14 h-14 object-cover rounded-xl border border-white/10 shrink-0" />
+                  <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
+                  <button
+                    type="button"
+                    onClick={() => { setImage(null); setImagePreview(null); }}
+                    className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => canUploadImage ? fileInputRef.current?.click() : (window.location.href = "/pricing")}
+                  className={`flex items-center gap-2 text-xs font-bold transition-colors ${canUploadImage ? "text-slate-400 hover:text-purple-400" : "text-slate-600 hover:text-slate-500"}`}
+                >
+                  {canUploadImage ? <Camera size={14} /> : <Lock size={14} />}
+                  <span>{canUploadImage ? "Nahrát screenshot" : "Nahrát screenshot · Dostupné od tarifu BASIC"}</span>
+                </button>
+              )}
+            </div>
+
             <div className="flex items-center justify-between p-4 border-t border-white/5 bg-white/[0.02] rounded-b-[32px]">
               <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter · Esc pro smazání</span>
               <div className="flex items-center gap-2 ml-auto">
-                {(input || result || error) && (
+                {(input || image || result || error) && (
                   <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-3 rounded-2xl font-black text-xs text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 transition-all">
                     <X size={13} /> Vymazat
                   </button>
                 )}
                 <button
                   onClick={handleAnalysis}
-                  disabled={loading || !input.trim()}
+                  disabled={loading || (!input.trim() && !image)}
                   className="bg-white text-black px-12 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}

@@ -90,14 +90,24 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { text } = body;
+    const { text, image } = body;
 
-    if (!text || text.trim().length < 3) {
-      return NextResponse.json({ error: "Zadejte text ke kontrole." }, { status: 400 });
+    if (!image && (!text || text.trim().length < 3)) {
+      return NextResponse.json({ error: "Zadejte text nebo nahrajte obrázek ke kontrole." }, { status: 400 });
     }
 
-    if (text.length > 5000) {
+    if (!image && text && text.length > 5000) {
       return NextResponse.json({ error: "Text je příliš dlouhý. Maximum je 5000 znaků." }, { status: 400 });
+    }
+
+    if (image) {
+      if (typeof image !== "string") {
+        return NextResponse.json({ error: "Neplatný formát obrázku." }, { status: 400 });
+      }
+      const base64Data = image.split(",")[1] ?? image;
+      if (Math.ceil(base64Data.length * 0.75) > 4 * 1024 * 1024) {
+        return NextResponse.json({ error: "Obrázek je příliš velký. Maximum jsou 4 MB." }, { status: 400 });
+      }
     }
 
     // ── PŘIHLÁŠENÝ UŽIVATEL — zkus cookies i Bearer token ─────────────────
@@ -132,6 +142,12 @@ export async function POST(req: Request) {
 
     // ── FALLBACK NA ANONYMNÍ REŽIM ─────────────────────────────────────────
     if (!userId) {
+      if (image) {
+        return NextResponse.json({
+          error: "Pro analýzu obrázků se musíte přihlásit a mít tarif BASIC nebo PRO.",
+          upgradeRequired: true,
+        }, { status: 403 });
+      }
       return handleAnonymousAnalysis(req, text);
     }
 
@@ -146,6 +162,13 @@ export async function POST(req: Request) {
     }
 
     const tier = profile.tier || "free";
+
+    if (image && !["basic", "pro"].includes(tier)) {
+      return NextResponse.json({
+        error: "Analýza obrázků je dostupná pouze pro tarif BASIC a PRO.",
+        upgradeRequired: true,
+      }, { status: 403 });
+    }
 
     // Atomically check-and-deduct in one DB operation.
     // deduct_credit returns the new credits_remaining, or NULL if the user had 0 credits.
@@ -174,8 +197,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await runAnalysis(text, tier);
-    const shareId = await saveResult(userId, text, result, tier);
+    const result = await runAnalysis(text ?? null, tier, image ?? null);
+    const shareId = await saveResult(userId, image ? "[Analýza obrázku]" : text, result, tier);
 
     void (async () => { try { await supabaseAdmin.rpc("increment_total_analyses"); } catch {} })();
 
@@ -221,16 +244,29 @@ function extractJson(raw: string): any {
   throw new Error("AI nevrátila validní JSON");
 }
 
-async function runAnalysis(text: string, tier: string) {
+async function runAnalysis(text: string | null, tier: string, imageBase64?: string | null) {
   const model = TIER_MODELS[tier] || TIER_MODELS.free;
   const systemPrompt = tier === "pro" ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
   const maxTokens = tier === "pro" ? 2000 : tier === "basic" ? 1500 : 800;
+
+  let userContent: any;
+  if (imageBase64) {
+    const match = imageBase64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+    const mediaType = (match?.[1] ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
+    const data = match?.[2] ?? imageBase64;
+    userContent = [
+      { type: "image", source: { type: "base64", media_type: mediaType, data } },
+      { type: "text", text: "Nejdříve extrahuj veškerý text z tohoto obrázku, poté ho analyzuj na phishing/podvodné indikátory. Odpověz ve stejném JSON formátu." },
+    ];
+  } else {
+    userContent = `Analyzuj tuto zprávu/odkaz na phishing a podvody:\n\n${text}`;
+  }
 
   const msg = await anthropic.messages.create({
     model,
     max_tokens: maxTokens,
     system: systemPrompt,
-    messages: [{ role: "user", content: `Analyzuj tuto zprávu/odkaz na phishing a podvody:\n\n${text}` }],
+    messages: [{ role: "user", content: userContent }],
   });
 
   const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
