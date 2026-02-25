@@ -195,6 +195,32 @@ export async function POST(req: Request) {
   }
 }
 
+function extractJson(raw: string): any {
+  // Strip markdown code fences (```json ... ``` or ``` ... ```)
+  const stripped = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
+
+  // Try direct parse first
+  try { return JSON.parse(stripped); } catch {}
+
+  // Walk the string finding balanced {} blocks and try each one
+  let depth = 0;
+  let start = -1;
+  for (let i = 0; i < stripped.length; i++) {
+    if (stripped[i] === "{") {
+      if (depth === 0) start = i;
+      depth++;
+    } else if (stripped[i] === "}") {
+      depth--;
+      if (depth === 0 && start !== -1) {
+        try { return JSON.parse(stripped.slice(start, i + 1)); } catch {}
+        start = -1;
+      }
+    }
+  }
+
+  throw new Error("AI nevrátila validní JSON");
+}
+
 async function runAnalysis(text: string, tier: string) {
   const model = TIER_MODELS[tier] || TIER_MODELS.free;
   const systemPrompt = tier === "pro" ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
@@ -208,10 +234,7 @@ async function runAnalysis(text: string, tier: string) {
   });
 
   const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("AI nevrátila validní JSON");
-
-  const aiData = JSON.parse(jsonMatch[0]);
+  const aiData = extractJson(raw);
   if (typeof aiData.risk !== "number" || !aiData.verdict) throw new Error("Neúplná AI odpověď");
 
   return aiData;
