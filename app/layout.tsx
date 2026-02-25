@@ -41,7 +41,15 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
-  }
+  },
+  appleWebApp: {
+    capable: true,
+    title: "NeKlikni",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/icon-192.png",
+  },
 };
 
 export default function RootLayout({
