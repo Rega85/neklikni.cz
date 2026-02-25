@@ -189,7 +189,7 @@ export default function Home() {
             <p className="text-slate-400 text-sm mt-3">
               <span>✓ 100% anonymní</span>
               <span className="mx-2 text-slate-600">·</span>
-              <span>✓ Bez registrace</span>
+              <span>✓ Zdarma a bez registrace</span>
               <span className="mx-2 text-slate-600">·</span>
               <span>✓ Neukládáme váš obsah</span>
             </p>
