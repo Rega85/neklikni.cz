@@ -232,64 +232,63 @@ export default function Home() {
               className="w-full bg-transparent p-6 outline-none text-white text-base sm:text-lg min-h-[160px] resize-none placeholder:text-slate-600 rounded-t-[32px]"
             />
 
-            {/* Image upload strip */}
-            <div className="px-4 py-3 border-t border-white/5">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/png, image/jpeg, image/webp"
-                className="hidden"
-                onChange={handleImageSelect}
-              />
-              {imagePreview ? (
-                <div className="flex items-center gap-3 px-2">
-                  <img src={imagePreview} alt="Náhled" className="w-14 h-14 object-cover rounded-xl border border-white/10 shrink-0" />
-                  <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
-                  <button
-                    type="button"
-                    onClick={() => { setImage(null); setImagePreview(null); }}
-                    className="text-slate-500 hover:text-red-400 transition-colors p-1"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : canUploadImage ? (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white text-sm font-bold py-3 rounded-2xl transition-all"
-                >
-                  <Camera size={15} />
-                  Nahrát screenshot
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => { window.location.href = "/pricing"; }}
-                  className="w-full flex items-center justify-center gap-2 bg-slate-800/60 border border-purple-500/30 hover:border-purple-500/60 text-slate-500 hover:text-slate-400 text-sm font-bold py-3 rounded-2xl transition-all"
-                >
-                  <Lock size={15} />
-                  Nahrát screenshot <span className="text-purple-500/70">(od tarifu BASIC)</span>
-                </button>
-              )}
-            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png, image/jpeg, image/webp"
+              className="hidden"
+              onChange={handleImageSelect}
+            />
 
-            <div className="flex items-center justify-between p-4 border-t border-white/5 bg-white/[0.02] rounded-b-[32px]">
-              <span className="text-slate-600 text-[10px] hidden sm:block">Ctrl+Enter · Esc pro smazání</span>
-              <div className="flex items-center gap-2 ml-auto">
+            <div className="p-4 border-t border-white/5 bg-white/[0.02] rounded-b-[32px] space-y-3">
+              {/* Main CTA */}
+              <div className="flex items-center gap-2">
                 {(input || image || result || error) && (
-                  <button onClick={handleClear} className="flex items-center gap-1.5 px-4 py-3 rounded-2xl font-black text-xs text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 transition-all">
+                  <button onClick={handleClear} className="shrink-0 flex items-center gap-1.5 px-4 py-4 rounded-2xl font-black text-xs text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 transition-all">
                     <X size={13} /> Vymazat
                   </button>
                 )}
                 <button
                   onClick={handleAnalysis}
                   disabled={loading}
-                  className="bg-purple-600 hover:bg-purple-700 text-white px-12 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}
                 </button>
               </div>
+
+              {/* Screenshot upload - secondary */}
+              {imagePreview ? (
+                <div className="flex items-center gap-3 px-1">
+                  <img src={imagePreview} alt="Náhled" className="w-10 h-10 object-cover rounded-lg border border-white/10 shrink-0" />
+                  <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
+                  <button
+                    type="button"
+                    onClick={() => { setImage(null); setImagePreview(null); }}
+                    className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ) : canUploadImage ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-400 text-xs font-bold transition-colors py-1"
+                >
+                  <Camera size={13} /> Přidat screenshot
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => { window.location.href = "/pricing"; }}
+                  className="w-full flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-500 text-xs transition-colors py-1"
+                >
+                  <Lock size={13} /> Přidat screenshot <span className="text-purple-700 ml-1">(BASIC+)</span>
+                </button>
+              )}
+
+              <p className="text-slate-700 text-[10px] text-center hidden sm:block">Ctrl+Enter · Esc pro smazání</p>
             </div>
           </div>
 
