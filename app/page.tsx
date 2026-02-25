@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X } from "lucide-react";
+import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 type AnalysisResult = {
@@ -26,6 +26,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [ctaCopied, setCtaCopied] = useState(false);
 
   useEffect(() => {
     // Bookmarklet handler - přečte ?q= parametr z URL
@@ -275,6 +276,51 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {result?.shareId && (() => {
+            const shareUrl = `${typeof window !== "undefined" ? window.location.origin : "https://neklikni.cz"}/report/${result.shareId}`;
+            const waText = encodeURIComponent(`Pozor na tento podvod! Podívej se na analýzu: ${shareUrl}`);
+            return (
+              <div className="max-w-3xl mx-auto w-full bg-amber-900/20 border border-amber-700/30 rounded-[32px] p-8 space-y-5">
+                <div className="text-center space-y-2">
+                  <h3 className="text-xl font-black text-white">⚠️ Varujte svou rodinu a přátele</h3>
+                  <p className="text-slate-300 text-sm leading-relaxed">Sdílejte tento výsledek, aby se vaši blízcí nenechali nachytat.</p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <a
+                    href={`https://wa.me/?text=${waText}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-bold text-sm transition-all active:scale-95"
+                  >
+                    💬 WhatsApp
+                  </a>
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all active:scale-95"
+                  >
+                    📘 Facebook
+                  </a>
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(shareUrl);
+                      setCtaCopied(true);
+                      setTimeout(() => setCtaCopied(false), 2000);
+                    }}
+                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm transition-all active:scale-95"
+                  >
+                    {ctaCopied ? <><Check size={16} className="text-green-400" /> Odkaz zkopírován!</> : <><Copy size={16} /> Kopírovat odkaz</>}
+                  </button>
+                  <button
+                    onClick={async () => { if (navigator.share) await navigator.share({ title: "NeKlikni.cz – Varování", text: "Pozor na tento podvod! Podívej se na analýzu:", url: shareUrl }); }}
+                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm transition-all active:scale-95 sm:hidden"
+                  >
+                    <Share2 size={16} /> Sdílet
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </main>
     </div>
