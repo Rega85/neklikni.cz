@@ -27,7 +27,7 @@ Analyzuj zprávu a vrať POUZE validní JSON bez markdown bloků:
   "threats": ["hrozba1", "hrozba2"],
   "recommendation": "doporučení česky"
 }
-DŮLEŽITÉ: Vždy piš pouze v češtině s latinkou. Nikdy nepoužívej cyrilici ani jiné nelatinkové znaky.`;
+DŮLEŽITÉ: Vždy odpovídej pouze v češtině s latinkou. Nikdy nepoužívej cyrilici, azbuku ani jiné nelatinkové znaky.`;
 
 const SYSTEM_PROMPT_PRO = `Jsi expert na kybernetickou bezpečnost a phishing s hlubokými znalostmi sociálního inženýrství.
 Analyzuj zprávu detailně a vrať POUZE validní JSON bez markdown bloků:
@@ -44,7 +44,7 @@ Analyzuj zprávu detailně a vrať POUZE validní JSON bez markdown bloků:
     "technical_indicators": ["technický indikátor"]
   }
 }
-DŮLEŽITÉ: Vždy piš pouze v češtině s latinkou. Nikdy nepoužívej cyrilici ani jiné nelatinkové znaky.`;
+DŮLEŽITÉ: Vždy odpovídej pouze v češtině s latinkou. Nikdy nepoužívej cyrilici, azbuku ani jiné nelatinkové znaky.`;
 
 export const dynamic = "force-dynamic";
 
@@ -220,6 +220,30 @@ export async function POST(req: Request) {
   }
 }
 
+// Cyrillic-to-Latin lookalike map (covers the most common confusables)
+const CYRILLIC_MAP: Record<string, string> = {
+  "А": "A", "В": "B", "С": "C", "Е": "E", "Н": "H", "І": "I",
+  "К": "K", "М": "M", "О": "O", "Р": "P", "Т": "T", "Х": "X",
+  "а": "a", "с": "c", "е": "e", "і": "i", "о": "o", "р": "p", "х": "x",
+  "И": "N", "Ѕ": "S", "ѕ": "s",
+};
+const CYRILLIC_RE = new RegExp(Object.keys(CYRILLIC_MAP).join("|"), "g");
+
+function decyrillize(s: string): string {
+  return s.replace(CYRILLIC_RE, (ch) => CYRILLIC_MAP[ch] ?? ch);
+}
+
+function sanitizeCyrillic(data: any): any {
+  if (typeof data === "string") return decyrillize(data);
+  if (Array.isArray(data)) return data.map(sanitizeCyrillic);
+  if (data && typeof data === "object") {
+    const out: any = {};
+    for (const k of Object.keys(data)) out[k] = sanitizeCyrillic(data[k]);
+    return out;
+  }
+  return data;
+}
+
 function extractJson(raw: string): any {
   // Strip markdown code fences (```json ... ``` or ``` ... ```)
   const stripped = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
@@ -272,7 +296,7 @@ async function runAnalysis(text: string | null, tier: string, imageBase64?: stri
   });
 
   const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
-  const aiData = extractJson(raw);
+  const aiData = sanitizeCyrillic(extractJson(raw));
   if (typeof aiData.risk !== "number" || !aiData.verdict) throw new Error("Neúplná AI odpověď");
 
   return aiData;
