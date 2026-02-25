@@ -14,11 +14,14 @@ export async function GET() {
 
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("*")
+      .select("tier, credits_remaining")
       .eq("id", user.id)
       .single();
 
-    return NextResponse.json({ user, profile });
+    return NextResponse.json({
+      user: { id: user.id, email: user.email },
+      profile,
+    });
   } catch (error) {
     return NextResponse.json({ error: "Chyba serveru" }, { status: 500 });
   }

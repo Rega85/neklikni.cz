@@ -7,7 +7,9 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
-  const next = searchParams.get('next') ?? '/'
+  // Validate next: must be a relative path starting with "/" and no double slashes or protocol
+  const rawNext = searchParams.get('next') ?? '/'
+  const next = /^\/[^/\\]/.test(rawNext) || rawNext === '/' ? rawNext : '/'
 
   const cookieStore = await cookies()
   
