@@ -10,7 +10,7 @@ export default function BillingPage() {
   const [data, setData] = useState<{user: any, profile: any} | null>(null);
 
   useEffect(() => {
-    fetch(`/api/me?t=${Date.now()}`, { cache: 'no-store' })
+    fetch('/api/me', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(d => setData(d))
       .catch(() => setData(null))

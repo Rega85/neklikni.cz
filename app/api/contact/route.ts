@@ -12,8 +12,8 @@ export async function POST(req: Request) {
     }
 
     await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: "menffisto@gmail.com",
+      from: process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev",
+      to: process.env.CONTACT_EMAIL ?? "menffisto@gmail.com",
       replyTo: email,
       subject: `Kontaktní formulář: ${name}`,
       html: `<p><strong>Jméno:</strong> ${name}</p><p><strong>E-mail:</strong> ${email}</p><p><strong>Zpráva:</strong><br/>${message}</p>`,

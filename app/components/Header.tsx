@@ -23,7 +23,7 @@ export default function Header() {
 
   const fetchMe = async () => {
     try {
-      const res = await fetch(`/api/me?t=${Date.now()}`, { cache: 'no-store' });
+      const res = await fetch('/api/me', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         if (mountedRef.current) { setUser(data.user); setProfile(data.profile); }

@@ -42,7 +42,7 @@ export default function Home() {
       if (cached) setTotalAnalyses(parseInt(cached, 10));
     } catch {}
 
-    fetch(`/api/stats?t=${Date.now()}`, { cache: "no-store" })
+    fetch('/api/stats', { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         const total = d.total ?? null;
