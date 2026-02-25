@@ -6,8 +6,7 @@ export function AnimatedCounter({ endValue = 0 }: { endValue: number }) {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
-    // Pokud je číslo moc malé, ukážeme aspoň nějaký základ, ať to nevypadá prázdně
-    const target = endValue > 1460 ? endValue : 1467 + endValue; 
+    const target = endValue;
     
     let startTime: number;
     const duration = 2000;

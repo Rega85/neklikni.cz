@@ -107,7 +107,7 @@ export default function Home() {
   };
 
   const handleShare = async () => {
-    const url = result?.shareId ? `${window.location.origin}/result/${result.shareId}` : window.location.href;
+    const url = result?.shareId ? `${window.location.origin}/report/${result.shareId}` : window.location.href;
     await navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

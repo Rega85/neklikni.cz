@@ -59,7 +59,7 @@ export async function POST(req: Request) {
       customer_email: user.email,
       line_items: [{ price: selected.priceId, quantity: 1 }],
       mode: selected.mode,
-      success_url: `${origin}/success?session_id={CHECKOUT_SESSION_ID}`,  // ← opraveno
+      success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/pricing?canceled=true`,
       allow_promotion_codes: true,
       metadata: { user_id: user.id, plan },

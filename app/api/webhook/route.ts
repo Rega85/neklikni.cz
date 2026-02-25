@@ -41,8 +41,7 @@ export async function POST(req: Request) {
 
     if (!userId) return NextResponse.json({ error: "No user ID" }, { status: 400 });
 
-    // Pevné nastavení kreditů podle tieru
-    const addedCredits = plan === "pro" ? 550 : 100;
+    const addedCredits = plan === "pro" ? 200 : plan === "basic" ? 50 : 10;
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
@@ -88,7 +87,7 @@ export async function POST(req: Request) {
         .single();
 
       if (profile) {
-        const addedCredits = profile.tier === "pro" ? 550 : 100;
+        const addedCredits = profile.tier === "pro" ? 200 : profile.tier === "basic" ? 50 : 10;
 
         await supabaseAdmin
           .from("user_profiles")
