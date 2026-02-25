@@ -89,15 +89,10 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { text, isAnonymous } = body;
+    const { text } = body;
 
     if (!text || text.trim().length < 3) {
       return NextResponse.json({ error: "Zadejte text ke kontrole." }, { status: 400 });
-    }
-
-    // ── EXPLICITNĚ ANONYMNÍ UŽIVATEL ───────────────────────────────────────
-    if (isAnonymous) {
-      return handleAnonymousAnalysis(req, text);
     }
 
     // ── PŘIHLÁŠENÝ UŽIVATEL — zkus cookies i Bearer token ─────────────────
