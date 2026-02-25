@@ -26,7 +26,8 @@ Analyzuj zprávu a vrať POUZE validní JSON bez markdown bloků:
   "analysis": "stručná analýza česky (2-3 věty)",
   "threats": ["hrozba1", "hrozba2"],
   "recommendation": "doporučení česky"
-}`;
+}
+DŮLEŽITÉ: Vždy piš pouze v češtině s latinkou. Nikdy nepoužívej cyrilici ani jiné nelatinkové znaky.`;
 
 const SYSTEM_PROMPT_PRO = `Jsi expert na kybernetickou bezpečnost a phishing s hlubokými znalostmi sociálního inženýrství.
 Analyzuj zprávu detailně a vrať POUZE validní JSON bez markdown bloků:
@@ -42,7 +43,8 @@ Analyzuj zprávu detailně a vrať POUZE validní JSON bez markdown bloků:
     "urgency_indicators": ["indikátor naléhavosti"],
     "technical_indicators": ["technický indikátor"]
   }
-}`;
+}
+DŮLEŽITÉ: Vždy piš pouze v češtině s latinkou. Nikdy nepoužívej cyrilici ani jiné nelatinkové znaky.`;
 
 export const dynamic = "force-dynamic";
 
