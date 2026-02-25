@@ -116,6 +116,25 @@ export default function Home() {
   const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
   const RiskIcon = !result ? Shield : result.risk >= 40 ? AlertTriangle : CheckCircle;
 
+  const EXAMPLES = [
+    {
+      label: "📱 SMS z banky",
+      text: "Vážený kliente, Vaše karta byla zablokována z důvodu podezřelé aktivity. Pro okamžité odblokování klikněte na odkaz: www.csob-overeni.cz/login. Máte 24 hodin.",
+    },
+    {
+      label: "📦 Nedoručený balíček",
+      text: "Ceska posta: Vas balik nelze dorucit kvuli chybejicimu poplatku 29 Kc. Zaplaťte zde pro doručení: https://ceska-posta-doruceni.com/platba",
+    },
+    {
+      label: "🏆 Výhra v soutěži",
+      text: "GRATULUJEME! Byl/a jste vybrán/a jako výherce iPhone 16 Pro v naší soutěži. Pro vyzvednutí výhry vyplňte údaje zde: www.vyhry-cz.com/iphone",
+    },
+    {
+      label: "⚡ Urgentní email z úřadu",
+      text: "Finanční úřad ČR: Evidujeme u Vás nedoplatek na dani z příjmu ve výši 4.250 Kč. Pokud nezaplatíte do 48 hodin, bude zahájeno exekuční řízení. Platba zde: www.financni-urad-platby.cz",
+    },
+  ];
+
   return (
     <div className="flex flex-col min-h-screen bg-[#020617]">
       <main className="flex-grow text-white pt-28 px-4 sm:px-6 pb-20 flex flex-col items-center">
@@ -142,6 +161,23 @@ export default function Home() {
               )}{" "}
               hrozeb odhaleno
             </p>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+              Zkuste to – vyberte ukázku podvodu:
+            </p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {EXAMPLES.map((ex) => (
+                <button
+                  key={ex.label}
+                  onClick={() => { setInput(ex.text); setResult(null); setError(null); }}
+                  className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-slate-300 bg-slate-800/60 border border-white/10 hover:bg-slate-700/80 hover:text-white hover:border-white/20 active:scale-95 transition-all"
+                >
+                  {ex.label}
+                </button>
+              ))}
+            </div>
           </div>
 
           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col">
