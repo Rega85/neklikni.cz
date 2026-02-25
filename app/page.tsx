@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Zap, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock } from "lucide-react";
+import { Loader2, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 type AnalysisResult = {
@@ -171,22 +171,18 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#020617]">
-      <main className="flex-grow text-white pt-28 px-4 sm:px-6 pb-20 flex flex-col items-center">
-        <div className="max-w-4xl w-full space-y-10 text-center">
+      <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center">
+        <div className="max-w-4xl w-full space-y-4 text-center">
 
-          <div className="space-y-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[10px] font-black uppercase tracking-widest">
-              <Zap size={10} fill="currentColor" /> AI Security v4.6
-            </div>
-
+          <div className="space-y-2">
             <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal">
-              <span className="text-5xl sm:text-6xl md:text-7xl text-white leading-normal">PROVĚŘ</span>
-              <span className="text-2xl sm:text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-normal">
+              <span className="text-4xl sm:text-5xl md:text-6xl text-white leading-tight">PROVĚŘ</span>
+              <span className="text-xl sm:text-3xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight">
                 NEŽ KLIKNEŠ
               </span>
             </h1>
 
-            <p className="text-slate-400 text-sm mt-3">
+            <p className="text-slate-400 text-sm">
               <span>✓ 100% anonymní</span>
               <span className="mx-2 text-slate-600">·</span>
               <span>✓ Zdarma a bez registrace</span>
@@ -194,7 +190,7 @@ export default function Home() {
               <span>✓ Neukládáme váš obsah</span>
             </p>
 
-            <p className="text-slate-400 text-sm mt-1">
+            <p className="text-slate-400 text-sm">
               Už jsme pomohli odhalit{" "}
               {totalAnalyses !== null ? (
                 <span className="text-white font-black">{totalAnalyses.toLocaleString("cs-CZ")} podvodů</span>
@@ -205,7 +201,7 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
               Zkuste to – vyberte ukázku podvodu:
             </p>
@@ -229,7 +225,7 @@ export default function Home() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Vložte podezřelý text, SMS, email nebo URL..."
-              className="w-full bg-transparent p-6 outline-none text-white text-base sm:text-lg min-h-[160px] resize-none placeholder:text-slate-600 rounded-t-[32px]"
+              className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg min-h-[120px] resize-none placeholder:text-slate-600 rounded-t-[32px]"
             />
 
             <input
@@ -251,7 +247,7 @@ export default function Home() {
                 <button
                   onClick={handleAnalysis}
                   disabled={loading}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-4 rounded-2xl font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}
                 </button>
