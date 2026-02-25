@@ -99,6 +99,15 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
                   </div>
                 </div>
               )}
+
+              {report.original_text && (
+                <div>
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Analyzovaný text</h4>
+                  <p className="text-slate-400 text-sm leading-relaxed whitespace-pre-wrap break-words font-mono bg-slate-900/50 rounded-xl p-4 border border-white/5">
+                    {report.original_text}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

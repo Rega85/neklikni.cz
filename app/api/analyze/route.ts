@@ -222,6 +222,7 @@ async function saveResult(userId: string | null, text: string, result: any, tier
     const { data } = await supabaseAdmin
       .from("shared_results")
       .insert({
+        original_text:  text,
         risk:           result.risk,
         verdict:        result.verdict,
         analysis:       result.analysis,
