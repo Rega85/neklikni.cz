@@ -223,7 +223,7 @@ export default function Home() {
           </div>
 
           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col">
-            <p className="text-slate-300 text-sm px-6 pt-5 pb-1 text-left">Zkopírujte podezřelou zprávu. Do 10 sekund víte, jestli je to podvod.</p>
+            <p className="text-slate-200 text-sm font-semibold px-6 pt-5 pb-1 text-left">Zkopírujte podezřelou zprávu. Do 10 sekund víte, jestli je to podvod.</p>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
