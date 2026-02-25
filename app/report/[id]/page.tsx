@@ -41,7 +41,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
   const supabase = await createClient();
 
   const { data: report } = await supabase
-    .from("analyses")
+    .from("shared_results")
     .select("*")
     .eq("id", resolvedParams.id)
     .single();

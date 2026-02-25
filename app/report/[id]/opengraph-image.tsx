@@ -42,6 +42,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
             justifyContent: 'center',
             fontFamily: 'sans-serif',
             padding: '40px',
+            position: 'relative',
           }}
         >
           <div
@@ -57,19 +58,19 @@ export default async function Image({ params }: { params: Promise<{ id: string }
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
             }}
           >
-            <div style={{ fontSize: '140px', fontWeight: '900', color: textColor, lineHeight: 1 }}>
+            <div style={{ fontSize: '140px', fontWeight: '900', color: textColor, lineHeight: 1, display: 'flex' }}>
               {report.risk}%
             </div>
-            <div style={{ fontSize: '36px', fontWeight: 'bold', color: textColor, textTransform: 'uppercase', marginTop: '20px', letterSpacing: '2px' }}>
-              {isHigh ? '⚠️ Vysoké riziko' : '✅ Nízké riziko'}
+            <div style={{ fontSize: '36px', fontWeight: 'bold', color: textColor, textTransform: 'uppercase', marginTop: '20px', letterSpacing: '2px', display: 'flex' }}>
+              {isHigh ? 'POZOR: Vysoké riziko' : 'OK: Nízké riziko'}
             </div>
-            <div style={{ fontSize: '32px', color: '#f1f5f9', textAlign: 'center', marginTop: '40px', fontStyle: 'italic', padding: '0 20px' }}>
+            <div style={{ fontSize: '32px', color: '#f1f5f9', textAlign: 'center', marginTop: '40px', fontStyle: 'italic', padding: '0 20px', display: 'flex' }}>
               "{report.verdict}"
             </div>
           </div>
-          
+
           <div style={{ position: 'absolute', bottom: 40, fontSize: '28px', color: '#94a3b8', display: 'flex', fontWeight: 'bold', letterSpacing: '1px' }}>
-            🛡️ Prověřeno pomocí AI na NeKlikni.cz
+            Prověřeno pomocí AI na NeKlikni.cz
           </div>
         </div>
       ),
@@ -80,7 +81,7 @@ export default async function Image({ params }: { params: Promise<{ id: string }
     return new ImageResponse(
       (
         <div style={{ background: '#020617', width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <h1 style={{ color: 'white', fontSize: '60px' }}>Výsledek analýzy - NeKlikni.cz</h1>
+          <div style={{ color: 'white', fontSize: '60px', display: 'flex' }}>Výsledek analýzy - NeKlikni.cz</div>
         </div>
       ),
       { ...size }
