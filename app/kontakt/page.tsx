@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Send, CheckCircle2 } from 'lucide-react';
 
 export default function KontaktPage() {
-  const [form, setForm] = useState({ name: '', email: '', message: '' });
+  const [form, setForm] = useState({ name: '', email: '', message: '', website: '' });
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -46,6 +46,17 @@ export default function KontaktPage() {
 
         <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Honeypot — hidden from real users, bots fill it */}
+            <input
+              type="text"
+              name="website"
+              value={form.website}
+              onChange={(e) => setForm({ ...form, website: e.target.value })}
+              tabIndex={-1}
+              autoComplete="off"
+              style={{ display: 'none' }}
+              aria-hidden="true"
+            />
 
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 block">
