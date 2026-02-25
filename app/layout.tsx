@@ -5,6 +5,7 @@ import { ReactNode } from "react";
 import Script from "next/script";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import CookieConsent from "./components/CookieConsent";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -75,6 +76,7 @@ export default function RootLayout({
         <Header />
         {children}
         <Footer />
+        <CookieConsent />
       </body>
     </html>
   );
