@@ -1,15 +1,32 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
+// Referral codes are exactly 8 uppercase alphanumeric characters
+const REF_CODE_RE = /^[A-Z0-9]{8}$/
+
 export async function middleware(request: NextRequest) {
   const protectedPaths = ['/profile', '/billing']
   const isProtectedPath = protectedPaths.some(path =>
     request.nextUrl.pathname.startsWith(path)
   )
 
-  if (!isProtectedPath) return NextResponse.next()
+  if (!isProtectedPath) {
+    const res = NextResponse.next()
+    // Store referral code in HTTP-only cookie for 30 days (only if not already set)
+    const refCode = request.nextUrl.searchParams.get('ref')
+    if (refCode && REF_CODE_RE.test(refCode) && !request.cookies.get('neklikni_ref')) {
+      res.cookies.set('neklikni_ref', refCode, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 60 * 60 * 24 * 30,
+      })
+    }
+    return res
+  }
 
-  // Build a mutable response so refreshed session cookies are forwarded
+  // Protected path — validate session and forward refreshed cookies
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -21,7 +38,6 @@ export async function middleware(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          // Write refreshed cookies back onto both the request and the response
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           response = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -32,7 +48,6 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // getUser() validates the JWT with Supabase's server and refreshes expired tokens
   const { data: { user } } = await supabase.auth.getUser()
 
   if (!user) {

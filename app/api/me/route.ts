@@ -14,7 +14,7 @@ export async function GET() {
 
     const { data: profile } = await supabase
       .from("user_profiles")
-      .select("tier, credits_remaining")
+      .select("tier, credits_remaining, referral_code")
       .eq("id", user.id)
       .single();
 

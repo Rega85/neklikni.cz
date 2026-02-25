@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -12,7 +18,7 @@ export async function GET(request: Request) {
   const next = /^\/[^/\\]/.test(rawNext) || rawNext === '/' ? rawNext : '/'
 
   const cookieStore = await cookies()
-  
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -28,9 +34,24 @@ export async function GET(request: Request) {
     }
   )
 
+  async function tryApplyReferral() {
+    const refCookie = cookieStore.get('neklikni_ref')
+    if (!refCookie?.value) return
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    await supabaseAdmin.rpc('apply_referral', {
+      p_new_user_id: user.id,
+      p_ref_code: refCookie.value,
+    })
+    cookieStore.delete('neklikni_ref')
+  }
+
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    if (!error) {
+      await tryApplyReferral()
+      return NextResponse.redirect(`${origin}${next}`)
+    }
     console.error('Code exchange error:', error)
   }
 
@@ -39,7 +60,10 @@ export async function GET(request: Request) {
       token_hash,
       type: type as any,
     })
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    if (!error) {
+      if (type === 'signup') await tryApplyReferral()
+      return NextResponse.redirect(`${origin}${next}`)
+    }
     console.error('OTP verification error:', error)
   }
 
