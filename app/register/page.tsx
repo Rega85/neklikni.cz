@@ -4,6 +4,18 @@ import { createClient } from '@/utils/supabase/client';
 import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+function translateError(msg: string): string {
+  if (/already registered|already in use|already exists/i.test(msg))
+    return 'Tento e-mail je již registrován. Přihlaste se.';
+  if (/rate limit|too many/i.test(msg))
+    return 'Příliš mnoho pokusů. Zkuste to za chvíli.';
+  if (/invalid email/i.test(msg))
+    return 'Neplatný formát e-mailu.';
+  if (/password/i.test(msg))
+    return 'Heslo musí mít alespoň 6 znaků.';
+  return 'Registrace se nezdařila. Zkuste to znovu.';
+}
+
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,7 +47,7 @@ export default function RegisterPage() {
     });
 
     if (error) {
-      setError(error.message);
+      setError(translateError(error.message));
     } else {
       setDone(true);
     }

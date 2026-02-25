@@ -2,7 +2,6 @@
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 type Mode = "password" | "magic";
 
@@ -15,7 +14,6 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   
   const supabase = createClient();
-  const router = useRouter(); // ✅ Přidán Next.js Router
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +26,7 @@ export default function LoginPage() {
         setError("Špatný e-mail nebo heslo.");
         setLoading(false); // Vypneme loading jen při chybě
       } else {
-        // ✅ OPRAVA: Plynulé přesměrování
-        router.push('/');
-        router.refresh();
+        window.location.href = '/';
       }
     } else {
       const { error } = await supabase.auth.signInWithOtp({
@@ -56,7 +52,7 @@ export default function LoginPage() {
     setError('');
     
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`, 
+      redirectTo: `${window.location.origin}/auth/callback?next=/update-password`,
     });
 
     setLoading(false);
@@ -89,14 +85,14 @@ export default function LoginPage() {
         <div className="flex bg-slate-950 rounded-xl p-1 mb-6">
           <button
             type="button"
-            onClick={() => setMode("password")}
+            onClick={() => { setMode("password"); setError(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === "password" ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}
           >
             Heslo
           </button>
           <button
             type="button"
-            onClick={() => setMode("magic")}
+            onClick={() => { setMode("magic"); setError(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === "magic" ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}
           >
             Magic link

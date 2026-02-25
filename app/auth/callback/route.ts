@@ -33,17 +33,12 @@ export async function GET(request: Request) {
   }
 
   if (token_hash && type) {
-    // Pro magic link použij exchangeCodeForSession místo verifyOtp
-    const { error } = await supabase.auth.exchangeCodeForSession(token_hash)
-    if (!error) return NextResponse.redirect(`${origin}${next}`)
-    
-    // Fallback na verifyOtp
-    const { error: otpError } = await supabase.auth.verifyOtp({ 
-      token_hash, 
-      type: type as any 
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: type as any,
     })
-    if (!otpError) return NextResponse.redirect(`${origin}${next}`)
-    console.error('Auth error:', otpError)
+    if (!error) return NextResponse.redirect(`${origin}${next}`)
+    console.error('OTP verification error:', error)
   }
 
   return NextResponse.redirect(`${origin}/login?error=Prihlaseni_selhalo`)

@@ -1,15 +1,35 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { Lock } from 'lucide-react';
+import { Lock, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function UpdatePasswordPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [sessionReady, setSessionReady] = useState(false);
   const supabase = createClient();
   const router = useRouter();
+
+  useEffect(() => {
+    // Session is set by /auth/callback before redirecting here.
+    // If someone lands without a recovery session, send them to login.
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSessionReady(true);
+      } else {
+        router.replace('/login');
+      }
+    });
+
+    // Also handle PASSWORD_RECOVERY event for any client-side redirect flows
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') setSessionReady(true);
+      if (event === 'SIGNED_OUT') router.replace('/login');
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,8 +37,14 @@ export default function UpdatePasswordPage() {
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     if (error) { setError(error.message); setLoading(false); return; }
-    router.push('/');
+    window.location.href = '/';
   };
+
+  if (!sessionReady) return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <Loader2 className="animate-spin text-purple-500" size={32} />
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
