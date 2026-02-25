@@ -186,6 +186,14 @@ export default function Home() {
               </span>
             </h1>
 
+            <p className="text-slate-400 text-sm mt-3">
+              <span>✓ 100% anonymní</span>
+              <span className="mx-2 text-slate-600">·</span>
+              <span>✓ Bez registrace</span>
+              <span className="mx-2 text-slate-600">·</span>
+              <span>✓ Neukládáme váš obsah</span>
+            </p>
+
             <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-2">
               Komunitní štít:{" "}
               {totalAnalyses !== null ? (
@@ -215,6 +223,7 @@ export default function Home() {
           </div>
 
           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col">
+            <p className="text-slate-300 text-sm px-6 pt-5 pb-1 text-left">Zkopírujte podezřelou zprávu. Do 10 sekund víte, jestli je to podvod.</p>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -275,8 +284,8 @@ export default function Home() {
                 )}
                 <button
                   onClick={handleAnalysis}
-                  disabled={loading || (!input.trim() && !image)}
-                  className="bg-white text-black px-12 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={loading}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-12 py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}
                 </button>
