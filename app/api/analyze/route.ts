@@ -132,7 +132,7 @@ export async function POST(req: Request) {
 
     const { data: profile, error: profileErr } = await supabaseAdmin
       .from("user_profiles")
-      .select("tier, credits_remaining")
+      .select("tier")
       .eq("id", userId)
       .single();
 
@@ -141,9 +141,20 @@ export async function POST(req: Request) {
     }
 
     const tier = profile.tier || "free";
-    const credits = profile.credits_remaining ?? 0;
 
-    if (credits <= 0) {
+    // Atomically check-and-deduct in one DB operation.
+    // deduct_credit returns the new credits_remaining, or NULL if the user had 0 credits.
+    const { data: newCredits, error: deductErr } = await supabaseAdmin.rpc(
+      "deduct_credit",
+      { p_user_id: userId }
+    );
+
+    if (deductErr) {
+      console.error("Credit deduction failed:", deductErr);
+      return NextResponse.json({ error: "Nepodařilo se odečíst kredit. Zkuste to znovu." }, { status: 500 });
+    }
+
+    if (newCredits === null || newCredits === undefined) {
       return NextResponse.json(
         {
           error: "Nedostatek kreditů",
@@ -158,16 +169,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: deductResult, error: deductErr } = await supabaseAdmin.rpc(
-      "deduct_credit",
-      { p_user_id: userId }
-    );
-
-    if (deductErr || !deductResult) {
-      console.error("Credit deduction failed:", deductErr);
-      return NextResponse.json({ error: "Nepodařilo se odečíst kredit. Zkuste to znovu." }, { status: 500 });
-    }
-
     const result = await runAnalysis(text, tier);
     const shareId = await saveResult(userId, text, result, tier);
 
@@ -176,7 +177,7 @@ export async function POST(req: Request) {
     return NextResponse.json({
       ...result,
       shareId,
-      credits: credits - 1,
+      credits: newCredits,
       tier,
     });
 
