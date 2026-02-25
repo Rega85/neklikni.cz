@@ -77,6 +77,7 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
   const result = await runAnalysis(text, "free");
   await supabaseAdmin.rpc("upsert_anonymous_usage", { p_ip: ip, p_date: today });
   const shareId = await saveResult(null, text, result, "free");
+  void (async () => { try { await supabaseAdmin.rpc("increment_total_analyses"); } catch {} })();
 
   return NextResponse.json({
     ...result,
@@ -93,6 +94,10 @@ export async function POST(req: Request) {
 
     if (!text || text.trim().length < 3) {
       return NextResponse.json({ error: "Zadejte text ke kontrole." }, { status: 400 });
+    }
+
+    if (text.length > 5000) {
+      return NextResponse.json({ error: "Text je příliš dlouhý. Maximum je 5000 znaků." }, { status: 400 });
     }
 
     // ── PŘIHLÁŠENÝ UŽIVATEL — zkus cookies i Bearer token ─────────────────
@@ -113,7 +118,7 @@ export async function POST(req: Request) {
       );
       const { data: { user } } = await supabaseCookies.auth.getUser();
       if (user) userId = user.id;
-    } catch {}
+    } catch (e) { console.warn("Cookie auth failed:", e); }
 
     // Metoda 2: Bearer token jako fallback
     if (!userId) {
