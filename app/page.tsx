@@ -194,14 +194,14 @@ export default function Home() {
               <span>✓ Neukládáme váš obsah</span>
             </p>
 
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mt-2">
-              Komunitní štít:{" "}
+            <p className="text-slate-400 text-sm mt-1">
+              Už jsme pomohli odhalit{" "}
               {totalAnalyses !== null ? (
-                <span className="text-white text-lg font-black">{totalAnalyses.toLocaleString("cs-CZ")}</span>
+                <span className="text-white font-black">{totalAnalyses.toLocaleString("cs-CZ")} podvodů</span>
               ) : (
-                <span className="inline-block w-16 h-5 bg-slate-800 rounded animate-pulse align-middle" />
-              )}{" "}
-              hrozeb odhaleno
+                <span className="inline-block w-16 h-4 bg-slate-800 rounded animate-pulse align-middle" />
+              )}
+              . Bude ten váš další?
             </p>
           </div>
 
