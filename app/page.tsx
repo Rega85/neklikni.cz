@@ -112,6 +112,8 @@ export default function Home() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const DISCLAIMER = "Výsledky analýzy vygenerované umělou inteligencí mají informativní charakter. Technologie se může mýlit — poslední rozhodnutí je vždy na Vás.";
+
   const riskColor = !result ? "" : result.risk >= 70 ? "text-red-400" : result.risk >= 40 ? "text-yellow-400" : "text-green-400";
   const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
   const RiskIcon = !result ? Shield : result.risk >= 40 ? AlertTriangle : CheckCircle;
@@ -207,6 +209,10 @@ export default function Home() {
             </div>
           </div>
 
+          <p className="text-slate-400 text-sm text-center max-w-3xl mx-auto leading-relaxed">
+            ⚠️ {DISCLAIMER}
+          </p>
+
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
           {result && (
@@ -262,6 +268,10 @@ export default function Home() {
                     {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}
                   </button>
                 </div>
+
+                <p className="text-slate-400 text-sm text-center leading-relaxed pt-2 border-t border-white/5">
+                  ⚠️ {DISCLAIMER}
+                </p>
               </div>
             </div>
           )}
