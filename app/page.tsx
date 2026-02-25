@@ -224,7 +224,7 @@ export default function Home() {
             />
 
             {/* Image upload strip */}
-            <div className="px-6 py-3 border-t border-white/5">
+            <div className="px-4 py-3 border-t border-white/5">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -233,7 +233,7 @@ export default function Home() {
                 onChange={handleImageSelect}
               />
               {imagePreview ? (
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 px-2">
                   <img src={imagePreview} alt="Náhled" className="w-14 h-14 object-cover rounded-xl border border-white/10 shrink-0" />
                   <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
                   <button
@@ -244,14 +244,23 @@ export default function Home() {
                     <X size={14} />
                   </button>
                 </div>
+              ) : canUploadImage ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-500 active:scale-95 text-white text-sm font-bold py-3 rounded-2xl transition-all"
+                >
+                  <Camera size={15} />
+                  Nahrát screenshot
+                </button>
               ) : (
                 <button
                   type="button"
-                  onClick={() => canUploadImage ? fileInputRef.current?.click() : (window.location.href = "/pricing")}
-                  className={`flex items-center gap-2 text-xs font-bold transition-colors ${canUploadImage ? "text-slate-400 hover:text-purple-400" : "text-slate-600 hover:text-slate-500"}`}
+                  onClick={() => { window.location.href = "/pricing"; }}
+                  className="w-full flex items-center justify-center gap-2 bg-slate-800/60 border border-purple-500/30 hover:border-purple-500/60 text-slate-500 hover:text-slate-400 text-sm font-bold py-3 rounded-2xl transition-all"
                 >
-                  {canUploadImage ? <Camera size={14} /> : <Lock size={14} />}
-                  <span>{canUploadImage ? "Nahrát screenshot" : "Nahrát screenshot · Dostupné od tarifu BASIC"}</span>
+                  <Lock size={15} />
+                  Nahrát screenshot <span className="text-purple-500/70">(od tarifu BASIC)</span>
                 </button>
               )}
             </div>

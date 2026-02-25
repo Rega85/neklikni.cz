@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc("get_total_analyses");
-    if (error) {
-      console.error("get_total_analyses RPC failed:", error);
-      return NextResponse.json({ total: 0 });
+    // Try the fast atomic RPC counter first
+    const { data, error } = await supabaseAdmin.rpc("get_total_analyses");
+    if (!error && data != null && data > 0) {
+      return NextResponse.json({ total: data });
     }
-    return NextResponse.json({ total: data ?? 0 });
+    if (error) console.error("get_total_analyses RPC failed:", error);
+
+    // Fallback: count actual rows in shared_results
+    const { count, error: countErr } = await supabaseAdmin
+      .from("shared_results")
+      .select("*", { count: "exact", head: true });
+    if (countErr) console.error("shared_results count failed:", countErr);
+
+    return NextResponse.json({ total: count ?? 0 });
   } catch (e) {
     console.error("Stats route error:", e);
     return NextResponse.json({ total: 0 });
