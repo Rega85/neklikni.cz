@@ -6,7 +6,7 @@ import Script from "next/script";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
 export const viewport: Viewport = {
   themeColor: "#020617",

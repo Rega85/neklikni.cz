@@ -40,7 +40,7 @@ export default function ProfilePage() {
   return (
     <main className="min-h-screen bg-[#020617] text-white pt-28 px-4 sm:px-6 pb-20">
       <div className="max-w-2xl mx-auto space-y-6">
-        <h1 className="text-3xl font-black uppercase italic tracking-tighter">Můj Profil</h1>
+        <h1 className="text-3xl font-black uppercase tracking-tighter">Můj Profil</h1>
         <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-4">
           <div>
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">E-mail</p>

@@ -74,7 +74,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
           <div className="p-10 space-y-8">
             <div className="text-center">
-              <p className="text-2xl font-medium text-slate-200 italic leading-relaxed">
+              <p className="text-2xl font-semibold text-slate-200 leading-relaxed">
                 "{report.verdict}"
               </p>
             </div>
@@ -82,7 +82,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             <div className="space-y-6 pt-8 border-t border-white/5">
               <div>
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-3">Hloubková analýza</h4>
-                <p className="text-slate-300 leading-relaxed italic opacity-90">
+                <p className="text-slate-300 leading-relaxed">
                   {report.analysis || "Analýza není pro tento typ reportu k dispozici."}
                 </p>
               </div>

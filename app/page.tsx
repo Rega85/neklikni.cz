@@ -179,7 +179,7 @@ export default function Home() {
               <Zap size={10} fill="currentColor" /> AI Security v4.6
             </div>
 
-            <h1 className="flex flex-col items-center justify-center font-black italic uppercase tracking-normal">
+            <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal">
               <span className="text-5xl sm:text-6xl md:text-7xl text-white leading-normal">PROVĚŘ</span>
               <span className="text-2xl sm:text-4xl md:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-normal">
                 NEŽ KLIKNEŠ
@@ -298,7 +298,7 @@ export default function Home() {
                   <RiskIcon size={20} />
                   <span className="font-black uppercase text-sm tracking-widest">{result.risk >= 70 ? "Vysoké riziko" : result.risk >= 40 ? "Střední riziko" : "Nízké riziko"}</span>
                 </div>
-                <h2 className="text-xl sm:text-2xl font-black uppercase italic tracking-tighter text-white">{result.verdict}</h2>
+                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-white">{result.verdict}</h2>
               </div>
 
               <div className="space-y-6">
