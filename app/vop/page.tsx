@@ -54,6 +54,11 @@ export default function VopPage() {
             nepřevádějí do dalšího období a nevracejí. Na základě oprávněné reklamace může 
             provozovatel rozhodnout o vrácení platby individuálně.
           </p>
+          <p className="text-slate-300 leading-relaxed">
+            Zakoupením kreditů nebo předplatného souhlasíte s okamžitým poskytnutím digitálního obsahu
+            ve smyslu § 1837 písm. l) občanského zákoníku. Tímto souhlasem ztrácíte právo na odstoupení
+            od smlouvy ve 14denní lhůtě.
+          </p>
         </section>
 
         <section className="space-y-4">

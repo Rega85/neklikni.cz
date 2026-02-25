@@ -28,8 +28,12 @@ export default function GdprPage() {
             <li className="flex gap-2"><span className="text-purple-400">→</span> Záznamy o použití služby (počet analýz, tarif)</li>
           </ul>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Analyzované texty a zprávy <strong className="text-white">nejsou trvale ukládány</strong> a 
+            Analyzované texty a zprávy <strong className="text-white">nejsou trvale ukládány</strong> a
             nejsou sdíleny s třetími stranami mimo zpracování analýzy.
+          </p>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            Nahrané screenshoty mohou obsahovat osobní údaje třetích stran (telefonní čísla, jména, adresy).
+            Tyto údaje jsou zpracovány výhradně za účelem analýzy a nejsou po jejím dokončení ukládány.
           </p>
         </section>
 
@@ -62,7 +66,15 @@ export default function GdprPage() {
             <li className="flex gap-2"><span className="text-purple-400">→</span> <strong className="text-white">Stripe</strong> – zpracování plateb (USA, Standard Contractual Clauses)</li>
             <li className="flex gap-2"><span className="text-purple-400">→</span> <strong className="text-white">Anthropic</strong> – AI analýza textů (USA, Standard Contractual Clauses)</li>
             <li className="flex gap-2"><span className="text-purple-400">→</span> <strong className="text-white">Vercel</strong> – hosting aplikace (USA, Standard Contractual Clauses)</li>
+            <li className="flex gap-2"><span className="text-purple-400">→</span> <strong className="text-white">Google Analytics</strong> – analýza návštěvnosti (pouze se souhlasem uživatele)</li>
           </ul>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            Podrobnosti o používání cookies naleznete na stránce{" "}
+            <a href="/cookies" className="text-purple-400 hover:text-purple-300 font-bold transition-colors">
+              Cookies
+            </a>
+            .
+          </p>
         </section>
 
         <section className="space-y-4">
