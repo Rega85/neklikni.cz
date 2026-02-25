@@ -86,7 +86,7 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-3">
-          <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors hidden sm:block">Ceník</Link>
+          <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">Ceník</Link>
 
           {initialLoading ? (
             <div className="w-28 h-9 bg-white/5 rounded-full animate-pulse" />
