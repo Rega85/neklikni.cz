@@ -197,7 +197,7 @@ export async function POST(req: Request) {
 
 async function runAnalysis(text: string, tier: string) {
   const model = TIER_MODELS[tier] || TIER_MODELS.free;
-  const systemPrompt = tier === "pro" || tier === "basic" ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
+  const systemPrompt = tier === "pro" ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
   const maxTokens = tier === "pro" ? 2000 : tier === "basic" ? 1500 : 800;
 
   const msg = await anthropic.messages.create({
