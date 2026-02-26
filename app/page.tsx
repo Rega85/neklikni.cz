@@ -219,13 +219,14 @@ export default function Home() {
           </div>
 
           <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col">
-            <p className="text-slate-200 text-sm font-semibold px-6 pt-5 pb-1 text-left">Zkopírujte podezřelou zprávu. Do 10 sekund víte, jestli je to podvod.</p>
+            <p className="text-slate-200 text-sm font-semibold px-6 pt-5 pb-1 text-left">Vložte podezřelou zprávu. AI odhalí podvod během chvilky.</p>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Vložte podezřelý text, SMS, email nebo URL..."
-              className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg min-h-[120px] resize-none placeholder:text-slate-600 rounded-t-[32px]"
+              rows={4}
+              className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg resize-none placeholder:text-slate-600 rounded-t-[32px]"
             />
 
             <input
