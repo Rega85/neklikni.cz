@@ -12,8 +12,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 export async function POST(req: Request) {
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
@@ -160,6 +158,7 @@ export async function POST(req: Request) {
       const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(profile.id);
       if (user?.email) {
         try {
+          const resend = new Resend(process.env.RESEND_API_KEY);
           await resend.emails.send({
             from: process.env.RESEND_FROM_EMAIL!,
             to: user.email,
