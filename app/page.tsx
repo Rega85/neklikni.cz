@@ -18,6 +18,27 @@ type AnalysisResult = {
   limitReached?: boolean;
 };
 
+type UserProfile = { tier: string; credits_remaining?: number };
+
+const EXAMPLES = [
+  {
+    label: "📱 SMS z banky",
+    text: "Vážený kliente, Vaše karta byla zablokována z důvodu podezřelé aktivity. Pro okamžité odblokování klikněte na odkaz: www.csob-overeni.cz/login. Máte 24 hodin.",
+  },
+  {
+    label: "📦 Nedoručený balíček",
+    text: "Ceska posta: Vas balik nelze dorucit kvuli chybejicimu poplatku 29 Kc. Zaplaťte zde pro doručení: https://ceska-posta-doruceni.com/platba",
+  },
+  {
+    label: "🏆 Výhra v soutěži",
+    text: "GRATULUJEME! Byl/a jste vybrán/a jako výherce iPhone 16 Pro v naší soutěži. Pro vyzvednutí výhry vyplňte údaje zde: www.vyhry-cz.com/iphone",
+  },
+  {
+    label: "⚡ Urgentní email z úřadu",
+    text: "Finanční úřad ČR: Evidujeme u Vás nedoplatek na dani z příjmu ve výši 4.250 Kč. Pokud nezaplatíte do 48 hodin, bude zahájeno exekuční řízení. Platba zde: www.financni-urad-platby.cz",
+  },
+];
+
 export default function Home() {
   const [supabase] = useState(() => createClient());
   const [input, setInput] = useState("");
@@ -28,7 +49,7 @@ export default function Home() {
   const [ctaCopied, setCtaCopied] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState("");
@@ -194,25 +215,6 @@ export default function Home() {
   const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
   const RiskIcon = !result ? Shield : result.risk >= 40 ? AlertTriangle : CheckCircle;
 
-  const EXAMPLES = [
-    {
-      label: "📱 SMS z banky",
-      text: "Vážený kliente, Vaše karta byla zablokována z důvodu podezřelé aktivity. Pro okamžité odblokování klikněte na odkaz: www.csob-overeni.cz/login. Máte 24 hodin.",
-    },
-    {
-      label: "📦 Nedoručený balíček",
-      text: "Ceska posta: Vas balik nelze dorucit kvuli chybejicimu poplatku 29 Kc. Zaplaťte zde pro doručení: https://ceska-posta-doruceni.com/platba",
-    },
-    {
-      label: "🏆 Výhra v soutěži",
-      text: "GRATULUJEME! Byl/a jste vybrán/a jako výherce iPhone 16 Pro v naší soutěži. Pro vyzvednutí výhry vyplňte údaje zde: www.vyhry-cz.com/iphone",
-    },
-    {
-      label: "⚡ Urgentní email z úřadu",
-      text: "Finanční úřad ČR: Evidujeme u Vás nedoplatek na dani z příjmu ve výši 4.250 Kč. Pokud nezaplatíte do 48 hodin, bude zahájeno exekuční řízení. Platba zde: www.financni-urad-platby.cz",
-    },
-  ];
-
   return (
     <div className="flex flex-col min-h-screen bg-[#020617]">
       <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center">
@@ -274,7 +276,7 @@ export default function Home() {
                 onBlur={() => setIsFocused(false)}
                 rows={3}
                 aria-label="Vstupní pole pro analýzu zprávy"
-                className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg resize-none rounded-t-[32px]"
+                className="w-full bg-transparent p-5 focus:ring-2 focus:ring-purple-500/30 focus:outline-none text-white text-base sm:text-lg resize-none rounded-t-[32px]"
               />
             </div>
 

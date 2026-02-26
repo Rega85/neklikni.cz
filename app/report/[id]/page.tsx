@@ -8,30 +8,39 @@ import { Shield, AlertTriangle, CheckCircle, ArrowLeft, Share2 } from "lucide-re
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const resolvedParams = await params;
   const url = `https://www.neklikni.cz/report/${resolvedParams.id}`;
+  const supabase = await createClient();
+
+  const { data: report } = await supabase
+    .from("shared_results")
+    .select("risk, verdict, analysis")
+    .eq("id", resolvedParams.id)
+    .single();
+
+  if (!report) {
+    return { title: "Výsledek analýzy | NeKlikni.cz", alternates: { canonical: url } };
+  }
+
+  const firstSentence = report.analysis?.split(/[.!?]/)[0] ?? report.analysis ?? "";
+  const title = `Výsledek analýzy: ${report.verdict} | NeKlikni.cz`;
+  const description = `Riziko ${report.risk}/100 – ${firstSentence}`;
 
   return {
-    title: 'Analýza hrozby | NeKlikni.cz',
+    title,
+    description,
     alternates: { canonical: url },
     openGraph: {
-      title: 'Pozor! AI analýza odhalila riziko ⚠️',
-      description: 'AI bodyguard prověřil tuto zprávu. Podívejte se na výsledek.',
-      url: url,
+      title,
+      description,
+      url,
       type: 'article',
-      images: [
-        {
-          url: `${url}/opengraph-image`,
-          width: 1200,
-          height: 630,
-          type: 'image/png',
-          alt: 'AI analýza hrozby NeKlikni.cz',
-        },
-      ],
+      images: [{ url: '/og-image.png', width: 1200, height: 630, type: 'image/png', alt: 'AI analýza hrozby NeKlikni.cz' }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'AI analýza odhalila riziko ⚠️',
-      images: [`${url}/opengraph-image`],
-    }
+      title,
+      description,
+      images: ['/og-image.png'],
+    },
   };
 }
 

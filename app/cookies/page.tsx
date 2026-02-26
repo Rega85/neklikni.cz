@@ -63,6 +63,43 @@ export default function CookiesPage() {
         </section>
 
         <section className="space-y-4">
+          <h2 className="text-xl font-bold text-purple-400">Přehled cookies a doba uchování</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-slate-400 border-collapse">
+              <thead>
+                <tr className="text-left border-b border-slate-700">
+                  <th className="py-3 pr-6 text-slate-300 font-bold">Název</th>
+                  <th className="py-3 pr-6 text-slate-300 font-bold">Typ</th>
+                  <th className="py-3 text-slate-300 font-bold">Doba uchování</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800">
+                <tr>
+                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">cookie_consent</td>
+                  <td className="py-3 pr-6">localStorage</td>
+                  <td className="py-3">Neexpiruje (do smazání)</td>
+                </tr>
+                <tr>
+                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">neklikni_ref</td>
+                  <td className="py-3 pr-6">httpOnly cookie</td>
+                  <td className="py-3">30 dní</td>
+                </tr>
+                <tr>
+                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">Supabase auth</td>
+                  <td className="py-3 pr-6">httpOnly cookie</td>
+                  <td className="py-3">1 hodina (refresh automaticky)</td>
+                </tr>
+                <tr>
+                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">_ga, _gid</td>
+                  <td className="py-3 pr-6">cookie (GA4)</td>
+                  <td className="py-3">2 roky / 24 hodin</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="space-y-4">
           <h2 className="text-xl font-bold text-purple-400">Jak spravovat cookies?</h2>
           <p className="text-slate-300 leading-relaxed">
             Cookies můžete spravovat nebo zakázat v nastavení vašeho prohlížeče. Upozorňujeme,
