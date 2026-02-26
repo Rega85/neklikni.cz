@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Platba proběhla úspěšně | NeKlikni.cz",
-  description: "Děkujeme za nákup. Vaše kredity byly připsány a můžete začít analyzovat.",
+  title: "Platba úspěšná | NeKlikni.cz",
+  description: "Vaše platba byla úspěšně zpracována",
 };
 
 export default function BillingSuccessLayout({ children }: { children: React.ReactNode }) {

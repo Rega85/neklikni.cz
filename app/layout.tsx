@@ -39,6 +39,9 @@ export const metadata: Metadata = {
     description: 'Prověřte si podezřelou zprávu dřív, než na ni kliknete.',
     images: ['/og-image.png'],
   },
+  alternates: {
+    canonical: "https://neklikni.cz",
+  },
   robots: {
     index: true,
     follow: true,
