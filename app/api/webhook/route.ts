@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { Resend } from "resend";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-01-28.clover",
@@ -10,6 +11,8 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: Request) {
   const body = await req.text();
@@ -59,23 +62,29 @@ export async function POST(req: Request) {
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
-      .select("credits_remaining")
+      .select("credits_remaining, tier")
       .eq("id", userId)
       .single();
 
     const currentCredits = profile?.credits_remaining ?? 0;
 
-    const { error: updateError } = await supabaseAdmin
-      .from("user_profiles")
-      .update({
-        credits_remaining: currentCredits + addedCredits,
-        stripe_customer_id: session.customer as string,
-        tier: plan,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
+    // For easy (one-time top-up), preserve any existing paid tier
+    const currentTier = profile?.tier;
+    const tierToSet = plan === "easy" && currentTier && ["basic", "pro"].includes(currentTier)
+      ? currentTier
+      : plan;
 
-    if (updateError) {
+    const { error: upsertError } = await supabaseAdmin
+      .from("user_profiles")
+      .upsert({
+        id: userId,
+        credits_remaining: (currentCredits || 0) + addedCredits,
+        stripe_customer_id: session.customer as string,
+        tier: tierToSet,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: "id" });
+
+    if (upsertError) {
       return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
     }
   }
@@ -86,7 +95,7 @@ export async function POST(req: Request) {
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice;
 
-    if (invoice.billing_reason === "subscription_cycle") {
+    if (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_renewal") {
       const customerId = invoice.customer as string;
 
       const { data: profile } = await supabaseAdmin
@@ -131,6 +140,36 @@ export async function POST(req: Request) {
 
     if (cancelError) {
       return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
+    }
+  }
+
+  // ==========================================
+  // SCÉNÁŘ D: Neúspěšná platba
+  // ==========================================
+  if (event.type === "invoice.payment_failed") {
+    const invoice = event.data.object as Stripe.Invoice;
+    const customerId = invoice.customer as string;
+
+    const { data: profile } = await supabaseAdmin
+      .from("user_profiles")
+      .select("id")
+      .eq("stripe_customer_id", customerId)
+      .single();
+
+    if (profile) {
+      const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+      if (user?.email) {
+        try {
+          await resend.emails.send({
+            from: process.env.RESEND_FROM_EMAIL!,
+            to: user.email,
+            subject: "Platba na NeKlikni.cz selhala",
+            html: `<p>Dobrý den,</p><p>Nepodařilo se zpracovat vaši platbu na <strong>NeKlikni.cz</strong>. Zkontrolujte prosím platební údaje ve svém účtu a aktualizujte je, aby nedošlo k přerušení služby.</p><p>Tým NeKlikni.cz</p>`,
+          });
+        } catch (e) {
+          console.warn("Failed to send payment failure email:", e);
+        }
+      }
     }
   }
 
