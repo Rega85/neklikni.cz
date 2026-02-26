@@ -30,7 +30,53 @@ export default function Home() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [placeholderText, setPlaceholderText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const PLACEHOLDERS = [
+    "Vložte podezřelou zprávu, SMS nebo odkaz...",
+    "Váš balíček CZ83726 čeká na zaplacení cla 45 Kč...",
+    "Gratulujeme! Váš email byl vylosován, klikněte zde...",
+    "Česká spořitelna: Váš účet byl dočasně zablokován...",
+    "Ahoj mami, rozbil se mi telefon, napiš mi na toto číslo...",
+    "Máte nedoplatek na zdravotním pojištění, uhraďte zde...",
+  ];
+
+  useEffect(() => {
+    let cancelled = false;
+    let phraseIndex = 0;
+    let charIndex = 0;
+    let typing = true;
+    let timeoutId: ReturnType<typeof setTimeout>;
+
+    const tick = () => {
+      if (cancelled) return;
+      const phrase = PLACEHOLDERS[phraseIndex];
+      if (typing) {
+        charIndex++;
+        setPlaceholderText(phrase.slice(0, charIndex));
+        if (charIndex < phrase.length) {
+          timeoutId = setTimeout(tick, 50);
+        } else {
+          timeoutId = setTimeout(() => { typing = false; tick(); }, 2000);
+        }
+      } else {
+        charIndex--;
+        setPlaceholderText(phrase.slice(0, charIndex));
+        if (charIndex > 0) {
+          timeoutId = setTimeout(tick, 30);
+        } else {
+          phraseIndex = (phraseIndex + 1) % PLACEHOLDERS.length;
+          typing = true;
+          timeoutId = setTimeout(tick, 300);
+        }
+      }
+    };
+
+    timeoutId = setTimeout(tick, 800);
+    return () => { cancelled = true; clearTimeout(timeoutId); };
+  }, []);
 
   useEffect(() => {
     // Bookmarklet handler - přečte ?q= parametr z URL
@@ -214,14 +260,22 @@ export default function Home() {
               </div>
             )}
             <p className="text-slate-200 text-sm font-semibold px-6 pt-5 pb-1 text-left">Vložte podezřelou zprávu. AI odhalí podvod během chvilky.</p>
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Vložte podezřelý text, SMS, email nebo URL..."
-              rows={3}
-              className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg resize-none placeholder:text-slate-600 rounded-t-[32px]"
-            />
+            <div className="relative">
+              {!input && !isFocused && (
+                <div className="absolute inset-0 p-5 pointer-events-none text-slate-600 text-base sm:text-lg leading-normal">
+                  {placeholderText}<span className="animate-pulse">|</span>
+                </div>
+              )}
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                rows={3}
+                className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg resize-none rounded-t-[32px]"
+              />
+            </div>
 
             <input
               ref={fileInputRef}
