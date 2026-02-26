@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("Checkout error:", error);
+    console.warn("Checkout error:", error);
     return NextResponse.json({ error: "Chyba při vytváření platby" }, { status: 500 });
   }
 }

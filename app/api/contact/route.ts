@@ -20,6 +20,10 @@ export async function POST(req: Request) {
     if (typeof email !== "string" || email.length > 200) {
       return NextResponse.json({ error: "E-mail je příliš dlouhý." }, { status: 400 });
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Neplatný email." }, { status: 400 });
+    }
     if (typeof message !== "string" || message.length > 5000) {
       return NextResponse.json({ error: "Zpráva je příliš dlouhá. Maximum je 5000 znaků." }, { status: 400 });
     }
@@ -27,7 +31,6 @@ export async function POST(req: Request) {
     const toEmail = process.env.CONTACT_EMAIL;
     const fromEmail = process.env.RESEND_FROM_EMAIL;
     if (!toEmail || !fromEmail) {
-      console.error("Missing CONTACT_EMAIL or RESEND_FROM_EMAIL env var");
       return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 
@@ -41,7 +44,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("Resend error:", error);
+    console.warn("Resend error:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

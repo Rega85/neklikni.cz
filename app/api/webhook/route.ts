@@ -76,7 +76,6 @@ export async function POST(req: Request) {
       .eq("id", userId);
 
     if (updateError) {
-      console.error("Webhook: chyba při zápisu první platby:", updateError.message);
       return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
     }
   }
@@ -108,7 +107,6 @@ export async function POST(req: Request) {
           .eq("id", profile.id);
 
         if (renewError) {
-          console.error("Webhook: chyba při obnově tarifu:", renewError.message);
           return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
         }
       }
@@ -132,7 +130,6 @@ export async function POST(req: Request) {
       .eq("stripe_customer_id", customerId);
 
     if (cancelError) {
-      console.error("Webhook: chyba při rušení tarifu:", cancelError.message);
       return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
     }
   }

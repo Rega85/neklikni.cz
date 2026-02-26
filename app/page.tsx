@@ -390,9 +390,14 @@ export default function Home() {
 
                 <div className="flex items-center justify-between pt-2">
                   <div className="text-slate-600 text-xs">
-                    {result.remainingChecks !== undefined && (
-                      <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/3</span></span>
-                    )}
+                    {!result.tier || result.tier === "free"
+                      ? result.remainingChecks !== undefined && (
+                          <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/3</span></span>
+                        )
+                      : result.credits !== undefined && (
+                          <span>Zbývá: <span className="text-slate-400 font-bold">{result.credits.toLocaleString("cs-CZ")} kreditů</span></span>
+                        )
+                    }
                   </div>
                   <button onClick={handleShare} className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
                     {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}

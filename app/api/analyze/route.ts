@@ -180,7 +180,6 @@ export async function POST(req: Request) {
     );
 
     if (deductErr) {
-      console.error("Credit deduction failed:", deductErr);
       return NextResponse.json({ error: "Nepodařilo se odečíst kredit. Zkuste to znovu." }, { status: 500 });
     }
 
@@ -212,7 +211,7 @@ export async function POST(req: Request) {
     });
 
   } catch (err: any) {
-    console.error("Analyze error:", err);
+    console.warn("Analyze error:", err);
     if (err?.status === 429 || err?.message?.includes("rate limit")) {
       return NextResponse.json({ error: "AI služba je přetížena. Zkuste to za chvíli." }, { status: 503 });
     }
@@ -320,7 +319,7 @@ async function saveResult(userId: string | null, text: string, result: any, tier
       .single();
     return data?.id || null;
   } catch (e) {
-    console.error("Failed to save result:", e);
+    console.warn("Failed to save result:", e);
     return null;
   }
 }

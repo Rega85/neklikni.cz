@@ -52,7 +52,6 @@ export async function GET(request: Request) {
       await tryApplyReferral()
       return NextResponse.redirect(`${origin}${next}`)
     }
-    console.error('Code exchange error:', error)
   }
 
   if (token_hash && type) {
@@ -64,7 +63,6 @@ export async function GET(request: Request) {
       if (type === 'signup') await tryApplyReferral()
       return NextResponse.redirect(`${origin}${next}`)
     }
-    console.error('OTP verification error:', error)
   }
 
   return NextResponse.redirect(`${origin}/login?error=Prihlaseni_selhalo`)

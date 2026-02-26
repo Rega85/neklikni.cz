@@ -64,7 +64,6 @@ export default function LoginPage() {
     }
   };
 
-  // ... (TADY NECH PŘESNĚ TEN STEJNÝ RETURN JAKO JSI MĚL PRO HTML, NIC SE TAM NEMĚNÍ) ...
   if (submitted) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
       <CheckCircle2 className="w-20 h-20 text-green-400 mb-6 animate-bounce" />

@@ -23,8 +23,7 @@ export default function BillingPage() {
       const res = await fetch("/api/portal", { method: "POST" });
       const { url } = await res.json();
       if (url) window.location.href = url;
-    } catch (e) {
-      console.error("Chyba portálu", e);
+    } catch {
     } finally {
       setPortalLoading(false);
     }

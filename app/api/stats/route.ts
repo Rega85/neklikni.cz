@@ -15,17 +15,15 @@ export async function GET() {
     if (!error && data != null && data > 0) {
       return NextResponse.json({ total: data });
     }
-    if (error) console.error("get_total_analyses RPC failed:", error);
+    if (error && data == null) return NextResponse.json({ total: 0 });
 
     // Fallback: count actual rows in shared_results
-    const { count, error: countErr } = await supabaseAdmin
+    const { count } = await supabaseAdmin
       .from("shared_results")
       .select("*", { count: "exact", head: true });
-    if (countErr) console.error("shared_results count failed:", countErr);
 
     return NextResponse.json({ total: count ?? 0 });
-  } catch (e) {
-    console.error("Stats route error:", e);
+  } catch {
     return NextResponse.json({ total: 0 });
   }
 }

@@ -56,7 +56,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error("Portal Error:", error);
+    console.warn("Portal Error:", error);
     return NextResponse.json({ error: "Kritická chyba serveru" }, { status: 500 });
   }
 }
