@@ -225,7 +225,7 @@ export default function Home() {
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Vložte podezřelý text, SMS, email nebo URL..."
-              rows={4}
+              rows={3}
               className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg resize-none placeholder:text-slate-600 rounded-t-[32px]"
             />
 
