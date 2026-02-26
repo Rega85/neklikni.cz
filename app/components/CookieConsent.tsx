@@ -15,6 +15,8 @@ export default function CookieConsent() {
   function accept() {
     localStorage.setItem("cookie_consent", "all");
     setVisible(false);
+    // Informuj GaScript komponentu aby načetla GA4 bez page reload
+    window.dispatchEvent(new Event("cookieConsentAccepted"));
   }
 
   function necessary() {

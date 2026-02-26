@@ -2,10 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ReactNode } from "react";
-import Script from "next/script";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
+import GaScript from "./components/GaScript";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -61,18 +61,7 @@ export default function RootLayout({
   return (
     <html lang="cs" className="selection:bg-purple-500/30">
       <body className={`${inter.className} bg-slate-950 text-white antialiased`}>
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=G-8C9GPC7C3J"
-          strategy="afterInteractive"
-        />
-        <Script id="gtag-init" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-8C9GPC7C3J');
-          `}
-        </Script>
+        <GaScript />
         <Header />
         {children}
         <Footer />
