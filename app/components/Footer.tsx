@@ -1,5 +1,6 @@
 ﻿import { Shield } from "lucide-react";
 import Link from "next/link";
+import CookieSettingsButton from "./CookieSettingsButton";
 
 export default function Footer() {
   return (
@@ -27,6 +28,7 @@ export default function Footer() {
             <Link href="/vop" className="hover:text-white transition-colors">Obchodní podmínky</Link>
             <Link href="/kontakt" className="hover:text-white transition-colors">Kontakt</Link>
             <Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link>
+            <CookieSettingsButton className="text-left hover:text-white transition-colors" />
           </div>
         </div>
       </div>

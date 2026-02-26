@@ -1,3 +1,5 @@
+import CookieSettingsButton from "../components/CookieSettingsButton";
+
 export default function CookiesPage() {
   return (
     <main className="min-h-screen bg-slate-950 text-white py-32 px-6">
@@ -63,9 +65,10 @@ export default function CookiesPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-bold text-purple-400">Jak spravovat cookies?</h2>
           <p className="text-slate-300 leading-relaxed">
-            Cookies můžete spravovat nebo zakázat v nastavení vašeho prohlížeče. Upozorňujeme, 
+            Cookies můžete spravovat nebo zakázat v nastavení vašeho prohlížeče. Upozorňujeme,
             že zakázání nezbytných cookies může způsobit nefunkčnost přihlášení a dalších funkcí služby.
           </p>
+          <CookieSettingsButton className="inline-flex items-center gap-2 border border-purple-500 text-purple-400 px-4 py-2 rounded-lg hover:bg-purple-500/10 text-sm font-bold transition-colors" />
         </section>
 
         <section className="space-y-4">
