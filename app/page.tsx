@@ -201,7 +201,6 @@ export default function Home() {
                 </button>
               ))}
             </div>
-          </div>
 
           <div
             className={`bg-slate-900/40 backdrop-blur-3xl border rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col relative ${isDragging ? "border-purple-500" : "border-white/10"}`}
