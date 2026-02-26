@@ -24,12 +24,12 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const [ctaCopied, setCtaCopied] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -40,22 +40,6 @@ export default function Home() {
       setInput(query);
       window.history.replaceState({}, '', '/');
     }
-
-    try {
-      const cached = localStorage.getItem("neklikni_total");
-      if (cached) setTotalAnalyses(parseInt(cached, 10));
-    } catch {}
-
-    fetch('/api/stats', { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        const total = d.total ?? null;
-        if (total !== null) {
-          setTotalAnalyses(total);
-          try { localStorage.setItem("neklikni_total", String(total)); } catch {}
-        }
-      })
-      .catch(() => {});
 
     fetch('/api/me', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : null)
@@ -113,14 +97,6 @@ export default function Home() {
 
       setResult(data);
       window.dispatchEvent(new CustomEvent("creditsUpdated"));
-
-      setTotalAnalyses((prev) => {
-        const next = prev !== null ? prev + 1 : null;
-        if (next !== null) {
-          try { localStorage.setItem("neklikni_total", String(next)); } catch {}
-        }
-        return next;
-      });
     } catch (err: any) {
       setError(err.message || "Nepodařilo se připojit k serveru.");
     } finally {
@@ -129,6 +105,28 @@ export default function Home() {
   }, [input, image, loading]);
 
   const handleClear = () => { setInput(""); setResult(null); setError(null); setImage(null); setImagePreview(null); };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) setIsDragging(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setError("Lze přetáhnout pouze obrázky."); return; }
+    if (file.size > 4 * 1024 * 1024) { setError("Obrázek je příliš velký. Maximum jsou 4 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const b64 = ev.target?.result as string;
+      setImage(b64); setImagePreview(b64); setInput(""); setResult(null); setError(null);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") handleAnalysis();
@@ -190,22 +188,9 @@ export default function Home() {
               <span>✓ Neukládáme váš obsah</span>
             </p>
 
-            <p className="text-slate-400 text-sm">
-              Už jsme pomohli odhalit{" "}
-              {totalAnalyses !== null ? (
-                <span className="text-white font-black">{totalAnalyses.toLocaleString("cs-CZ")} podvodů</span>
-              ) : (
-                <span className="inline-block w-16 h-4 bg-slate-800 rounded animate-pulse align-middle" />
-              )}
-              . Bude ten váš další?
-            </p>
           </div>
 
-          <div className="space-y-2">
-            <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-              Zkuste to – vyberte ukázku podvodu:
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
               {EXAMPLES.map((ex) => (
                 <button
                   key={ex.label}
@@ -218,7 +203,17 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="bg-slate-900/40 backdrop-blur-3xl border border-white/10 rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col">
+          <div
+            className={`bg-slate-900/40 backdrop-blur-3xl border rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col relative ${isDragging ? "border-purple-500" : "border-white/10"}`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {isDragging && (
+              <div className="absolute inset-0 rounded-[32px] bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
+                <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
+              </div>
+            )}
             <p className="text-slate-200 text-sm font-semibold px-6 pt-5 pb-1 text-left">Vložte podezřelou zprávu. AI odhalí podvod během chvilky.</p>
             <textarea
               value={input}
@@ -271,7 +266,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-400 text-xs font-bold transition-colors py-1"
+                  className="w-full flex items-center justify-center gap-1.5 border border-purple-500 text-purple-400 px-4 py-2 rounded-lg hover:bg-purple-500/10 text-xs font-bold transition-colors"
                 >
                   <Camera size={13} /> Přidat screenshot
                 </button>
