@@ -95,7 +95,7 @@ export async function POST(req: Request) {
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice;
 
-    if (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_renewal") {
+    if (invoice.billing_reason === "subscription_cycle" || invoice.billing_reason === "subscription_update") {
       const customerId = invoice.customer as string;
 
       const { data: profile } = await supabaseAdmin
