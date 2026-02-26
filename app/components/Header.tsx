@@ -92,7 +92,7 @@ export default function Header() {
             <div className="w-28 h-9 bg-white/5 rounded-full animate-pulse" />
           ) : user ? (
             <div className="relative" ref={menuRef}>
-              <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/5 transition-colors">
+              <button onClick={() => setMenuOpen(!menuOpen)} aria-label="Otevřít menu účtu" aria-expanded={menuOpen} className="flex items-center gap-2 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full border border-white/5 transition-colors">
                 <div className="w-7 h-7 bg-purple-600 rounded-full flex items-center justify-center text-[11px] font-black text-white shrink-0">
                   {user.email?.[0]?.toUpperCase() ?? "U"}
                 </div>

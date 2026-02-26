@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Zap, Shield, Crown } from "lucide-react";
+import { Check, Zap, Shield, Crown, X } from "lucide-react";
 
 type Plan = "easy" | "basic" | "pro";
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<Plan | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const handleCheckout = async (plan: Plan) => {
     setLoading(plan);
@@ -20,12 +27,11 @@ export default function PricingPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) { router.push("/login"); return; }
-      if (!res.ok) { alert("Chyba: " + (data?.error ?? `HTTP ${res.status}`)); return; }
+      if (!res.ok) { setToast("Chyba: " + (data?.error ?? `HTTP ${res.status}`)); return; }
       if (data?.url) { window.location.href = data.url; return; }
-      alert("Chyba: server nevrátil checkout URL.");
-    } catch (err) {
-      console.error(err);
-      alert("Něco se pokazilo. Zkus to prosím znovu.");
+      setToast("Chyba: server nevrátil checkout URL.");
+    } catch {
+      setToast("Něco se pokazilo. Zkus to prosím znovu.");
     } finally {
       setLoading(null);
     }
@@ -129,6 +135,15 @@ export default function PricingPage() {
         </div>
 
       </div>
+
+      {toast && (
+        <div role="alert" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-red-950/95 border border-red-500/40 text-red-200 px-5 py-3 rounded-2xl text-sm font-medium shadow-2xl backdrop-blur max-w-sm w-full mx-4">
+          <span className="flex-1">{toast}</span>
+          <button type="button" onClick={() => setToast(null)} aria-label="Zavřít" className="shrink-0 text-red-400 hover:text-red-200 transition-colors">
+            <X size={15} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

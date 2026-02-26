@@ -273,6 +273,7 @@ export default function Home() {
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 rows={3}
+                aria-label="Vstupní pole pro analýzu zprávy"
                 className="w-full bg-transparent p-5 outline-none text-white text-base sm:text-lg resize-none rounded-t-[32px]"
               />
             </div>
@@ -310,6 +311,7 @@ export default function Home() {
                   <button
                     type="button"
                     onClick={() => { setImage(null); setImagePreview(null); }}
+                    aria-label="Odebrat screenshot"
                     className="text-slate-500 hover:text-red-400 transition-colors p-1"
                   >
                     <X size={13} />

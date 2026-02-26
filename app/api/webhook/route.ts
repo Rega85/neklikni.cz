@@ -115,5 +115,27 @@ export async function POST(req: Request) {
     }
   }
 
+  // ==========================================
+  // SCÉNÁŘ C: Zrušení předplatného
+  // ==========================================
+  if (event.type === "customer.subscription.deleted") {
+    const subscription = event.data.object as Stripe.Subscription;
+    const customerId = subscription.customer as string;
+
+    const { error: cancelError } = await supabaseAdmin
+      .from("user_profiles")
+      .update({
+        tier: "free",
+        credits_remaining: 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_customer_id", customerId);
+
+    if (cancelError) {
+      console.error("Webhook: chyba při rušení tarifu:", cancelError.message);
+      return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
+    }
+  }
+
   return NextResponse.json({ received: true });
 }
