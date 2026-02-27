@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock } from "lucide-react";
+import { Loader2, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock, Download } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 
 type AnalysisResult = {
@@ -198,6 +198,50 @@ export default function Home() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") handleAnalysis();
     if (e.key === "Escape") handleClear();
+  };
+
+  const handleDownloadPDF = () => {
+    if (!result) return;
+    const riskClass = result.risk >= 70 ? "high" : result.risk >= 40 ? "medium" : "low";
+    const date = new Date().toLocaleDateString("cs-CZ");
+    const threatsHtml = result.threats && result.threats.length > 0
+      ? `<ul class="threats">${result.threats.map(t => `<li>${t}</li>`).join("")}</ul>`
+      : "";
+    const html = `<!DOCTYPE html>
+<html><head>
+  <title>NeKlikni.cz - Výsledek analýzy</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; color: #1f2937; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .logo { font-size: 24px; font-weight: bold; color: #7c3aed; }
+    .risk { font-size: 48px; font-weight: bold; text-align: center; margin: 20px 0; }
+    .risk.high { color: #ef4444; }
+    .risk.medium { color: #f59e0b; }
+    .risk.low { color: #10b981; }
+    .verdict { font-size: 24px; text-align: center; font-weight: bold; margin-bottom: 20px; }
+    .section { margin: 20px 0; padding: 15px; background: #f9fafb; border-radius: 8px; }
+    .section h3 { margin: 0 0 10px; color: #4b5563; }
+    .threats { list-style: none; padding: 0; }
+    .threats li { padding: 5px 0; }
+    .threats li::before { content: "⚠ "; }
+    .footer { text-align: center; margin-top: 40px; color: #9ca3af; font-size: 12px; }
+    @media print { body { margin: 0; } }
+  </style>
+</head><body>
+  <div class="header"><div class="logo">NeKlikni.cz</div><div>Výsledek bezpečnostní analýzy</div></div>
+  <div class="risk ${riskClass}">${result.risk}%</div>
+  <div class="verdict">${result.verdict}</div>
+  ${result.analysis ? `<div class="section"><h3>Analýza</h3><p>${result.analysis}</p></div>` : ""}
+  ${threatsHtml ? `<div class="section"><h3>Identifikované hrozby</h3>${threatsHtml}</div>` : ""}
+  ${result.recommendation ? `<div class="section"><h3>Doporučení</h3><p>${result.recommendation}</p></div>` : ""}
+  <div class="footer">Vygenerováno na neklikni.cz • ${date}</div>
+</body></html>`;
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.print();
+    }
   };
 
   const handleShare = async () => {
@@ -401,9 +445,14 @@ export default function Home() {
                         )
                     }
                   </div>
-                  <button onClick={handleShare} className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
-                    {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleDownloadPDF} className="flex items-center gap-2 text-xs border border-purple-500 text-purple-400 px-4 py-2 rounded-lg hover:bg-purple-500/10 transition-colors">
+                      <Download size={14} /> Stáhnout report
+                    </button>
+                    <button onClick={handleShare} className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
+                      {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}
+                    </button>
+                  </div>
                 </div>
 
                 <p className="text-slate-400 text-sm text-center leading-relaxed pt-2 border-t border-white/5">
