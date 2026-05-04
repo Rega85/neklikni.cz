@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock, Download } from "lucide-react";
+import { Loader2, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import HomeSections from "./components/HomeSections";
 
@@ -283,12 +283,12 @@ export default function Home() {
 
           </div>
 
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex flex-wrap justify-center gap-2.5">
               {EXAMPLES.map((ex) => (
                 <button
                   key={ex.label}
                   onClick={() => { setInput(ex.text); setResult(null); setError(null); }}
-                  className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-slate-300 bg-slate-800/60 border border-white/10 hover:bg-slate-700/80 hover:text-white hover:border-white/20 active:scale-95 transition-all"
+                  className="group px-4 py-2 rounded-full text-[13px] font-semibold text-slate-300 bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-500/15 hover:to-blue-500/15 hover:text-white hover:border-purple-400/40 active:scale-95 transition-all duration-200"
                 >
                   {ex.label}
                 </button>
@@ -296,20 +296,44 @@ export default function Home() {
             </div>
 
           <div
-            className={`bg-slate-900/40 backdrop-blur-3xl border rounded-[32px] shadow-2xl mx-auto max-w-3xl flex flex-col relative ${isDragging ? "border-purple-500" : "border-white/10"}`}
+            className={`relative mx-auto max-w-3xl rounded-[32px] transition-all duration-300 ${
+              isFocused
+                ? "ring-2 ring-purple-500/40 shadow-[0_0_60px_-15px_rgba(168,85,247,0.45)]"
+                : isDragging
+                  ? "ring-2 ring-purple-500/60 shadow-[0_0_60px_-15px_rgba(168,85,247,0.55)]"
+                  : ""
+            }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
+            <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/60 backdrop-blur-2xl border border-white/10 rounded-[32px] shadow-2xl flex flex-col relative overflow-hidden">
             {isDragging && (
               <div className="absolute inset-0 rounded-[32px] bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
                 <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
               </div>
             )}
-            <p className="text-slate-200 text-sm font-semibold px-6 pt-5 pb-1 text-left">Vložte podezřelou zprávu. AI odhalí podvod během chvilky.</p>
+
+            {/* Header row with friendly prompt + clear icon button */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-1">
+              <p className="flex items-center gap-2 text-slate-200 text-sm font-semibold text-left">
+                <Sparkles size={14} className="text-purple-400" />
+                Vlož zprávu, AI odhalí podvod během chvilky
+              </p>
+              {(input || image || result || error) && (
+                <button
+                  onClick={handleClear}
+                  aria-label="Vymazat vstup"
+                  className="shrink-0 w-7 h-7 rounded-full text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
             <div className="relative">
               {!input && !isFocused && (
-                <div className="absolute inset-0 p-5 pointer-events-none text-slate-600 text-base sm:text-lg leading-normal">
+                <div className="absolute inset-0 px-6 pt-2 pb-5 pointer-events-none text-slate-600 text-base sm:text-lg leading-normal">
                   {placeholderText}<span className="animate-pulse">|</span>
                 </div>
               )}
@@ -321,7 +345,7 @@ export default function Home() {
                 onBlur={() => setIsFocused(false)}
                 rows={3}
                 aria-label="Vstupní pole pro analýzu zprávy"
-                className="w-full bg-transparent p-5 focus:ring-2 focus:ring-purple-500/30 focus:outline-none text-white text-base sm:text-lg resize-none rounded-t-[32px]"
+                className="w-full bg-transparent px-6 pt-2 pb-5 focus:outline-none text-white text-base sm:text-lg resize-none placeholder:text-slate-600"
               />
             </div>
 
@@ -333,22 +357,24 @@ export default function Home() {
               onChange={handleImageSelect}
             />
 
-            <div className="p-4 border-t border-white/5 bg-white/[0.02] rounded-b-[32px] space-y-3">
-              {/* Main CTA */}
-              <div className="flex items-center gap-2">
-                {(input || image || result || error) && (
-                  <button onClick={handleClear} className="shrink-0 flex items-center gap-1.5 px-4 py-4 rounded-2xl font-black text-xs text-slate-500 hover:text-white bg-white/5 hover:bg-white/10 transition-all">
-                    <X size={13} /> Vymazat
-                  </button>
+            <div className="p-4 border-t border-white/5 bg-white/[0.02] space-y-3">
+              {/* Main CTA — gradient + sparkles, friendlier sentence-case */}
+              <button
+                onClick={handleAnalysis}
+                disabled={loading || (!input.trim() && !image)}
+                className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} /> Analyzuji…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
+                    Prověřit zprávu
+                  </>
                 )}
-                <button
-                  onClick={handleAnalysis}
-                  disabled={loading}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {loading ? <Loader2 className="animate-spin" size={18} /> : "PROVĚŘIT"}
-                </button>
-              </div>
+              </button>
 
               {/* Screenshot upload - secondary */}
               {imagePreview ? (
@@ -359,30 +385,31 @@ export default function Home() {
                     type="button"
                     onClick={() => { setImage(null); setImagePreview(null); }}
                     aria-label="Odebrat screenshot"
-                    className="text-slate-500 hover:text-red-400 transition-colors p-1"
+                    className="w-7 h-7 rounded-full text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors"
                   >
-                    <X size={13} />
+                    <X size={14} />
                   </button>
                 </div>
               ) : canUploadImage ? (
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-1.5 border border-purple-500 text-purple-400 px-4 py-2 rounded-lg hover:bg-purple-500/10 text-xs font-bold transition-colors"
+                  className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
                 >
-                  <Camera size={13} /> Přidat screenshot
+                  <Camera size={14} /> Přidat screenshot
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => { window.location.href = "/pricing"; }}
-                  className="w-full flex items-center justify-center gap-1.5 text-slate-600 hover:text-slate-500 text-xs transition-colors py-1"
+                  className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
                 >
-                  <Lock size={13} /> Přidat screenshot <span className="text-purple-700 ml-1">(BASIC+)</span>
+                  <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
                 </button>
               )}
 
-              <p className="text-slate-700 text-[10px] text-center hidden sm:block">Ctrl+Enter · Esc pro smazání</p>
+              <p className="text-slate-600 text-[10px] text-center hidden sm:block">Ctrl + Enter pro odeslání · Esc pro smazání</p>
+            </div>
             </div>
           </div>
 
