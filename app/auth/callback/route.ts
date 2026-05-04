@@ -39,10 +39,11 @@ export async function GET(request: Request) {
     if (!refCookie?.value) return
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabaseAdmin.rpc('apply_referral', {
+    const { error } = await supabaseAdmin.rpc('apply_referral', {
       p_new_user_id: user.id,
       p_ref_code: refCookie.value,
     })
+    if (error) console.warn('apply_referral failed:', error.message)
     cookieStore.delete('neklikni_ref')
   }
 
