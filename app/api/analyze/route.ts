@@ -6,10 +6,16 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+let _supabaseAdmin: ReturnType<typeof createClient<any>> | null = null;
+function supabaseAdmin() {
+  if (!_supabaseAdmin) {
+    _supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+  }
+  return _supabaseAdmin;
+}
 
 const TIER_MODELS: Record<string, string> = {
   free:  "claude-haiku-4-5-20251001",
@@ -55,7 +61,7 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
     "unknown";
 
   const today = new Date().toISOString().split("T")[0];
-  const { data: ipRecord } = await supabaseAdmin
+  const { data: ipRecord } = await supabaseAdmin()
     .from("anonymous_usage")
     .select("count")
     .eq("ip_address", ip)
@@ -77,9 +83,9 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
   }
 
   const result = await runAnalysis(text, "free");
-  await supabaseAdmin.rpc("upsert_anonymous_usage", { p_ip: ip, p_date: today });
+  await supabaseAdmin().rpc("upsert_anonymous_usage", { p_ip: ip, p_date: today });
   const shareId = await saveResult(null, text, result, "free");
-  void (async () => { try { await supabaseAdmin.rpc("increment_total_analyses"); } catch {} })();
+  void (async () => { try { await supabaseAdmin().rpc("increment_total_analyses"); } catch {} })();
 
   return NextResponse.json({
     ...result,
@@ -137,7 +143,7 @@ export async function POST(req: Request) {
       const auth = req.headers.get("authorization") || "";
       const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
       if (token) {
-        const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+        const { data: { user } } = await supabaseAdmin().auth.getUser(token);
         if (user) userId = user.id;
       }
     }
@@ -153,7 +159,7 @@ export async function POST(req: Request) {
       return handleAnonymousAnalysis(req, text);
     }
 
-    const { data: profile, error: profileErr } = await supabaseAdmin
+    const { data: profile, error: profileErr } = await supabaseAdmin()
       .from("user_profiles")
       .select("tier")
       .eq("id", userId)
@@ -174,7 +180,7 @@ export async function POST(req: Request) {
 
     // Atomically check-and-deduct in one DB operation.
     // deduct_credit returns the new credits_remaining, or NULL if the user had 0 credits.
-    const { data: newCredits, error: deductErr } = await supabaseAdmin.rpc(
+    const { data: newCredits, error: deductErr } = await supabaseAdmin().rpc(
       "deduct_credit",
       { p_user_id: userId }
     );
@@ -201,7 +207,7 @@ export async function POST(req: Request) {
     const result = await runAnalysis(text ?? null, tier, image ?? null);
     const shareId = await saveResult(userId, image ? "[Analýza obrázku]" : text, result, tier);
 
-    void (async () => { try { await supabaseAdmin.rpc("increment_total_analyses"); } catch {} })();
+    void (async () => { try { await supabaseAdmin().rpc("increment_total_analyses"); } catch {} })();
 
     return NextResponse.json({
       ...result,
@@ -303,7 +309,7 @@ async function runAnalysis(text: string | null, tier: string, imageBase64?: stri
 
 async function saveResult(userId: string | null, text: string, result: any, tier: string): Promise<string | null> {
   try {
-    const { data } = await supabaseAdmin
+    const { data } = await supabaseAdmin()
       .from("shared_results")
       .insert({
         original_text:  text,
