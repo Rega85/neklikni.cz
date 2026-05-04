@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Loader2, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock, Download } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import HomeSections from "./components/HomeSections";
 
 type AnalysisResult = {
   risk: number;
@@ -507,6 +508,8 @@ export default function Home() {
             );
           })()}
         </div>
+
+        <HomeSections />
       </main>
     </div>
   );

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt } from "lucide-react";
+import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles } from "lucide-react";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   free:  { label: "FREE",  color: "text-slate-400",  bg: "bg-slate-500/10"  },
@@ -85,8 +85,19 @@ export default function Header() {
           </nav>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">Ceník</Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Upgrade CTA: prominent for free users, subtle "Ceník" otherwise */}
+          {!initialLoading && user && tier === "free" ? (
+            <Link
+              href="/pricing"
+              className="hidden sm:inline-flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-[11px] font-black uppercase tracking-widest px-3.5 py-2 rounded-full shadow-lg shadow-purple-500/25 transition-all active:scale-95"
+            >
+              <Sparkles size={12} fill="currentColor" />
+              <span>Upgraduj</span>
+            </Link>
+          ) : (
+            <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">Ceník</Link>
+          )}
 
           {initialLoading ? (
             <div className="w-28 h-9 bg-white/5 rounded-full animate-pulse" />

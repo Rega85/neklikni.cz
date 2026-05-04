@@ -1,10 +1,15 @@
-﻿import { Shield } from "lucide-react";
+﻿import { Shield, ShieldCheck, Lock, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import CookieSettingsButton from "./CookieSettingsButton";
 
 export default function Footer() {
   return (
-    <footer className="w-full bg-[#020617] mt-auto border-t border-white/5 pt-8 pb-4">
+    <footer className="w-full bg-[#020617] mt-auto border-t border-white/5 pt-10 pb-4">
+      <div className="max-w-7xl mx-auto px-6 mb-8 flex flex-wrap justify-center gap-x-8 gap-y-3 text-xs text-slate-400">
+        <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-green-400" /> 100% anonymní</span>
+        <span className="inline-flex items-center gap-1.5"><Lock size={14} className="text-green-400" /> Zprávy se neukládají</span>
+        <span className="inline-flex items-center gap-1.5"><RotateCcw size={14} className="text-green-400" /> Zrušit kdykoli</span>
+      </div>
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-start justify-between gap-8 text-xs text-slate-500">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
