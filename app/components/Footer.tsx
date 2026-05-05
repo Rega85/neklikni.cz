@@ -29,6 +29,8 @@ export default function Footer() {
           </div>
           <div className="space-y-2 flex flex-col">
             <p className="text-slate-300 font-bold mb-1 uppercase text-[10px] tracking-widest">Informace</p>
+            <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
+            <Link href="/pricing" className="hover:text-white transition-colors">Ceník</Link>
             <Link href="/gdpr" className="hover:text-white transition-colors">Ochrana osobních údajů</Link>
             <Link href="/vop" className="hover:text-white transition-colors">Obchodní podmínky</Link>
             <Link href="/kontakt" className="hover:text-white transition-colors">Kontakt</Link>

@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift } from "lucide-react";
+import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen } from "lucide-react";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   free:  { label: "FREE",  color: "text-slate-400",  bg: "bg-slate-500/10"  },
@@ -81,6 +81,9 @@ export default function Header() {
           <nav className="hidden sm:flex items-center gap-4">
             <Link href="/" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
               <Home size={13} /> Domů
+            </Link>
+            <Link href="/blog" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+              <BookOpen size={13} /> Blog
             </Link>
           </nav>
         </div>
