@@ -64,6 +64,7 @@ export default function RootLayout({
   return (
     <html lang="cs" className="selection:bg-purple-500/30">
       <body className={`${inter.className} bg-slate-950 text-white antialiased`}>
+        <div className="bg-blobs" aria-hidden="true" />
         <GaScript />
         <Header />
         {children}

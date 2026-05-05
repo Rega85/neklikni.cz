@@ -1,9 +1,14 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Info, Shield, AlertTriangle, CheckCircle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles } from "lucide-react";
+import { Loader2, Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import HomeSections from "./components/HomeSections";
+import { HomeSchema } from "./components/StructuredData";
+import { trackEvent } from "./lib/analytics";
+import ErrorBoundary from "./components/ErrorBoundary";
+import RiskGauge from "./components/RiskGauge";
+import UpsellModal from "./components/UpsellModal";
 
 type AnalysisResult = {
   risk: number;
@@ -51,6 +56,7 @@ export default function Home() {
   const [image, setImage] = useState<string | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [upsellReason, setUpsellReason] = useState<"anon_daily" | "no_credits" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState("");
@@ -140,6 +146,7 @@ export default function Home() {
     setLoading(true);
     setResult(null);
     setError(null);
+    trackEvent("analyze_started", { kind: image ? "image" : "text" });
 
     try {
       const res = await fetch("/api/analyze", {
@@ -157,20 +164,29 @@ export default function Home() {
       const data = await res.json();
 
       if (!res.ok) {
-        if (res.status === 429 && data.limitReached) setError(data.message || "Denní limit vyčerpán.");
-        else if (res.status === 402) setError(data.message || "Nedostatek kreditů.");
-        else setError(data.error || "Něco se pokazilo. Zkuste to znovu.");
+        if (res.status === 429 && data.limitReached) {
+          setError(data.message || "Denní limit vyčerpán.");
+          setUpsellReason("anon_daily");
+          trackEvent("analyze_limit_reached", { tier: profile?.tier ?? "anon" });
+        } else if (res.status === 402) {
+          setError(data.message || "Nedostatek kreditů.");
+          setUpsellReason("no_credits");
+          trackEvent("analyze_limit_reached", { tier: profile?.tier ?? "anon", reason: "no_credits" });
+        } else {
+          setError(data.error || "Něco se pokazilo. Zkuste to znovu.");
+        }
         return;
       }
 
       setResult(data);
+      trackEvent("analyze_completed", { risk: data.risk, tier: data.tier ?? "free" });
       window.dispatchEvent(new CustomEvent("creditsUpdated"));
     } catch (err: any) {
       setError(err.message || "Nepodařilo se připojit k serveru.");
     } finally {
       setLoading(false);
     }
-  }, [input, image, loading]);
+  }, [input, image, loading, profile?.tier]);
 
   const handleClear = () => { setInput(""); setResult(null); setError(null); setImage(null); setImagePreview(null); };
 
@@ -203,6 +219,7 @@ export default function Home() {
 
   const handleDownloadPDF = () => {
     if (!result) return;
+    trackEvent("cta_pdf_download", { risk: result.risk });
     const riskClass = result.risk >= 70 ? "high" : result.risk >= 40 ? "medium" : "low";
     const date = new Date().toLocaleDateString("cs-CZ");
     const threatsHtml = result.threats && result.threats.length > 0
@@ -248,6 +265,7 @@ export default function Home() {
   const handleShare = async () => {
     const url = result?.shareId ? `${window.location.origin}/report/${result.shareId}` : window.location.href;
     await navigator.clipboard.writeText(url);
+    trackEvent("cta_share_clicked", { method: "copy" });
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -256,12 +274,11 @@ export default function Home() {
 
   const canUploadImage = profile?.tier === "basic" || profile?.tier === "pro";
 
-  const riskColor = !result ? "" : result.risk >= 70 ? "text-red-400" : result.risk >= 40 ? "text-yellow-400" : "text-green-400";
   const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
-  const RiskIcon = !result ? Shield : result.risk >= 40 ? AlertTriangle : CheckCircle;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#020617]">
+      <HomeSchema />
       <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center">
         <div className="max-w-4xl w-full space-y-4 text-center">
 
@@ -421,12 +438,8 @@ export default function Home() {
 
           {result && (
             <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left max-w-3xl mx-auto w-full`}>
-              <div className="text-center mb-8">
-                <div className={`text-7xl font-black mb-2 ${riskColor}`}>{result.risk}%</div>
-                <div className={`inline-flex items-center gap-2 mb-3 ${riskColor}`}>
-                  <RiskIcon size={20} />
-                  <span className="font-black uppercase text-sm tracking-widest">{result.risk >= 70 ? "Vysoké riziko" : result.risk >= 40 ? "Střední riziko" : "Nízké riziko"}</span>
-                </div>
+              <div className="flex flex-col items-center text-center mb-8 gap-4">
+                <RiskGauge value={result.risk} size={200} />
                 <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-white">{result.verdict}</h2>
               </div>
 
@@ -536,8 +549,16 @@ export default function Home() {
           })()}
         </div>
 
-        <HomeSections />
+        <ErrorBoundary>
+          <HomeSections />
+        </ErrorBoundary>
       </main>
+
+      <UpsellModal
+        reason={upsellReason}
+        tier={profile?.tier}
+        onClose={() => setUpsellReason(null)}
+      />
     </div>
   );
 }

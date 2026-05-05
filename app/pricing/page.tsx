@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Zap, Shield, Crown, X, ChevronDown, ShieldCheck, RotateCcw, BadgeCheck, Sparkles } from "lucide-react";
+import { PricingSchema } from "../components/StructuredData";
+import { trackEvent } from "../lib/analytics";
 
 type Plan = "easy" | "basic" | "pro";
 
@@ -181,6 +183,7 @@ export default function PricingPage() {
 
   const handleCheckout = async (plan: Plan) => {
     setLoading(plan);
+    trackEvent("checkout_started", { plan });
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
@@ -203,6 +206,7 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen text-white">
+      {PricingSchema(FAQ)}
       <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-24 pb-20">
 
         {/* ─── Hero ─────────────────────────────────────── */}
@@ -280,6 +284,44 @@ export default function PricingPage() {
               </div>
             );
           })}
+        </section>
+
+        {/* ─── Loss Aversion Calculator ─────────────────── */}
+        <section className="surface-card-elevated p-6 sm:p-10 mb-12 animate-fade-up">
+          <div className="grid md:grid-cols-2 gap-8 items-center">
+            <div className="space-y-4">
+              <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-amber-300 bg-amber-500/10 border border-amber-400/20 px-3 py-1.5 rounded-full">
+                Spočítej si, co se ti vyplatí
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tighter">
+                Jeden phishing v ČR =&nbsp;průměrně <span className="text-amber-300">35&nbsp;000&nbsp;Kč</span>
+              </h2>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Podle ČNB a Policie ČR ztratil průměrný oběť phishingu v roce 2025 mezi 8 000 a 80 000 Kč. Babičce, která chytila falešnou Českou poštu, je dnes v průměru obrali o 25 000 Kč.
+              </p>
+            </div>
+
+            <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5 sm:p-6">
+              <div className="space-y-3">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-slate-400 text-sm">Cena BASIC za rok:</span>
+                  <span className="text-white font-black tabular-nums">1 188 Kč</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-slate-400 text-sm">Cena PRO za rok:</span>
+                  <span className="text-white font-black tabular-nums">2 388 Kč</span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-slate-400 text-sm">Průměrná škoda z phishingu:</span>
+                  <span className="text-amber-300 font-black tabular-nums">35 000 Kč</span>
+                </div>
+                <div className="border-t border-white/10 pt-3 flex justify-between items-baseline">
+                  <span className="text-white font-bold text-sm">ROI při 1 odhaleném podvodu (BASIC):</span>
+                  <span className="text-emerald-400 font-black text-xl tabular-nums">29×</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         {/* ─── Money-Back Banner ────────────────────────── */}

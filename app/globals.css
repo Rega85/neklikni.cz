@@ -9,6 +9,9 @@
   --brand-purple-dark: #7c3aed;
   --brand-blue: #3b82f6;
   --brand-yellow: #facc15;
+  --brand-coral: #fb7185;       /* warm danger */
+  --brand-amber: #f59e0b;       /* warning */
+  --brand-success: #10b981;     /* safe */
 
   /* Surfaces */
   --surface-1: rgba(255, 255, 255, 0.04);
@@ -27,9 +30,44 @@ body {
   background-color: var(--background);
   color: var(--foreground);
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 60, 200, 0.18), transparent 60%),
-    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(59, 130, 246, 0.08), transparent 60%);
+    radial-gradient(ellipse 80% 50% at 50% -20%, rgba(120, 60, 200, 0.20), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(59, 130, 246, 0.10), transparent 60%),
+    radial-gradient(ellipse 40% 30% at 0% 60%, rgba(168, 85, 247, 0.08), transparent 70%);
   background-attachment: fixed;
+}
+
+/* Floating decorative blobs — purely visual, pointer-events-none */
+.bg-blobs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  overflow: hidden;
+}
+.bg-blobs::before,
+.bg-blobs::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(120px);
+  opacity: 0.35;
+  animation: float 12s ease-in-out infinite;
+}
+.bg-blobs::before {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.5), transparent 70%);
+  top: 10%;
+  left: -10%;
+  animation-delay: 0s;
+}
+.bg-blobs::after {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.4), transparent 70%);
+  bottom: 5%;
+  right: -10%;
+  animation-delay: -6s;
 }
 
 /* ── Animations ─────────────────────────────────────── */

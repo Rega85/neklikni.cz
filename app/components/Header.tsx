@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles } from "lucide-react";
+import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift } from "lucide-react";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   free:  { label: "FREE",  color: "text-slate-400",  bg: "bg-slate-500/10"  },
@@ -150,6 +150,9 @@ export default function Header() {
                     </Link>
                     <Link href="/billing" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
                       <Receipt size={16} className="text-slate-500 shrink-0" /><span>Fakturace & předplatné</span>
+                    </Link>
+                    <Link href="/referral" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
+                      <Gift size={16} className="text-emerald-400 shrink-0" /><span>Pozvi přátele <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider ml-1">+5 kreditů</span></span>
                     </Link>
                     <Link href="/update-password" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
                       <KeyRound size={16} className="text-slate-500 shrink-0" /><span>Změna hesla</span>
