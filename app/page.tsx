@@ -9,6 +9,7 @@ import { trackEvent } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
 import RiskGauge from "./components/RiskGauge";
 import UpsellModal from "./components/UpsellModal";
+import DecoderText from "./components/DecoderText";
 
 type AnalysisResult = {
   risk: number;
@@ -61,6 +62,21 @@ export default function Home() {
   const [isFocused, setIsFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const spotlightRef = useRef<HTMLDivElement>(null);
+
+  // Hero spotlight: track mouse and update CSS vars for radial gradient
+  useEffect(() => {
+    const el = spotlightRef.current;
+    if (!el) return;
+    if (window.matchMedia?.("(hover: none)").matches) return;
+    const handler = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect();
+      el.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
+      el.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
+    };
+    el.addEventListener("mousemove", handler);
+    return () => el.removeEventListener("mousemove", handler);
+  }, []);
 
   const PLACEHOLDERS = [
     "Vložte podezřelou zprávu, SMS nebo odkaz...",
@@ -280,14 +296,19 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-[#020617]">
       <HomeSchema />
       <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center">
-        <div className="max-w-4xl w-full space-y-4 text-center">
+        <div ref={spotlightRef} className="spotlight max-w-4xl w-full space-y-4 text-center">
 
-          <div className="space-y-2">
-            <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal">
-              <span className="text-4xl sm:text-5xl md:text-6xl text-white leading-tight">PROVĚŘ</span>
-              <span className="text-xl sm:text-3xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight">
-                NEŽ KLIKNEŠ
-              </span>
+          <div className="space-y-2 relative z-10">
+            <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal font-mono-fallback">
+              <DecoderText
+                text="PROVĚŘ"
+                className="text-4xl sm:text-5xl md:text-6xl text-white leading-tight"
+              />
+              <DecoderText
+                text="NEŽ KLIKNEŠ"
+                duration={1100}
+                className="text-xl sm:text-3xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight"
+              />
             </h1>
 
             <p className="text-slate-400 text-sm">
@@ -313,7 +334,7 @@ export default function Home() {
             </div>
 
           <div
-            className={`relative mx-auto max-w-3xl rounded-[32px] transition-all duration-300 ${
+            className={`scan-border relative mx-auto max-w-3xl rounded-[32px] transition-all duration-300 ${
               isFocused
                 ? "ring-2 ring-purple-500/40 shadow-[0_0_60px_-15px_rgba(168,85,247,0.45)]"
                 : isDragging
