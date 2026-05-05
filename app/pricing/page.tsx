@@ -2,24 +2,27 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Zap, Shield, Crown, X, ChevronDown, ShieldCheck, RotateCcw, BadgeCheck, Sparkles } from "lucide-react";
+import { Check, Zap, Shield, Crown, X, ChevronDown, ShieldCheck, RotateCcw, BadgeCheck, Sparkles, Users } from "lucide-react";
 import { PricingSchema } from "../components/StructuredData";
 import { trackEvent } from "../lib/analytics";
 
 type Plan = "easy" | "basic" | "pro";
 
-const PLANS: {
-  key: Plan;
+type PlanCard = {
+  key: Plan | "family";
   name: string;
   tagline: string;
   price: number;
   period: string;
   icon: typeof Zap;
-  accent: "slate" | "blue" | "purple";
+  accent: "slate" | "blue" | "purple" | "amber";
   cta: string;
   popular?: boolean;
+  comingSoon?: boolean;
   features: string[];
-}[] = [
+};
+
+const PLANS: PlanCard[] = [
   {
     key: "easy",
     name: "EASY",
@@ -57,7 +60,7 @@ const PLANS: {
   {
     key: "pro",
     name: "PRO",
-    tagline: "Maximální ochrana pro celou rodinu",
+    tagline: "Maximální ochrana pro tebe",
     price: 199,
     period: "měsíc",
     icon: Crown,
@@ -70,6 +73,24 @@ const PLANS: {
       "Konkrétní kroky co dělat dál",
       "Až 12 000 znaků na zprávu",
       "Prioritní podpora",
+    ],
+  },
+  {
+    key: "family",
+    name: "FAMILY",
+    tagline: "PRO ochrana pro celou rodinu",
+    price: 399,
+    period: "měsíc",
+    icon: Users,
+    accent: "amber",
+    cta: "Mám zájem",
+    comingSoon: true,
+    features: [
+      "Až 4 účty (rodiče, prarodiče, děti)",
+      "800 analýz měsíčně dohromady",
+      "Sdílený výpis zachycených hrozeb",
+      "Vše z PRO pro každého člena",
+      "Centrální správa a fakturace",
     ],
   },
 ];
@@ -123,7 +144,7 @@ const FAQ: { q: string; a: string }[] = [
   },
 ];
 
-const ACCENT_STYLES: Record<"slate" | "blue" | "purple", {
+const ACCENT_STYLES: Record<"slate" | "blue" | "purple" | "amber", {
   border: string;
   glow: string;
   iconBg: string;
@@ -165,6 +186,17 @@ const ACCENT_STYLES: Record<"slate" | "blue" | "purple", {
     badgeText: "text-purple-300",
     ctaBg: "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/30",
     check: "text-purple-300",
+    popularRing: "",
+  },
+  amber: {
+    border: "border-amber-400/40",
+    glow: "shadow-[0_30px_80px_-30px_rgba(251,191,36,0.45)]",
+    iconBg: "bg-amber-500/20",
+    iconColor: "text-amber-300",
+    badgeBg: "bg-amber-500/15",
+    badgeText: "text-amber-300",
+    ctaBg: "bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 border border-amber-400/40",
+    check: "text-amber-300",
     popularRing: "",
   },
 };
@@ -234,11 +266,11 @@ export default function PricingPage() {
         </section>
 
         {/* ─── Plan Cards ───────────────────────────────── */}
-        <section className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-16">
+        <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
           {PLANS.map((p, idx) => {
             const styles = ACCENT_STYLES[p.accent];
             const Icon = p.icon;
-            const isLoading = loading === p.key;
+            const isLoading = !p.comingSoon && loading === (p.key as Plan);
             return (
               <div
                 key={p.key}
@@ -248,6 +280,11 @@ export default function PricingPage() {
                 {p.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-blue-500/30">
                     Nejoblíbenější
+                  </div>
+                )}
+                {p.comingSoon && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-900 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-amber-500/40">
+                    Připravujeme
                   </div>
                 )}
 
@@ -274,13 +311,23 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                <button
-                  onClick={() => handleCheckout(p.key)}
-                  disabled={disabled}
-                  className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed ${styles.ctaBg}`}
-                >
-                  {isLoading ? "Načítám pokladnu..." : p.cta}
-                </button>
+                {p.comingSoon ? (
+                  <a
+                    href={`mailto:info@neklikni.cz?subject=${encodeURIComponent("Mám zájem o FAMILY tarif")}`}
+                    onClick={() => trackEvent("cta_upgrade_clicked", { from: "pricing", action: "family_inquiry" })}
+                    className={`w-full inline-flex items-center justify-center py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] ${styles.ctaBg}`}
+                  >
+                    {p.cta}
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => handleCheckout(p.key as Plan)}
+                    disabled={disabled}
+                    className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed ${styles.ctaBg}`}
+                  >
+                    {isLoading ? "Načítám pokladnu..." : p.cta}
+                  </button>
+                )}
               </div>
             );
           })}

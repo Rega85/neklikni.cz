@@ -49,21 +49,21 @@ const BENEFITS = [
   },
 ];
 
-const TESTIMONIALS = [
+const USE_CASES = [
   {
-    name: "Petra K.",
-    role: "Mamka, Brno",
-    text: "Babička dostala SMS z falešné České pošty. Než zaplatila, dala mi to k ověření. Neklikni během 2 sekund odhalil podvod a ušetřil 25 000 Kč.",
+    label: "Pro rodiče",
+    title: "Babička, Česká pošta a 25 000 Kč",
+    text: "Babičce přijde SMS o nedoručeném balíku za 29 Kč. Před zaplacením ti to pošle. Vložíš to na Neklikni — během 2 sekund vidíš 92% riziko a varování. Babička nezaplatí. Útočníci nezískali přístup ke kartě, kde má našetřené úspory.",
   },
   {
-    name: "Tomáš H.",
-    role: "IT specialista, Praha",
-    text: "Doporučuji rodičům — pro lidi, kteří v IT nejsou doma, je to záchrana. Verdikty jsou čitelné v češtině, ne technický jazyk.",
+    label: "Pro netechnické",
+    title: "Verdikt v češtině, ne v IT jazyce",
+    text: "Většina antispam nástrojů ti řekne „SPAM detected, score 8.4“ — pro člověka bez IT znalostí to nic neznamená. Neklikni dá konkrétní odpověď: „Toto je phishing. Odesílatel není ČSOB. Doména csob-overeni.cz neexistuje. Neklikejte.“",
   },
   {
-    name: "Lenka M.",
-    role: "Účetní, Ostrava",
-    text: "Denně mi chodí 5+ podezřelých e-mailů. PRO tarif s detailním rozborem mi šetří hodiny rozhodování, jestli to má smysl řešit.",
+    label: "Pro firmy / účetní",
+    title: "Když ti denně chodí 5+ podezřelých e-mailů",
+    text: "Pro účetní a HR pracovníky chodí denně desítky e-mailů od „úřadů“, „bank“, „dodavatelů“. PRO tarif s detailním rozborem rychle odliší legitimní žádost od pokusu o podvodný převod. Šetří desítky minut denně.",
   },
 ];
 
@@ -209,33 +209,29 @@ export default function HomeSections() {
         </div>
       </section>
 
-      {/* ─── Testimonials ───────────────────────────────── */}
+      {/* ─── Use Cases ──────────────────────────────────── */}
       <section>
         <header className="text-center mb-10 sm:mb-12 space-y-3 animate-fade-up">
           <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/10 border border-yellow-400/20 px-3 py-1.5 rounded-full">
-            <Sparkles size={12} /> Zkušenosti uživatelů
+            <Sparkles size={12} /> Reálné scénáře použití
           </span>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tighter">
-            Reálné <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">peníze zachráněné</span>
+            Pro koho <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">to dává smysl</span>
           </h2>
+          <p className="text-slate-400 max-w-xl mx-auto text-sm">Reálné situace, ve kterých Neklikni pomáhá. Bez vymyšlených hvězdiček.</p>
         </header>
 
         <div className="grid md:grid-cols-3 gap-5">
-          {TESTIMONIALS.map((t, i) => (
-            <figure key={t.name} className="surface-card p-6 flex flex-col animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
+          {USE_CASES.map((t, i) => (
+            <figure key={t.title} className="surface-card p-6 flex flex-col animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
               <Quote size={20} className="text-purple-400/60 mb-3" />
-              <blockquote className="text-slate-200 text-sm leading-relaxed mb-5 flex-1">
+              <span className="inline-block text-[10px] font-black uppercase tracking-widest text-purple-300 bg-purple-500/10 border border-purple-400/20 px-2.5 py-1 rounded-full mb-3 w-fit">
+                {t.label}
+              </span>
+              <h3 className="font-black text-lg leading-tight mb-3">{t.title}</h3>
+              <p className="text-slate-300 text-sm leading-relaxed flex-1">
                 {t.text}
-              </blockquote>
-              <figcaption className="flex items-center gap-3 pt-4 border-t border-white/5">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center font-black text-white text-sm shrink-0">
-                  {t.name[0]}
-                </div>
-                <div>
-                  <div className="text-white text-sm font-bold">{t.name}</div>
-                  <div className="text-slate-500 text-xs">{t.role}</div>
-                </div>
-              </figcaption>
+              </p>
             </figure>
           ))}
         </div>
