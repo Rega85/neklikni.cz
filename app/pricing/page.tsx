@@ -392,7 +392,11 @@ export default function PricingPage() {
             <p className="text-slate-400 text-sm">Co všechno se v každém tarifu skrývá</p>
           </div>
 
-          <div className="surface-card overflow-hidden">
+          {/* Mobile hint: scroll horizontally */}
+          <p className="text-center text-[11px] text-slate-500 mb-3 sm:hidden">← Posuň prstem →</p>
+
+          <div className="surface-card overflow-x-auto">
+           <div className="min-w-[560px]">
             {/* Header row */}
             <div className="grid grid-cols-5 text-[10px] sm:text-xs font-black uppercase tracking-widest border-b border-white/5">
               <div className="p-3 sm:p-4 text-slate-500"></div>
@@ -414,6 +418,7 @@ export default function PricingPage() {
                 <div className="p-3 sm:p-4 text-center text-purple-300">{row.pro}</div>
               </div>
             ))}
+           </div>
           </div>
         </section>
 

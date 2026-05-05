@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen } from "lucide-react";
+import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag } from "lucide-react";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   free:  { label: "FREE",  color: "text-slate-400",  bg: "bg-slate-500/10"  },
@@ -18,7 +18,9 @@ export default function Header() {
   const [profile, setProfile] = useState<any>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
 
   const fetchMe = async () => {
@@ -51,10 +53,14 @@ export default function Header() {
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+      if (mobileNavRef.current && !mobileNavRef.current.contains(e.target as Node)) setMobileNavOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Close mobile drawer when route changes (Link click)
+  const closeMobile = () => setMobileNavOpen(false);
 
   const handleSignOut = async () => {
     setMenuOpen(false);
@@ -89,7 +95,7 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Upgrade CTA: prominent for free users, subtle "Ceník" otherwise */}
+          {/* Upgrade CTA: prominent for free users, subtle "Ceník" otherwise — desktop only */}
           {!initialLoading && user && tier === "free" ? (
             <Link
               href="/pricing"
@@ -99,8 +105,66 @@ export default function Header() {
               <span>Upgraduj</span>
             </Link>
           ) : (
-            <Link href="/pricing" className="text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">Ceník</Link>
+            <Link href="/pricing" className="hidden sm:inline-block text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">Ceník</Link>
           )}
+
+          {/* Mobile hamburger — visible only on small screens */}
+          <div className="sm:hidden relative" ref={mobileNavRef}>
+            <button
+              type="button"
+              onClick={() => setMobileNavOpen((o) => !o)}
+              aria-label={mobileNavOpen ? "Zavřít menu" : "Otevřít menu"}
+              aria-expanded={mobileNavOpen}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 border border-white/5 transition-colors"
+            >
+              {mobileNavOpen ? <X size={18} className="text-white" /> : <Menu size={18} className="text-white" />}
+            </button>
+
+            {mobileNavOpen && (
+              <div className="absolute right-0 top-12 w-64 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-up">
+                <div className="p-2 space-y-0.5">
+                  <Link href="/" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
+                    <Home size={16} className="text-slate-500 shrink-0" /><span>Domů</span>
+                  </Link>
+                  <Link href="/blog" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
+                    <BookOpen size={16} className="text-slate-500 shrink-0" /><span>Blog</span>
+                  </Link>
+                  <Link href="/pricing" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
+                    <Tag size={16} className="text-slate-500 shrink-0" /><span>Ceník</span>
+                  </Link>
+                  {user && (
+                    <Link href="/referral" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
+                      <Gift size={16} className="text-emerald-400 shrink-0" /><span>Pozvi přátele <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider ml-1">+5</span></span>
+                    </Link>
+                  )}
+                </div>
+
+                {!initialLoading && user && tier === "free" && (
+                  <div className="p-2 border-t border-white/5">
+                    <Link
+                      href="/pricing"
+                      onClick={closeMobile}
+                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-xs font-black uppercase tracking-widest px-3 py-2.5 rounded-xl shadow-lg shadow-purple-500/25 transition-all"
+                    >
+                      <Sparkles size={12} fill="currentColor" /> Upgraduj
+                    </Link>
+                  </div>
+                )}
+
+                {!initialLoading && !user && (
+                  <div className="p-2 border-t border-white/5">
+                    <Link
+                      href="/login"
+                      onClick={closeMobile}
+                      className="flex items-center justify-center bg-white text-black px-3 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors"
+                    >
+                      Přihlásit
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {initialLoading ? (
             <div className="w-28 h-9 bg-white/5 rounded-full animate-pulse" />
