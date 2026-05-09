@@ -8,6 +8,7 @@
   --brand-purple: #a855f7;
   --brand-purple-dark: #7c3aed;
   --brand-blue: #3b82f6;
+  --brand-cyan: #00d4ff;        /* tech / AI accent */
   --brand-yellow: #facc15;
   --brand-coral: #fb7185;       /* warm danger */
   --brand-amber: #f59e0b;       /* warning */
@@ -23,7 +24,19 @@
   /* Glows */
   --glow-purple: 0 0 60px -12px rgba(168, 85, 247, 0.45);
   --glow-blue:   0 0 60px -12px rgba(59, 130, 246, 0.45);
+  --glow-cyan:   0 0 60px -12px rgba(0, 212, 255, 0.45);
   --glow-yellow: 0 0 60px -12px rgba(250, 204, 21, 0.40);
+}
+
+/* Brand gradient utility — purple → cyan, the new "owned" accent */
+.brand-gradient {
+  background: linear-gradient(90deg, #a855f7 0%, #6366f1 50%, #06b6d4 100%);
+}
+.brand-gradient-text {
+  background: linear-gradient(90deg, #a855f7 0%, #818cf8 50%, #22d3ee 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 body {

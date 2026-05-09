@@ -1,6 +1,7 @@
-﻿import { Shield, ShieldCheck, Lock, RotateCcw } from "lucide-react";
+﻿import { ShieldCheck, Lock, RotateCcw } from "lucide-react";
 import Link from "next/link";
 import CookieSettingsButton from "./CookieSettingsButton";
+import BrandLogo from "./BrandLogo";
 
 export default function Footer() {
   return (
@@ -13,8 +14,10 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-start justify-between gap-8 text-xs text-slate-500">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Shield size={16} className="text-purple-500" />
-            <span className="font-black text-white uppercase tracking-tighter text-sm">Neklikni.cz</span>
+            <BrandLogo size={22} />
+            <span className="font-black text-white uppercase tracking-tighter text-sm">
+              NEKLIKNI<span className="brand-gradient-text">.CZ</span>
+            </span>
           </div>
           <p>© 2026 Všechna práva vyhrazena.</p>
         </div>

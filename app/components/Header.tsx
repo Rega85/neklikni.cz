@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { Shield, LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag } from "lucide-react";
+import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   free:  { label: "FREE",  color: "text-slate-400",  bg: "bg-slate-500/10"  },
@@ -78,11 +79,11 @@ export default function Header() {
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
 
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="bg-purple-600 p-1.5 rounded-lg">
-              <Shield size={18} className="text-white" fill="currentColor" />
-            </div>
-            <span className="font-black text-lg text-white uppercase tracking-tighter">NEKLIKNI<span className="text-purple-400">.CZ</span></span>
+          <Link href="/" className="flex items-center gap-2 shrink-0 group">
+            <BrandLogo size={32} className="group-hover:scale-105 transition-transform" />
+            <span className="font-black text-lg text-white uppercase tracking-tighter">
+              NEKLIKNI<span className="brand-gradient-text">.CZ</span>
+            </span>
           </Link>
           <nav className="hidden sm:flex items-center gap-4">
             <Link href="/" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
@@ -235,7 +236,21 @@ export default function Header() {
               )}
             </div>
           ) : (
-            <Link href="/login" className="bg-white text-black px-5 py-2 rounded-lg font-black text-xs hover:bg-slate-200 transition-colors">PŘIHLÁSIT</Link>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Link
+                href="/login"
+                className="hidden sm:inline-block text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors"
+              >
+                Přihlásit
+              </Link>
+              <Link
+                href="/"
+                className="hidden sm:inline-flex items-center gap-1.5 brand-gradient text-white text-[11px] font-black uppercase tracking-widest px-4 py-2 rounded-full shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:brightness-110 transition-all active:scale-95"
+              >
+                <Sparkles size={12} fill="currentColor" />
+                Vyzkoušet zdarma
+              </Link>
+            </div>
           )}
         </div>
       </div>

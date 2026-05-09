@@ -35,12 +35,72 @@ export default function LeadMagnet() {
   };
 
   return (
-    <section className="surface-card-elevated p-6 sm:p-10 animate-fade-up">
+    <section className="surface-card-elevated p-6 sm:p-10 animate-fade-up overflow-hidden">
       <div className="grid md:grid-cols-2 gap-8 items-center">
         <div className="space-y-4">
-          <div className="bg-gradient-to-br from-purple-500/20 to-blue-500/20 text-purple-300 w-14 h-14 rounded-2xl flex items-center justify-center">
-            <Download size={26} />
+          {/* 3D book mockup */}
+          <div className="flex items-end gap-4 mb-2">
+            <div
+              className="relative shrink-0"
+              style={{ perspective: "700px", width: "104px", height: "140px" }}
+              aria-hidden="true"
+            >
+              <div
+                className="absolute inset-0 rounded-r-md rounded-l-sm shadow-2xl shadow-amber-900/50"
+                style={{
+                  transform: "rotateY(-22deg) translateZ(0)",
+                  transformStyle: "preserve-3d",
+                  transformOrigin: "left center",
+                  background:
+                    "linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%)",
+                }}
+              >
+                {/* Spine */}
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-2 bg-gradient-to-b from-amber-800 to-amber-950 rounded-l-sm"
+                />
+                {/* Cover content */}
+                <div className="absolute inset-0 pl-3 pr-2 py-3 flex flex-col justify-between">
+                  <div>
+                    <div
+                      className="text-slate-900 font-black leading-none"
+                      style={{ fontSize: "44px", letterSpacing: "-0.05em" }}
+                    >
+                      10
+                    </div>
+                    <div className="text-slate-900/80 text-[7px] font-black uppercase tracking-widest mt-1 leading-tight">
+                      Nejčastějších
+                    </div>
+                    <div className="text-slate-900/80 text-[7px] font-black uppercase tracking-widest leading-tight">
+                      podvodů
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-slate-900 text-xs font-black border-t border-slate-900/30 pt-1 inline-block">
+                      2026
+                    </div>
+                    <div className="text-slate-900/70 text-[6px] font-bold uppercase tracking-widest mt-1 flex items-center gap-1">
+                      <span className="inline-block w-1.5 h-1.5 bg-red-600 rounded-full" />
+                      NeKlikni.cz
+                    </div>
+                  </div>
+                </div>
+                {/* Glossy highlight */}
+                <div
+                  className="absolute inset-0 rounded-r-md rounded-l-sm pointer-events-none"
+                  style={{
+                    background:
+                      "linear-gradient(115deg, rgba(255,255,255,0.25) 0%, transparent 35%, transparent 65%, rgba(0,0,0,0.15) 100%)",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-purple-500/20 to-blue-500/20 text-purple-300 w-12 h-12 rounded-2xl flex items-center justify-center shrink-0">
+              <Download size={22} />
+            </div>
           </div>
+
           <h2 className="text-2xl sm:text-3xl font-black tracking-tighter">
             Stáhni si zdarma:{" "}
             <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">

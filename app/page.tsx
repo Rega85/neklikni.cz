@@ -10,6 +10,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import RiskGauge from "./components/RiskGauge";
 import UpsellModal from "./components/UpsellModal";
 import DecoderText from "./components/DecoderText";
+import HeroParticles from "./components/HeroParticles";
 
 type AnalysisResult = {
   risk: number;
@@ -295,8 +296,9 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-[#020617]">
       <HomeSchema />
-      <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center">
-        <div ref={spotlightRef} className="spotlight max-w-4xl w-full space-y-4 text-center">
+      <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
+        <HeroParticles />
+        <div ref={spotlightRef} className="spotlight max-w-4xl w-full space-y-4 text-center relative z-10">
 
           <div className="space-y-2 relative z-10">
             <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal font-mono-fallback">
