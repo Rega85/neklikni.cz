@@ -8,10 +8,20 @@ function getStripe() {
   return new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-const PRICES = {
-  easy:  { priceId: "price_1T1whDBCHNo2zYHXNIU912Vl", mode: "payment" as const },
-  basic: { priceId: "price_1T1whYBCHNo2zYHXq0nQ3GJ7", mode: "subscription" as const },
-  pro:   { priceId: "price_1T1wi8BCHNo2zYHXH5xDjwwm", mode: "subscription" as const },
+// Price IDs are read from env so live and test keys can coexist.
+// Set these in Vercel (live) and .env.local (test):
+//   STRIPE_PRICE_ONESHOT  — 49 Kč one-time, 1 prémiová PRO analýza
+//   STRIPE_PRICE_BASIC    — 99 Kč/měs, 50 analýz
+//   STRIPE_PRICE_PRO      — 199 Kč/měs, 150 analýz
+//   STRIPE_PRICE_EASY     — (legacy, optional) — keep only if grandfathering test users
+type PlanConfig = { priceId: string | undefined; mode: "payment" | "subscription" };
+
+const PRICES: Record<string, PlanConfig> = {
+  oneshot: { priceId: process.env.STRIPE_PRICE_ONESHOT, mode: "payment" },
+  basic:   { priceId: process.env.STRIPE_PRICE_BASIC,   mode: "subscription" },
+  pro:     { priceId: process.env.STRIPE_PRICE_PRO,     mode: "subscription" },
+  // Legacy plan — only available if STRIPE_PRICE_EASY is configured
+  easy:    { priceId: process.env.STRIPE_PRICE_EASY,    mode: "payment" },
 };
 
 type Plan = keyof typeof PRICES;
@@ -23,8 +33,8 @@ export async function POST(req: Request) {
     const stripe = getStripe();
     const { plan } = (await req.json()) as { plan?: string };
 
-    if (!plan || !(plan in PRICES)) {
-      return NextResponse.json({ error: "Neplatný plán" }, { status: 400 });
+    if (!plan || !(plan in PRICES) || !PRICES[plan as Plan].priceId) {
+      return NextResponse.json({ error: "Neplatný nebo nedostupný plán" }, { status: 400 });
     }
 
     const cookieStore = await cookies();
@@ -54,6 +64,9 @@ export async function POST(req: Request) {
       "http://localhost:3000";
 
     const selected = PRICES[plan as Plan];
+    if (!selected.priceId) {
+      return NextResponse.json({ error: "Plán není v Stripe nakonfigurován" }, { status: 503 });
+    }
 
     const session = await stripe.checkout.sessions.create({
       customer_email: user.email,

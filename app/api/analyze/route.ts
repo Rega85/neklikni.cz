@@ -18,10 +18,11 @@ function supabaseAdmin() {
 }
 
 const TIER_MODELS: Record<string, string> = {
-  free:  "claude-haiku-4-5-20251001",
-  easy:  "claude-haiku-4-5-20251001",
-  basic: "claude-sonnet-4-5",
-  pro:   "claude-opus-4-5",
+  free:    "claude-haiku-4-5-20251001",
+  easy:    "claude-opus-4-5",     // legacy alias for oneshot
+  oneshot: "claude-opus-4-5",     // 49 Kč one-time premium analysis
+  basic:   "claude-sonnet-4-5",
+  pro:     "claude-opus-4-5",
 };
 
 const SYSTEM_PROMPT_FREE = `Jsi expert na kybernetickou bezpečnost a phishing. 
@@ -69,7 +70,7 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
     .single();
 
   const currentCount = ipRecord?.count ?? 0;
-  const ANON_DAILY_LIMIT = 3;
+  const ANON_DAILY_LIMIT = 2;
 
   if (currentCount >= ANON_DAILY_LIMIT) {
     return NextResponse.json(
@@ -171,7 +172,7 @@ export async function POST(req: Request) {
 
     const tier = profile.tier || "free";
 
-    if (image && !["basic", "pro"].includes(tier)) {
+    if (image && !["basic", "pro", "oneshot", "easy"].includes(tier)) {
       return NextResponse.json({
         error: "Analýza obrázků je dostupná pouze pro tarif BASIC a PRO.",
         upgradeRequired: true,
@@ -277,8 +278,8 @@ function extractJson(raw: string): any {
 
 async function runAnalysis(text: string | null, tier: string, imageBase64?: string | null) {
   const model = TIER_MODELS[tier] || TIER_MODELS.free;
-  const systemPrompt = tier === "pro" ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
-  const maxTokens = tier === "pro" ? 2000 : tier === "basic" ? 1500 : 800;
+  const systemPrompt = ["pro", "easy"].includes(tier) ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
+  const maxTokens = ["pro", "easy"].includes(tier) ? 2000 : tier === "basic" ? 1500 : 800;
 
   let userContent: any;
   if (imageBase64) {

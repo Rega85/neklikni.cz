@@ -69,7 +69,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl">
         <h1 className="text-3xl font-bold text-white mb-2 text-center">Registrace</h1>
-        <p className="text-slate-400 mb-8 text-center">Vytvoř si účet a získej 3 analýzy zdarma.</p>
+        <p className="text-slate-400 mb-8 text-center">Vytvoř si účet a získej 5 analýz zdarma navíc.</p>
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="relative">

@@ -70,7 +70,7 @@ const USE_CASES = [
 const FAQ_HOME: { q: string; a: string }[] = [
   {
     q: "Je to opravdu zdarma?",
-    a: "Ano. 3 analýzy denně máš zdarma — bez registrace, bez kreditky. Pro častější použití nebo screenshoty si můžeš vybrat tarif.",
+    a: "Ano. 2 analýzy denně máš zdarma — bez registrace, bez kreditky. Pro častější použití nebo screenshoty si můžeš vybrat tarif.",
   },
   {
     q: "Ukládáte moje zprávy?",

@@ -289,7 +289,7 @@ export default function Home() {
 
   const DISCLAIMER = "Výsledky analýzy vygenerované umělou inteligencí mají informativní charakter. Technologie se může mýlit — poslední rozhodnutí je vždy na Vás.";
 
-  const canUploadImage = profile?.tier === "basic" || profile?.tier === "pro";
+  const canUploadImage = !!profile?.tier && ["basic", "pro", "oneshot", "easy"].includes(profile.tier);
 
   const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
 
@@ -502,7 +502,7 @@ export default function Home() {
                   <div className="text-slate-600 text-xs">
                     {!result.tier || result.tier === "free"
                       ? result.remainingChecks !== undefined && (
-                          <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/3</span></span>
+                          <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/2</span></span>
                         )
                       : result.credits !== undefined && (
                           <span>Zbývá: <span className="text-slate-400 font-bold">{result.credits.toLocaleString("cs-CZ")} kreditů</span></span>

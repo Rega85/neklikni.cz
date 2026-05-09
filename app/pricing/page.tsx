@@ -25,17 +25,17 @@ type PlanCard = {
 const PLANS: PlanCard[] = [
   {
     key: "easy",
-    name: "EASY",
-    tagline: "Jednorázově, bez závazků",
-    price: 29,
+    name: "JEDNORÁZOVÁ",
+    tagline: "Když to opravdu MUSÍ sedět",
+    price: 49,
     period: "jednorázově",
     icon: Zap,
     accent: "slate",
-    cta: "Koupit balíček",
+    cta: "Koupit 1 analýzu",
     features: [
-      "10 AI analýz",
-      "Výsledek do 3 sekund",
-      "Kredity bez expirace",
+      "1 prémiová analýza",
+      "Nejlepší AI model Claude Opus",
+      "Hloubkový rozbor – taktiky útočníka",
       "Žádné předplatné",
     ],
   },
@@ -54,7 +54,7 @@ const PLANS: PlanCard[] = [
       "Plný verdikt s vysvětlením",
       "Analýza odkazů i SMS",
       "Analýza screenshotů (obrázků)",
-      "Bez vázanosti, zrušení kdykoli",
+      "Kredity přenosné do dalšího měsíce",
     ],
   },
   {
@@ -67,7 +67,7 @@ const PLANS: PlanCard[] = [
     accent: "purple",
     cta: "Získat PRO",
     features: [
-      "200 analýz měsíčně",
+      "150 analýz měsíčně",
       "Nejpokročilejší AI model Claude Opus",
       "Hloubkový rozbor – taktiky útočníka",
       "Konkrétní kroky co dělat dál",
@@ -87,7 +87,7 @@ const PLANS: PlanCard[] = [
     comingSoon: true,
     features: [
       "Až 4 účty (rodiče, prarodiče, děti)",
-      "800 analýz měsíčně dohromady",
+      "600 analýz měsíčně dohromady",
       "Sdílený výpis zachycených hrozeb",
       "Vše z PRO pro každého člena",
       "Centrální správa a fakturace",
@@ -96,16 +96,16 @@ const PLANS: PlanCard[] = [
 ];
 
 const COMPARE: { label: string; free: string; easy: string; basic: string; pro: string; highlight?: boolean }[] = [
-  { label: "Cena",                            free: "0 Kč",        easy: "29 Kč",       basic: "99 Kč / měs",   pro: "199 Kč / měs", highlight: true },
-  { label: "Počet analýz",                    free: "3 / den",     easy: "10",          basic: "50 / měs",      pro: "200 / měs", highlight: true },
-  { label: "AI model",                        free: "Claude Haiku",easy: "Claude Haiku",basic: "Claude Sonnet", pro: "Claude Opus" },
-  { label: "Maximální délka textu",           free: "5 000 znaků", easy: "5 000 znaků", basic: "8 000 znaků",   pro: "12 000 znaků" },
+  { label: "Cena",                            free: "0 Kč",        easy: "49 Kč",       basic: "99 Kč / měs",   pro: "199 Kč / měs", highlight: true },
+  { label: "Počet analýz",                    free: "2 / den",     easy: "1",           basic: "50 / měs",      pro: "150 / měs", highlight: true },
+  { label: "AI model",                        free: "Claude Haiku",easy: "Claude Opus", basic: "Claude Sonnet", pro: "Claude Opus" },
+  { label: "Maximální délka textu",           free: "5 000 znaků", easy: "12 000 znaků",basic: "8 000 znaků",   pro: "12 000 znaků" },
   { label: "Analýza obrázků / screenshotů",   free: "—",            easy: "—",           basic: "✓",             pro: "✓" },
-  { label: "Hloubkový rozbor + taktiky",      free: "—",            easy: "—",           basic: "—",             pro: "✓" },
-  { label: "Konkrétní kroky co dělat dál",    free: "—",            easy: "základní",    basic: "rozšířené",     pro: "rozšířené" },
+  { label: "Hloubkový rozbor + taktiky",      free: "—",            easy: "✓",           basic: "—",             pro: "✓" },
+  { label: "Konkrétní kroky co dělat dál",    free: "—",            easy: "rozšířené",   basic: "rozšířené",     pro: "rozšířené" },
   { label: "Sdílení a varování přes odkaz",   free: "✓",            easy: "✓",           basic: "✓",             pro: "✓" },
   { label: "PDF report ke stažení",           free: "✓",            easy: "✓",           basic: "✓",             pro: "✓" },
-  { label: "Expirace kreditů",                free: "—",            easy: "nikdy",       basic: "měsíc",         pro: "měsíc" },
+  { label: "Expirace kreditů",                free: "—",            easy: "ihned po použití", basic: "až +1 měsíc",   pro: "až +1 měsíc" },
   { label: "Závazek",                         free: "žádný",        easy: "žádný",       basic: "zrušit kdykoli",pro: "zrušit kdykoli" },
 ];
 
@@ -116,11 +116,11 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Co když mi dojdou kredity uprostřed měsíce?",
-    a: "Můžeš si dokoupit jednorázový balíček EASY (10 analýz za 29 Kč) — kredity se přičtou k tvému aktuálnímu zůstatku a nepropadnou. Nebo si upgraduj na vyšší tarif a kredity se ti rovnou navýší.",
+    a: "Pro kritické případy si můžeš dokoupit jednorázovou prémiovou analýzu (49 Kč). Pokud ale analyzuješ častěji, doporučujeme přechod na vyšší tarif, kde se kredity rovnou navýší.",
   },
   {
     q: "Liší se výsledky mezi tarify?",
-    a: "Ano, ale jen v hloubce. FREE a EASY používají rychlý model Haiku — kratší verdikt. BASIC nasazuje Sonnet — plný popis s vysvětlením. PRO běží na Opus — nejvyšší přesnost, taktiky útočníka, doporučení co dělat dál.",
+    a: "Ano, ale jen v hloubce. FREE používá rychlý model Haiku — kratší verdikt. BASIC nasazuje Sonnet — plný popis s vysvětlením. Jednorázový nákup a tarif PRO běží na modelu Opus — nejvyšší přesnost, taktiky útočníka, doporučení co dělat dál.",
   },
   {
     q: "Ukládáte moje zprávy?",
@@ -140,7 +140,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Co dostanu zdarma?",
-    a: "3 analýzy denně bez registrace, plus PDF report a sdílení. Pro screenshoty, vyšší přesnost a více analýz si můžeš vybrat tarif.",
+    a: "2 analýzy denně bez registrace, plus PDF report a sdílení. Pro screenshoty, vyšší přesnost a více analýz si můžeš vybrat tarif.",
   },
 ];
 
@@ -463,7 +463,7 @@ export default function PricingPage() {
         <section className="surface-card-elevated p-8 sm:p-12 text-center space-y-4 animate-fade-up">
           <h2 className="text-2xl sm:text-3xl font-black tracking-tighter">Stále váháš?</h2>
           <p className="text-slate-400 max-w-xl mx-auto leading-relaxed">
-            Začni s 3 analýzami denně zdarma — bez registrace, bez kreditky.
+            Začni se 2 analýzami denně zdarma — bez registrace, bez kreditky.
             Kdykoli později se rozhodneš pro tarif, kredity se ti spočítají hned od první minuty.
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-2">

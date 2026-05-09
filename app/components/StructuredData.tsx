@@ -73,7 +73,7 @@ export function PricingSchema(faq: { q: string; a: string }[]) {
         brand: ORGANIZATION,
         offers: [
           {
-            "@type": "Offer", name: "EASY", price: "29",  priceCurrency: "CZK",
+            "@type": "Offer", name: "JEDNORÁZOVÁ", price: "49",  priceCurrency: "CZK",
             url: `${BASE}/pricing`, availability: "https://schema.org/InStock",
           },
           {

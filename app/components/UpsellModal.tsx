@@ -15,7 +15,7 @@ type Props = {
 
 const COPY: Record<Exclude<Reason, null>, { title: string; sub: string }> = {
   anon_daily: {
-    title: "Dnes už jsi využil 3 zdarma analýzy",
+    title: "Dnes už jsi využil zdarma analýzy",
     sub: "Zaregistruj se zdarma pro dalších 5 — nebo si pořiď tarif a měj jistotu vždy.",
   },
   no_credits: {
@@ -86,8 +86,8 @@ export default function UpsellModal({ reason, onClose, tier }: Props) {
               <Shield size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white font-bold text-sm">EASY — 29 Kč jednorázově</div>
-              <div className="text-slate-400 text-xs">10 analýz, žádné předplatné</div>
+              <div className="text-white font-bold text-sm">JEDNORÁZOVÁ — 49 Kč</div>
+              <div className="text-slate-400 text-xs">1 prémiová analýza modelem Opus</div>
             </div>
             <ArrowRight size={16} className="text-slate-500 group-hover:translate-x-0.5 group-hover:text-white transition-all shrink-0" />
           </Link>

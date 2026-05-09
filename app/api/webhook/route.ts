@@ -56,7 +56,16 @@ export async function POST(req: Request) {
 
     if (!userId) return NextResponse.json({ error: "No user ID" }, { status: 400 });
 
-    const addedCredits = plan === "pro" ? 200 : plan === "basic" ? 50 : 10;
+    // Credit allocation per plan:
+    //   oneshot — 1  (49 Kč premium one-shot, Opus model)
+    //   easy    — 10 (legacy, for grandfathered test users)
+    //   basic   — 50 (99 Kč/měs, Sonnet)
+    //   pro     — 150 (199 Kč/měs, Opus)
+    const addedCredits =
+      plan === "pro"     ? 150 :
+      plan === "basic"   ?  50 :
+      plan === "oneshot" ?   1 :
+      plan === "easy"    ?  10 : 0;
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
@@ -65,10 +74,12 @@ export async function POST(req: Request) {
       .single();
 
     const currentCredits = profile?.credits_remaining ?? 0;
-
-    // For easy (one-time top-up), preserve any existing paid tier
     const currentTier = profile?.tier;
-    const tierToSet = plan === "easy" && currentTier && ["basic", "pro"].includes(currentTier)
+
+    // One-time top-ups (oneshot, easy) preserve an existing paid subscription tier
+    // so users don't get downgraded by buying a top-up.
+    const isTopUp = plan === "oneshot" || plan === "easy";
+    const tierToSet = isTopUp && currentTier && ["basic", "pro"].includes(currentTier)
       ? currentTier
       : plan;
 
@@ -103,7 +114,9 @@ export async function POST(req: Request) {
         .single();
 
       if (profile) {
-        const addedCredits = profile.tier === "pro" ? 200 : profile.tier === "basic" ? 50 : 10;
+        // Subscription renewal — top up credits to monthly allowance.
+        // Only pro/basic actually have subscriptions; other tiers shouldn't trigger renewal.
+        const addedCredits = profile.tier === "pro" ? 150 : profile.tier === "basic" ? 50 : 0;
 
         const { error: renewError } = await supabaseAdmin
           .from("user_profiles")
