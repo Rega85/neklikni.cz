@@ -712,16 +712,34 @@ Tyto věci **NEDĚLÁME** v MVP. Sepíšeme do v2 backlogu:
 
 ---
 
-## 9. OTEVŘENÉ OTÁZKY K DISKUZI
+## 9. ROZHODNUTÍ K MVP
 
-Tyto věci ještě nevíme jistě, řešíme s uživatelem před implementací:
+Tyto věci byly rozhodnuty a fixovány pro MVP implementaci:
 
-1. **Subject merging** — pokud nahlašovatel přidá identifikátor, který už existuje pod jiným subjektem, ale jiné identifikátory ne — jak rozhodnout, jestli je to stejný subjekt nebo cizí?
-2. **Notification e-mail extraction** — jak spolehlivě extrahovat e-mail dotčené osoby z důkazů? (OCR? Manuálně od nahlašovatele?)
-3. **Trust score formula** — přesný vzorec. Návrh:  
-   `score = 100 - min(100, (count_active * 10) + (severity_weighted * 5) + (recency_bonus * 2))`
-4. **Admin tooling** — jeden admin (Pavel) na začátku stačí, ale jak to bude vypadat při růstu?
-5. **Cena Claim & Respond** — 290 Kč/měs je odhad. Test pricing později.
+1. **Subject merging:** Admin manuálně rozhoduje o slučování subjektů přes admin UI. Když AI při procesu nahlášení najde konflikt identifikátorů (stejný value_hash u dvou subjektů), zařadí incident do admin queue se stavem `pending_merge_review`. Auto-merging je v2 cíl.
+
+2. **Notification e-mail dotčené osoby:** Hybridní přístup. (a) Pokud nahlašovatel uvedl identifikátor typu `email`, použijeme jej automaticky. (b) Formulář navíc obsahuje volitelné pole "Kontakt na dotčenou osobu (pokud znáte)" pro případy, kdy nahlašovatel zná jiný kontakt. Žádný OCR v MVP.
+
+3. **Trust score formula:** Fixní vzorec pro MVP:
+
+   ```
+   score = 100 - min(100, 
+     (count_active * 10) + 
+     (severity_weighted * 5) + 
+     (recency_bonus * 2)
+   )
+   ```
+
+   Kde:
+   - `count_active` = počet aktivních (status='published') incidentů
+   - `severity_weighted` = součet vah závažnosti (attempt=0, minor=1, medium=2, major=4, severe=8)
+   - `recency_bonus` = počet incidentů za posledních 90 dní
+
+   Kalibrace na základě reálných dat po 3 měsících provozu.
+
+4. **Admin tooling:** Jednoduchý seznam na `/databaze/admin` s tabulkou pending záznamů, filtry (stav, kategorie, score), akčními tlačítky (Schválit / Odmítnout / Vyžádat doplnění / Sloučit subjekty). Bez admin frameworku, vlastní komponenty v duchu zbytku app. Supabase Studio jako fallback pro pokročilé queries.
+
+5. **Cena Claim & Respond:** 290 Kč/měs (Stripe subscription, monthly recurring). Test po 3 měsících.
 
 ---
 
