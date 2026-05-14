@@ -9,83 +9,29 @@
  *
  * Auth: vyžaduje přihlášeného uživatele (Supabase Auth cookies).
  * Rate limit: max 10 prechecků za hodinu na uživatele.
+ *
+ * AI logika je v `../_lib/precheck.ts` (shared se `/report` endpointem).
  */
 
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
-import Anthropic from '@anthropic-ai/sdk'
 import type {
   IncidentCategory,
   IncidentSeverity,
   IncidentPlatform,
   EvidenceType,
-  AiPrecheckResult,
 } from '@/types/databaze'
+import type { DatabazeDatabase } from '../_lib/database'
+import { runAiPrecheck, type PrecheckInput } from '../_lib/precheck'
 
 export const dynamic = 'force-dynamic'
 
-const PRECHECK_MODEL = 'claude-sonnet-4-6'
-const MAX_TOKENS = 800
 const RATE_LIMIT_PER_HOUR = 10
 
 
-// =====================================================
-// Minimal Database type pro audit_log (dokud nejsou
-// vygenerované types/supabase.ts přes `supabase gen types`)
-// =====================================================
-
-type AuditLogInsert = {
-  id?: string
-  actor_type: 'reporter' | 'admin' | 'system' | 'public'
-  actor_id?: string | null
-  action: string
-  target_type: 'incident' | 'subject' | 'evidence' | 'reporter' | 'objection' | 'subscription'
-  target_id?: string | null
-  ip_address?: string | null
-  user_agent?: string | null
-  metadata?: Record<string, unknown>
-  created_at?: string
-}
-
-type AuditLogRow = Required<Omit<AuditLogInsert, 'id' | 'created_at'>> & {
-  id: string
-  created_at: string
-}
-
-type DatabazeDatabase = {
-  public: {
-    Tables: {
-      audit_log: {
-        Row: AuditLogRow
-        Insert: AuditLogInsert
-        Update: Partial<AuditLogInsert>
-        Relationships: []
-      }
-    }
-    Views: { [_ in never]: never }
-    Functions: { [_ in never]: never }
-    Enums: { [_ in never]: never }
-    CompositeTypes: { [_ in never]: never }
-  }
-}
-
-
-// =====================================================
-// Lazy-init clients (avoid build-time crash without env)
-// =====================================================
-
-let _anthropic: Anthropic | null = null
-function getAnthropic(): Anthropic {
-  if (!_anthropic) {
-    const apiKey = process.env.ANTHROPIC_API_KEY
-    if (!apiKey) throw new Error('ANTHROPIC_API_KEY missing')
-    _anthropic = new Anthropic({ apiKey })
-  }
-  return _anthropic
-}
-
+// ── Lazy-init Supabase admin ─────────────────────────
 
 type SupabaseAdminClient = ReturnType<typeof createClient<DatabazeDatabase>>
 let _supabaseAdmin: SupabaseAdminClient | null = null
@@ -100,9 +46,7 @@ function supabaseAdmin(): SupabaseAdminClient {
 }
 
 
-// =====================================================
-// Request validation
-// =====================================================
+// ── Request validation ───────────────────────────────
 
 const VALID_CATEGORIES: IncidentCategory[] = [
   'non_delivery',
@@ -147,30 +91,14 @@ const VALID_EVIDENCE_TYPES: EvidenceType[] = [
 ]
 
 
-interface PrecheckRequestBody {
-  category: IncidentCategory
-  category_other?: string
-  severity: IncidentSeverity
-  incident_date: string
-  amount_czk: number
-  platform: IncidentPlatform
-  platform_other?: string
-  description: string
-  evidence_summary: {
-    count: number
-    types: EvidenceType[]
-  }
-}
-
-
-function validateBody(raw: unknown): PrecheckRequestBody | string {
+function validateBody(raw: unknown): PrecheckInput | string {
   if (!raw || typeof raw !== 'object') return 'Tělo požadavku musí být JSON objekt'
   const b = raw as Record<string, unknown>
 
   if (typeof b.category !== 'string' || !VALID_CATEGORIES.includes(b.category as IncidentCategory)) {
     return 'Neplatná kategorie'
   }
-  if (b.category_other !== undefined && typeof b.category_other !== 'string') {
+  if (b.category_other !== undefined && b.category_other !== null && typeof b.category_other !== 'string') {
     return 'Neplatný category_other'
   }
   if (typeof b.severity !== 'string' || !VALID_SEVERITIES.includes(b.severity as IncidentSeverity)) {
@@ -185,7 +113,7 @@ function validateBody(raw: unknown): PrecheckRequestBody | string {
   if (typeof b.platform !== 'string' || !VALID_PLATFORMS.includes(b.platform as IncidentPlatform)) {
     return 'Neplatná platforma'
   }
-  if (b.platform_other !== undefined && typeof b.platform_other !== 'string') {
+  if (b.platform_other !== undefined && b.platform_other !== null && typeof b.platform_other !== 'string') {
     return 'Neplatný platform_other'
   }
   if (typeof b.description !== 'string' || b.description.length < 50 || b.description.length > 1000) {
@@ -204,12 +132,12 @@ function validateBody(raw: unknown): PrecheckRequestBody | string {
 
   return {
     category: b.category as IncidentCategory,
-    category_other: b.category_other as string | undefined,
+    category_other: (b.category_other as string | undefined) ?? null,
     severity: b.severity as IncidentSeverity,
     incident_date: b.incident_date,
     amount_czk: b.amount_czk,
     platform: b.platform as IncidentPlatform,
-    platform_other: b.platform_other as string | undefined,
+    platform_other: (b.platform_other as string | undefined) ?? null,
     description: b.description,
     evidence_summary: {
       count: es.count,
@@ -219,144 +147,10 @@ function validateBody(raw: unknown): PrecheckRequestBody | string {
 }
 
 
-// =====================================================
-// System prompt (SPEC sekce 5.5 + SKILL sekce 4)
-// =====================================================
-
-const SYSTEM_PROMPT = `Jsi expert na detekci pomstychtivých, manipulativních a nepravdivých nahlášení podvodů na českých bazarech a online platformách.
-
-Hodnotíš jediné nahlášení a vracíš strukturované JSON hodnocení.
-
-POSUĎ:
-1. Konzistence — odpovídá popis kategorii a závažnosti?
-2. Tón — působí věcně, nebo pomstychtivě/emocionálně?
-3. Specifičnost — obsahuje konkrétní detaily (datum, částka, modus operandi), nebo jen obecné nadávky?
-4. Důkazy — počet a typ odpovídá popisu? Drobné nahlášení s 5+ důkazy je podezřelé jako přílišné odhodlání; závažné incidenty by měly mít alespoň 2 důkazy.
-5. Red flags — jazyk pomsty, vágní obvinění, nesedící časové údaje, urážky, ad hominem.
-
-VRAŤ POUZE validní JSON bez markdown bloků v tomto tvaru:
-{
-  "confidence_score": <číslo 0-100>,
-  "ai_summary": "<2-3 věty>",
-  "red_flags": ["<string>", ...],
-  "recommendation": "<auto_publish | manual_review | reject>"
-}
-
-PRAVIDLA SKÓRE:
-- 80-100 = vypadá zcela autenticky, věcný tón, konkrétní detaily, odpovídající důkazy → auto_publish
-- 60-79 = většinou autenticky, drobné nejasnosti → auto_publish s vyšší prioritou pro spot-check
-- 30-59 = nejasné signály, nutná manuální kontrola → manual_review
-- 0-29 = silně pochybné, pravděpodobně pomsta nebo nepravdivé → reject
-
-KRITICKÁ JAZYKOVÁ PRAVIDLA PRO ai_summary (právní compliance, ČR):
-
-NIKDY nepoužij tato slova:
-- "podvodník", "zloděj", "lhář" — hodnocení charakteru, trestněprávní pojmy
-- "podvedl", "ukradl", "spáchal", "okradl" — implikují vinu
-- "falešný" o osobě — implikuje úmysl
-- "nepoctivý", "vinen", "trestaný" — hodnocení/rozsudek
-- "podvodné jednání" — implikuje protiprávnost
-
-VŽDY používej faktický, pasivní jazyk:
-- "byl evidován v souvislosti s..."
-- "nahlašující uvádí, že..."
-- "podle nahlášení nebylo zboží doručeno"
-- "nahlášení popisuje pattern..."
-- "subjekt je předmětem nahlášení typu X"
-
-PŘÍKLAD ŠPATNÉHO ai_summary:
-"Podvodník neposlal zboží po platbě 2500 Kč."
-
-PŘÍKLAD SPRÁVNÉHO ai_summary:
-"Nahlašující uvádí, že po platbě 2500 Kč na účet nedošlo k doručení zboží přes Sbazar."
-
-DALŠÍ PRAVIDLA:
-- Pokud popis obsahuje urážky nebo emocionální nadávky → automaticky přidej red_flag "ad hominem / pomstychtivý jazyk"
-- Pokud je popis kratší než 100 znaků a závažnost major/severe → red_flag "nedostatečný popis pro deklarovanou závažnost"
-- Pokud datum incidentu je v budoucnosti nebo starší 2 roky → red_flag "nesedící časový rámec"
-- ai_summary musí být v češtině, latinkou
-- red_flags mohou být v češtině nebo angličtině podle vhodnosti`
-
-
-// =====================================================
-// Helpers
-// =====================================================
-
-function extractJson(raw: string): unknown {
-  // Strip markdown fences
-  const stripped = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim()
-  try {
-    return JSON.parse(stripped)
-  } catch {
-    // Try balanced braces walk
-  }
-  let depth = 0
-  let start = -1
-  for (let i = 0; i < stripped.length; i++) {
-    if (stripped[i] === '{') {
-      if (depth === 0) start = i
-      depth++
-    } else if (stripped[i] === '}') {
-      depth--
-      if (depth === 0 && start !== -1) {
-        try {
-          return JSON.parse(stripped.slice(start, i + 1))
-        } catch {
-          // continue
-        }
-        start = -1
-      }
-    }
-  }
-  throw new Error('AI nevrátila validní JSON')
-}
-
-
-function validateAiResponse(parsed: unknown): AiPrecheckResult | null {
-  if (!parsed || typeof parsed !== 'object') return null
-  const p = parsed as Record<string, unknown>
-
-  if (
-    typeof p.confidence_score !== 'number' ||
-    p.confidence_score < 0 ||
-    p.confidence_score > 100
-  ) {
-    return null
-  }
-  if (typeof p.ai_summary !== 'string') return null
-  if (!Array.isArray(p.red_flags) || !p.red_flags.every((f) => typeof f === 'string')) {
-    return null
-  }
-  if (
-    typeof p.recommendation !== 'string' ||
-    !['auto_publish', 'manual_review', 'reject'].includes(p.recommendation)
-  ) {
-    return null
-  }
-
-  return {
-    confidence_score: p.confidence_score,
-    ai_summary: p.ai_summary,
-    red_flags: p.red_flags as string[],
-    recommendation: p.recommendation as AiPrecheckResult['recommendation'],
-  }
-}
-
-
-const FALLBACK_RESULT: AiPrecheckResult = {
-  confidence_score: 50,
-  ai_summary: '',
-  red_flags: [],
-  recommendation: 'manual_review',
-}
-
-
-// =====================================================
-// POST handler
-// =====================================================
+// ── POST handler ─────────────────────────────────────
 
 export async function POST(req: Request) {
-  // ── 1. Auth (cookie-based) ────────────────────────────
+  // 1. Auth
   let userId: string | null = null
   try {
     const cookieStore = await cookies()
@@ -368,9 +162,7 @@ export async function POST(req: Request) {
           getAll() {
             return cookieStore.getAll()
           },
-          setAll() {
-            // Route handler — cookies se neupravují
-          },
+          setAll() {},
         },
       },
     )
@@ -387,7 +179,7 @@ export async function POST(req: Request) {
     )
   }
 
-  // ── 2. Validace body ──────────────────────────────────
+  // 2. Validace body
   let body: unknown
   try {
     body = await req.json()
@@ -400,7 +192,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: validated }, { status: 400 })
   }
 
-  // ── 3. Rate limit (audit_log za poslední 1h) ──────────
+  // 3. Rate limit
   try {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const { count, error: countErr } = await supabaseAdmin()
@@ -414,12 +206,9 @@ export async function POST(req: Request) {
 
     if (countErr) {
       console.error('Precheck rate-limit lookup failed:', countErr)
-      // Soft-fail: pokud se rate limit nepodaří zkontrolovat, pustíme dál
     } else if ((count ?? 0) >= RATE_LIMIT_PER_HOUR) {
       return NextResponse.json(
-        {
-          error: `Limit ${RATE_LIMIT_PER_HOUR} AI předkontrol za hodinu vyčerpán. Zkuste to za chvíli.`,
-        },
+        { error: `Limit ${RATE_LIMIT_PER_HOUR} AI předkontrol za hodinu vyčerpán. Zkuste to za chvíli.` },
         { status: 429 },
       )
     }
@@ -427,55 +216,10 @@ export async function POST(req: Request) {
     console.error('Precheck rate-limit exception:', err)
   }
 
-  // ── 4. AI volání ──────────────────────────────────────
-  const userMessage = JSON.stringify({
-    category: validated.category,
-    category_other: validated.category_other ?? null,
-    severity: validated.severity,
-    incident_date: validated.incident_date,
-    amount_czk: validated.amount_czk,
-    platform: validated.platform,
-    platform_other: validated.platform_other ?? null,
-    description: validated.description,
-    evidence_summary: validated.evidence_summary,
-  })
+  // 4. AI volání (shared logika)
+  const result = await runAiPrecheck(validated)
 
-  let result: AiPrecheckResult
-  try {
-    const msg = await getAnthropic().messages.create({
-      model: PRECHECK_MODEL,
-      max_tokens: MAX_TOKENS,
-      system: [
-        {
-          type: 'text',
-          text: SYSTEM_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [
-        {
-          role: 'user',
-          content: `Posuď toto nahlášení a vrať JSON:\n\n${userMessage}`,
-        },
-      ],
-    })
-
-    const rawText = msg.content[0]?.type === 'text' ? msg.content[0].text : ''
-    const parsed = extractJson(rawText)
-    const validatedAi = validateAiResponse(parsed)
-
-    if (!validatedAi) {
-      console.error('Precheck AI returned invalid structure:', rawText)
-      result = FALLBACK_RESULT
-    } else {
-      result = validatedAi
-    }
-  } catch (err) {
-    console.error('Precheck AI call failed:', err)
-    result = FALLBACK_RESULT
-  }
-
-  // ── 5. Audit log ──────────────────────────────────────
+  // 5. Audit log
   try {
     await supabaseAdmin()
       .from('audit_log')
@@ -494,7 +238,6 @@ export async function POST(req: Request) {
       })
   } catch (err) {
     console.error('Precheck audit_log insert failed:', err)
-    // Soft-fail: audit failure nesmí vyřadit endpoint
   }
 
   return NextResponse.json(result)
