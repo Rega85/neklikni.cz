@@ -17,7 +17,7 @@
 
 | Vrstva | Volba | Poznámka |
 |---|---|---|
-| Framework | **Next.js 15 App Router** | NE Pages Router. Server Components default. |
+| Framework | **Next.js 16.2 App Router** (middleware.ts bude potřeba přejmenovat na proxy.ts dle Next 16 doporučení — drž v TODO seznamu) | NE Pages Router. Server Components default. |
 | Jazyk | **TypeScript strict** | Žádné `any`, žádné `@ts-ignore`. |
 | Styling | **Tailwind CSS 4** | + CSS proměnné v globals.css pro brand barvy |
 | Databáze | **Supabase Postgres** | + RLS policies VŽDY (žádná tabulka bez RLS) |
