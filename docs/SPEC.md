@@ -651,7 +651,7 @@ na uživateli.
 - Plné údaje incidentu (admin má přístup)
 - AI score + summary + red_flags
 - Důkazy (zobrazitelné inline)
-- Akce: ✅ Schválit / ❌ Odmítnout / ⏸️ Doplnit info
+- Akce: ✅ Schválit / ❌ Odmítnout / ❓ Vyžádat doplnění
 
 ---
 
