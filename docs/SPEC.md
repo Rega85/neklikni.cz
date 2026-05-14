@@ -672,11 +672,11 @@ MVP databáze je hotové, když:
 - [ ] Audit log se plní
 
 **Právně:**
-- [ ] VOP obsahují klauzule k databázi (advokát ⚠️)
-- [ ] GDPR má "oprávněný zájem" jako právní základ (advokát ⚠️)
+- [ ] VOP obsahují klauzule k databázi (✋ vyžaduje advokáta)
+- [ ] GDPR má "oprávněný zájem" jako právní základ (✋ vyžaduje advokáta)
 - [ ] Disclaimer pod každým záznamem
 - [ ] Žádné zakázané slovo v UI textech (viz SKILL.md sekce 4)
-- [ ] DPIA dokument je vypracovaný (advokát ⚠️)
+- [ ] DPIA dokument je vypracovaný (✋ vyžaduje advokáta)
 
 **Technicky:**
 - [ ] Build prochází bez warningů
