@@ -199,13 +199,18 @@ export type EvidenceInsert = {
 
 // ── audit_log ─────────────────────────────────────────
 
+// target_id: per migrace `target_id uuid NOT NULL` — povinný, ne nullable.
+// Audit log se zapisuje JEN když existuje konkrétní target_id (např. po
+// vytvoření incidentu). Pro intermediate phase (precheck) se audit
+// neukládá vůbec.
+
 export type AuditLogRow = {
   id: string
   actor_type: 'reporter' | 'admin' | 'system' | 'public'
   actor_id: string | null
   action: string
   target_type: 'incident' | 'subject' | 'evidence' | 'reporter' | 'objection' | 'subscription'
-  target_id: string | null
+  target_id: string
   ip_address: string | null
   user_agent: string | null
   metadata: Record<string, unknown>
@@ -218,7 +223,7 @@ export type AuditLogInsert = {
   actor_id?: string | null
   action: string
   target_type: 'incident' | 'subject' | 'evidence' | 'reporter' | 'objection' | 'subscription'
-  target_id?: string | null
+  target_id: string
   ip_address?: string | null
   user_agent?: string | null
   metadata?: Record<string, unknown>
