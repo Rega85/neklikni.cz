@@ -1,8 +1,6 @@
-# Prompts 3-5 implementation review
+# Implementační review – prompty 3-5
 
-Dump 4 souborů z modulu `/api/databaze` pro Pavlovo review.
-
----
+> Snapshot po fix(databaze): remove audit log from precheck.
 
 ## 1. app/api/databaze/_lib/database.ts
 
@@ -208,13 +206,18 @@ export type EvidenceInsert = {
 
 // ── audit_log ─────────────────────────────────────────
 
+// target_id: per migrace `target_id uuid NOT NULL` — povinný, ne nullable.
+// Audit log se zapisuje JEN když existuje konkrétní target_id (např. po
+// vytvoření incidentu). Pro intermediate phase (precheck) se audit
+// neukládá vůbec.
+
 export type AuditLogRow = {
   id: string
   actor_type: 'reporter' | 'admin' | 'system' | 'public'
   actor_id: string | null
   action: string
   target_type: 'incident' | 'subject' | 'evidence' | 'reporter' | 'objection' | 'subscription'
-  target_id: string | null
+  target_id: string
   ip_address: string | null
   user_agent: string | null
   metadata: Record<string, unknown>
@@ -227,7 +230,7 @@ export type AuditLogInsert = {
   actor_id?: string | null
   action: string
   target_type: 'incident' | 'subject' | 'evidence' | 'reporter' | 'objection' | 'subscription'
-  target_id?: string | null
+  target_id: string
   ip_address?: string | null
   user_agent?: string | null
   metadata?: Record<string, unknown>
@@ -284,8 +287,6 @@ export type DatabazeDatabase = {
   }
 }
 ```
-
----
 
 ## 2. app/api/databaze/_lib/precheck.ts
 
@@ -527,8 +528,6 @@ export async function runAiPrecheck(input: PrecheckInput): Promise<AiPrecheckRes
 }
 ```
 
----
-
 ## 3. app/api/databaze/precheck/route.ts
 
 ```typescript
@@ -542,13 +541,12 @@ export async function runAiPrecheck(input: PrecheckInput): Promise<AiPrecheckRes
  * (jazyková hygiena — KRITICKÉ pro system prompt).
  *
  * Auth: vyžaduje přihlášeného uživatele (Supabase Auth cookies).
- * Rate limit: max 10 prechecků za hodinu na uživatele.
+ * Rate limit: max 10 prechecků za hodinu na uživatele (in-memory).
  *
  * AI logika je v `../_lib/precheck.ts` (shared se `/report` endpointem).
  */
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import type {
@@ -557,26 +555,30 @@ import type {
   IncidentPlatform,
   EvidenceType,
 } from '@/types/databaze'
-import type { DatabazeDatabase } from '../_lib/database'
 import { runAiPrecheck, type PrecheckInput } from '../_lib/precheck'
 
 export const dynamic = 'force-dynamic'
 
-const RATE_LIMIT_PER_HOUR = 10
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+const RATE_LIMIT_MAX = 10
 
 
-// ── Lazy-init Supabase admin ─────────────────────────
+// ── MVP rate limit — in-memory, resets on deploy. Replace
+// ── with Redis or usage_daily table in v2.
 
-type SupabaseAdminClient = ReturnType<typeof createClient<DatabazeDatabase>>
-let _supabaseAdmin: SupabaseAdminClient | null = null
-function supabaseAdmin(): SupabaseAdminClient {
-  if (!_supabaseAdmin) {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-    if (!url || !key) throw new Error('Supabase admin env vars missing')
-    _supabaseAdmin = createClient<DatabazeDatabase>(url, key)
+const rateLimitMap = new Map<string, number[]>()
+
+function checkAndRecordRateLimit(userId: string): boolean {
+  const now = Date.now()
+  const cutoff = now - RATE_LIMIT_WINDOW_MS
+  const stamps = (rateLimitMap.get(userId) ?? []).filter((t) => t > cutoff)
+  if (stamps.length >= RATE_LIMIT_MAX) {
+    rateLimitMap.set(userId, stamps)
+    return false
   }
-  return _supabaseAdmin
+  stamps.push(now)
+  rateLimitMap.set(userId, stamps)
+  return true
 }
 
 
@@ -726,59 +728,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: validated }, { status: 400 })
   }
 
-  // 3. Rate limit
-  try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    const { count, error: countErr } = await supabaseAdmin()
-      .from('audit_log')
-      .select('*', { count: 'exact', head: true })
-      .eq('actor_type', 'reporter')
-      .eq('actor_id', userId)
-      .eq('action', 'create_incident')
-      .gte('created_at', oneHourAgo)
-      .filter('metadata->>phase', 'eq', 'precheck')
-
-    if (countErr) {
-      console.error('Precheck rate-limit lookup failed:', countErr)
-    } else if ((count ?? 0) >= RATE_LIMIT_PER_HOUR) {
-      return NextResponse.json(
-        { error: `Limit ${RATE_LIMIT_PER_HOUR} AI předkontrol za hodinu vyčerpán. Zkuste to za chvíli.` },
-        { status: 429 },
-      )
-    }
-  } catch (err) {
-    console.error('Precheck rate-limit exception:', err)
+  // 3. Rate limit (in-memory)
+  if (!checkAndRecordRateLimit(userId)) {
+    return NextResponse.json(
+      { error: `Limit ${RATE_LIMIT_MAX} AI předkontrol za hodinu vyčerpán. Zkuste to za chvíli.` },
+      { status: 429 },
+    )
   }
 
   // 4. AI volání (shared logika)
   const result = await runAiPrecheck(validated)
 
-  // 5. Audit log
-  try {
-    await supabaseAdmin()
-      .from('audit_log')
-      .insert({
-        actor_type: 'reporter',
-        actor_id: userId,
-        action: 'create_incident',
-        target_type: 'incident',
-        target_id: null,
-        metadata: {
-          phase: 'precheck',
-          confidence_score: result.confidence_score,
-          recommendation: result.recommendation,
-          red_flag_count: result.red_flags.length,
-        },
-      })
-  } catch (err) {
-    console.error('Precheck audit_log insert failed:', err)
-  }
+  // Audit log NOT written here — precheck is a technical intermediate
+  // step, not a discrete action. Audit happens in /api/databaze/report
+  // when incident is actually created (then we have a real target_id).
 
   return NextResponse.json(result)
 }
 ```
-
----
 
 ## 4. app/api/databaze/report/route.ts
 
