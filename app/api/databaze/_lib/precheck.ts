@@ -17,7 +17,9 @@ import type {
   IncidentSeverity,
 } from '@/types/databaze'
 
-const PRECHECK_MODEL = 'claude-sonnet-4-6'
+// Stable version. claude-sonnet-4-6 was speculative; verify availability
+// before upgrading.
+const PRECHECK_MODEL = 'claude-sonnet-4-5'
 const MAX_TOKENS = 800
 
 
@@ -62,7 +64,7 @@ export const FALLBACK_PRECHECK_RESULT: AiPrecheckResult = {
 
 // ── System prompt (SPEC sekce 5.5 + SKILL sekce 4) ────
 
-const SYSTEM_PROMPT = `Jsi expert na detekci pomstychtivých, manipulativních a nepravdivých nahlášení podvodů na českých bazarech a online platformách.
+const SYSTEM_PROMPT = `Jsi expert na detekci pomstychtivých, manipulativních a nepravdivých nahlášení obchodních incidentů na českých bazarech a online platformách.
 
 Hodnotíš jediné nahlášení a vracíš strukturované JSON hodnocení.
 

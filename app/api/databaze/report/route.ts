@@ -148,6 +148,7 @@ interface ParsedFields {
   files: File[]
   truth_confirmation: boolean
   data_processing_consent: boolean
+  law_enforcement_consent: boolean
 }
 
 
@@ -186,17 +187,16 @@ async function hashFile(file: File): Promise<string> {
   const buffer = await file.arrayBuffer()
   const digest = await crypto.subtle.digest('SHA-256', buffer)
   const bytes = new Uint8Array(digest)
-  let hex = ''
-  for (let i = 0; i < bytes.length; i++) {
-    hex += bytes[i].toString(16).padStart(2, '0')
-  }
-  return hex
+  return Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 
 function parseBoolean(raw: FormDataEntryValue | null): boolean {
   if (typeof raw !== 'string') return false
-  return raw === 'true' || raw === '1' || raw === 'on'
+  const v = raw.toLowerCase().trim()
+  return v === 'true' || v === '1' || v === 'on' || v === 'yes'
 }
 
 
@@ -252,9 +252,9 @@ function parseFormData(form: FormData): ParsedFields | string {
   }
 
   const amountRaw = form.get('amount_czk')
-  const amount_czk = typeof amountRaw === 'string' ? Number(amountRaw) : NaN
-  if (!Number.isFinite(amount_czk) || amount_czk < 0) {
-    return 'Neplatná částka'
+  const amount_czk = typeof amountRaw === 'string' ? Math.floor(Number(amountRaw)) : NaN
+  if (!Number.isFinite(amount_czk) || amount_czk < 0 || amount_czk > 100_000_000) {
+    return 'Neplatná částka (musí být celé číslo 0–100 000 000 Kč)'
   }
 
   const description = form.get('description')
@@ -300,6 +300,10 @@ function parseFormData(form: FormData): ParsedFields | string {
   if (!truth_confirmation) return 'Musíte potvrdit pravdivost údajů'
   const data_processing_consent = parseBoolean(form.get('data_processing_consent'))
   if (!data_processing_consent) return 'Musíte souhlasit se zpracováním osobních údajů'
+  const law_enforcement_consent = parseBoolean(form.get('law_enforcement_consent'))
+  if (!law_enforcement_consent) {
+    return 'Musíte souhlasit s předáním údajů orgánům činným v trestním řízení'
+  }
 
   // soubory
   const filesRaw = form.getAll('evidence_files')
@@ -333,6 +337,7 @@ function parseFormData(form: FormData): ParsedFields | string {
     files,
     truth_confirmation,
     data_processing_consent,
+    law_enforcement_consent,
   }
 }
 
@@ -474,6 +479,7 @@ export async function POST(req: Request) {
 
   // 6. Subject matching přes value_hash
   let subjectId: string
+  let wasNewSubject = false
   let needsMergeReview = false
   let conflictingSubjectIds: string[] = []
   const newIdentifiersToInsert: ParsedIdentifier[] = []
@@ -523,6 +529,7 @@ export async function POST(req: Request) {
         )
       }
       subjectId = newSubject.id
+      wasNewSubject = true
     } else if (matchedSubjectIds.size === 1) {
       subjectId = [...matchedSubjectIds][0]
     } else {
@@ -545,6 +552,17 @@ export async function POST(req: Request) {
         .from('subject_identifiers')
         .insert(rows)
       if (idInsertErr) {
+        if (idInsertErr.code === '23505') {
+          // Race condition: another request inserted same value_hash
+          // between our SELECT and INSERT.
+          if (wasNewSubject) {
+            await supabaseAdmin().from('subjects').delete().eq('id', subjectId)
+          }
+          return NextResponse.json(
+            { error: 'Konflikt: stejné nahlášení bylo právě zpracováno. Zkuste to znovu.' },
+            { status: 409 },
+          )
+        }
         console.error('Report identifier insert failed:', idInsertErr)
         return NextResponse.json(
           { error: 'Nepodařilo se uložit identifikátory.' },
@@ -694,28 +712,10 @@ export async function POST(req: Request) {
     )
   }
 
-  // 12. Pokud máme e-mail a status='ai_reviewed', přepni na 'notified'
-  let finalStatus: IncidentStatus = initialStatus
-  if (notification_email && initialStatus === 'ai_reviewed') {
-    try {
-      const { error: notifyErr } = await supabaseAdmin()
-        .from('incidents')
-        .update({
-          status: 'notified',
-          notification_sent_at: new Date().toISOString(),
-        })
-        .eq('id', incidentId)
-      if (notifyErr) {
-        console.error('Report status notify update failed:', notifyErr)
-        // Necháme status='ai_reviewed' — cron job pak publish za 14 dní
-      } else {
-        finalStatus = 'notified'
-        // TODO: Enqueue Resend e-mail job (v dalším promptu)
-      }
-    } catch (err) {
-      console.error('Report status notify exception:', err)
-    }
-  }
+  // 12. Notification email + status='notified' transition
+  // TODO: Notification email + status='notified' transition will
+  // be added when Resend integration is implemented (next prompt).
+  const finalStatus: IncidentStatus = initialStatus
 
   // 13. Audit log
   try {
@@ -745,6 +745,9 @@ export async function POST(req: Request) {
         },
       })
   } catch (err) {
+    // TODO: Silent audit failures are bad for forensics. In v2 send
+    // to monitoring (Sentry) and consider failing the request if
+    // audit is critical.
     console.error('Report audit_log insert failed:', err)
   }
 
