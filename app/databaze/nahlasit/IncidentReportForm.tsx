@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * IncidentReportForm — klientská komponenta formuláře nahlášení.
  *
@@ -17,8 +19,6 @@
  *   - Žádné API volání
  *   - Žádný drag&drop
  */
-
-'use client'
 
 import { useState } from 'react'
 import { Shield, AlertCircle, Upload, CheckCircle2 } from 'lucide-react'

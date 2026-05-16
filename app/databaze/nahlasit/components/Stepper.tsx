@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Stepper — vizuální indikátor kroků formuláře.
  *
@@ -11,8 +13,6 @@
  *   - Dokončené kroky mají Check ikonu
  *   - Budoucí kroky jsou ztlumené
  */
-
-'use client'
 
 import { Check } from 'lucide-react'
 
