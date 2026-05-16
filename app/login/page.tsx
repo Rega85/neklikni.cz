@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 
@@ -12,7 +13,18 @@ export default function LoginPage() {
   const [submitted, setSubmitted] = useState(false);
   const [mode, setMode] = useState<Mode>("password");
   const [error, setError] = useState('');
-  
+
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
+
+  // Validate redirect: must be a relative path starting with single "/"
+  // (protects against open-redirect attacks via "//evil.com" or "https://...").
+  const safeRedirect = (() => {
+    if (!redirectTo) return '/';
+    if (!redirectTo.startsWith('/') || redirectTo.startsWith('//')) return '/';
+    return redirectTo;
+  })();
+
   const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -26,12 +38,14 @@ export default function LoginPage() {
         setError("Špatný e-mail nebo heslo.");
         setLoading(false); // Vypneme loading jen při chybě
       } else {
-        window.location.href = '/';
+        window.location.href = safeRedirect;
       }
     } else {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: `${location.origin}/auth/callback` },
+        options: {
+          emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}`,
+        },
       });
       if (error) {
         setError("Chyba: " + error.message);

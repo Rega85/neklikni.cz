@@ -14,6 +14,13 @@ import { Shield } from 'lucide-react'
 import { createClient } from '@/utils/supabase/server'
 import { IncidentReportForm } from './IncidentReportForm'
 
+// Force per-request server rendering. Without this, Next 16 / Turbopack
+// can attempt to pre-render the page at build time, which causes
+// `supabase.auth.getUser()` to hang because cookies are unavailable.
+// Symptom: production response is the loading.tsx shell forever
+// instead of the actual page or a /login redirect.
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Nahlásit incident — Neklikni.cz',
   description:
@@ -21,12 +28,19 @@ export const metadata: Metadata = {
 }
 
 export default async function NahlasitPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let userId: string | null = null
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    userId = user?.id ?? null
+  } catch (err) {
+    console.error('NahlasitPage auth check failed:', err)
+    userId = null
+  }
 
-  if (!user) {
+  if (!userId) {
     redirect('/login?redirect=/databaze/nahlasit')
   }
 
