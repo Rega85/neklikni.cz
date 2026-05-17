@@ -80,7 +80,10 @@ interface FormData {
 
   // Step 2
   identifiers: IdentifierItem[]
-  contact_for_subject_email: string
+
+  // Step 3
+  amount_czk: number
+  description: string
 }
 
 function newIdentifier(): IdentifierItem {
@@ -101,7 +104,8 @@ function initialFormData(): FormData {
     platform_other: '',
     severity: '',
     identifiers: [newIdentifier()],
-    contact_for_subject_email: '',
+    amount_czk: 0,
+    description: '',
   }
 }
 
@@ -196,17 +200,27 @@ function isStep1Valid(d: FormData): boolean {
 function isStep2Valid(d: FormData): boolean {
   if (d.identifiers.length < 1) return false
   if (!d.identifiers.every(isIdentifierValid)) return false
-  // Kontakt na dotčenou osobu je volitelný, ale pokud vyplněn, musí být validní.
-  if (d.contact_for_subject_email.trim() !== '' && normalizeEmail(d.contact_for_subject_email) === null) {
+  return true
+}
+
+const DESCRIPTION_MIN = 50
+const DESCRIPTION_MAX = 1000
+const AMOUNT_MAX = 100_000_000
+
+function isStep3Valid(d: FormData): boolean {
+  if (!Number.isFinite(d.amount_czk) || d.amount_czk < 0 || d.amount_czk > AMOUNT_MAX) {
     return false
   }
+  const len = d.description.length
+  if (len < DESCRIPTION_MIN || len > DESCRIPTION_MAX) return false
   return true
 }
 
 function isStepValid(step: number, data: FormData): boolean {
   if (step === 1) return isStep1Valid(data)
   if (step === 2) return isStep2Valid(data)
-  // Steps 3-5 jsou placeholdery, validace přijde s naplněním obsahu.
+  if (step === 3) return isStep3Valid(data)
+  // Steps 4-5 jsou placeholdery, validace přijde s naplněním obsahu.
   return true
 }
 
@@ -243,7 +257,7 @@ export function IncidentReportForm() {
       <div className="min-h-[280px]">
         {currentStep === 1 && <Step1 data={formData} onChange={updateFormData} />}
         {currentStep === 2 && <Step2 data={formData} onChange={updateFormData} />}
-        {currentStep === 3 && <Step3Placeholder />}
+        {currentStep === 3 && <Step3 data={formData} onChange={updateFormData} />}
         {currentStep === 4 && <Step4Placeholder />}
         {currentStep === 5 && <Step5Placeholder />}
       </div>
@@ -530,32 +544,6 @@ function Step2({ data, onChange }: Step2Props) {
         </button>
       </div>
 
-      {/* Volitelný kontakt na dotčenou osobu */}
-      <section className="border-t border-slate-800 pt-5">
-        <h3 className="text-sm font-semibold text-slate-100">
-          Kontakt na dotčenou osobu{' '}
-          <span className="font-normal text-slate-500">(volitelné)</span>
-        </h3>
-        <p className="mt-1 text-xs text-slate-400">
-          Pokud znáš jiný kontakt než identifikátor výše, můžeme ho použít
-          k neutrální notifikaci o záznamu. Použijeme jen e-mail.
-        </p>
-        <div className="mt-3">
-          <label htmlFor="contact_email" className="sr-only">
-            E-mail dotčené osoby
-          </label>
-          <input
-            id="contact_email"
-            type="email"
-            placeholder="kontakt@example.cz"
-            value={data.contact_for_subject_email}
-            onChange={(e) =>
-              onChange({ contact_for_subject_email: e.target.value })
-            }
-            className={FIELD_BASE}
-          />
-        </div>
-      </section>
     </div>
   )
 }
@@ -639,21 +627,103 @@ function IdentifierCard({
 }
 
 
-function Step3Placeholder() {
+// ── Step 3 — "Detaily" (částka + popis) ─────────────
+
+const DESCRIPTION_WARN = 950
+
+interface Step3Props {
+  data: FormData
+  onChange: (patch: Partial<FormData>) => void
+}
+
+function Step3({ data, onChange }: Step3Props) {
+  const len = data.description.length
+  const tooShort = len > 0 && len < DESCRIPTION_MIN
+  const ok = len >= DESCRIPTION_MIN && len < DESCRIPTION_WARN
+  const nearLimit = len >= DESCRIPTION_WARN && len <= DESCRIPTION_MAX
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <div className="flex items-center gap-2 text-purple-300">
         <AlertCircle size={18} aria-hidden="true" />
         <h2 className="text-lg font-semibold text-slate-100">Detaily</h2>
       </div>
       <p className="text-sm text-slate-400">
-        Stručně popiš, co se stalo. 50–1000 znaků. Faktický tón, žádná osobní
-        obvinění (viz pokyny u textového pole).
+        Uveď výši ztráty a stručný faktický popis incidentu.
       </p>
-      {/* TODO: textarea pro description (50-1000 char counter),
-          amount_czk number input (0 - 100 000 000). */}
-      <div className="rounded-lg border border-dashed border-slate-700 bg-slate-900/40 p-6 text-center text-xs text-slate-500">
-        Placeholder — popis a částka se doplní v další iteraci.
+
+      {/* Částka */}
+      <div>
+        <label htmlFor="amount_czk" className={LABEL_BASE}>
+          Částka ztráty (Kč) <span className="text-red-400">*</span>
+        </label>
+        <input
+          id="amount_czk"
+          type="number"
+          required
+          min={0}
+          max={AMOUNT_MAX}
+          step={1}
+          placeholder="0"
+          value={Number.isFinite(data.amount_czk) ? data.amount_czk : 0}
+          onChange={(e) => {
+            const parsed = Math.floor(Number(e.target.value))
+            onChange({ amount_czk: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 })
+          }}
+          className={`${FIELD_BASE} text-lg font-semibold`}
+        />
+        <p className="mt-1.5 text-xs text-slate-500">
+          Pokud nedošlo ke ztrátě, zadej 0.
+        </p>
+      </div>
+
+      {/* Info box — faktický tón */}
+      <div className="rounded-md border-l-4 border-purple-500 bg-purple-500/10 p-3 text-sm text-slate-200">
+        💡 Pište faktem, ne emocemi. Místo „okradl mě" uveďte
+        „po platbě 2 500 Kč nedošlo k doručení zboží". AI vyhodnotí
+        věcnost popisu.
+      </div>
+
+      {/* Popis */}
+      <div>
+        <div className="mb-1.5 flex items-baseline justify-between gap-2">
+          <label htmlFor="description" className="text-sm font-medium text-slate-100">
+            Popis incidentu <span className="text-red-400">*</span>
+          </label>
+          <span className="text-xs text-slate-500">
+            {len} / {DESCRIPTION_MAX} znaků
+          </span>
+        </div>
+        <textarea
+          id="description"
+          required
+          minLength={DESCRIPTION_MIN}
+          maxLength={DESCRIPTION_MAX}
+          placeholder="Popiš stručně, co se stalo. Faktickým tónem, bez emocí. Co prodávající uvedl v inzerátu, jak probíhala komunikace, kdy ses pokusil/a o platbu, jaká částka, co se stalo dál."
+          value={data.description}
+          onChange={(e) => onChange({ description: e.target.value })}
+          className={`${FIELD_BASE} min-h-[200px] resize-y leading-relaxed`}
+        />
+        <div className="mt-1.5 text-xs" aria-live="polite">
+          {tooShort && (
+            <span className="text-red-400">
+              Minimálně {DESCRIPTION_MIN} znaků (zbývá {DESCRIPTION_MIN - len}).
+            </span>
+          )}
+          {ok && (
+            <span className="text-emerald-400">✓ Dostatečně podrobné</span>
+          )}
+          {nearLimit && (
+            <span className="text-amber-400">
+              Blíží se limit ({DESCRIPTION_MAX - len} znaků).
+            </span>
+          )}
+          {len === 0 && (
+            <span className="text-slate-500">
+              Minimálně {DESCRIPTION_MIN} znaků, maximálně {DESCRIPTION_MAX}.
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
