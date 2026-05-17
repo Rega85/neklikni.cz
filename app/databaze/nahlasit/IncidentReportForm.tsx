@@ -16,16 +16,32 @@
  *   - Real submit handler — zatím jen console.warn
  */
 
-import { useState } from 'react'
-import { Shield, AlertCircle, Upload, CheckCircle2 } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  Plus,
+  Shield,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import {
   CATEGORY_LABELS,
   PLATFORM_LABELS,
   SEVERITY_LABELS,
+  type IdentifierType,
   type IncidentCategory,
   type IncidentPlatform,
   type IncidentSeverity,
 } from '@/types/databaze'
+import {
+  detectIdentifierType,
+  normalizeAccount,
+  normalizeEmail,
+  normalizeFacebookUrl,
+  normalizePhone,
+  normalizeVarSymbol,
+} from '@/utils/databaze/identifiers'
 import { Stepper } from './components/Stepper'
 
 const TOTAL_STEPS = 5
@@ -45,6 +61,14 @@ const LABEL_BASE = 'mb-1.5 block text-sm font-medium text-slate-100'
 
 // ── Form data shape ──────────────────────────────────
 
+interface IdentifierItem {
+  id: string
+  type: IdentifierType
+  value: string
+  /** True pokud `type` přišel z auto-detekce, false po manuálním overridu. */
+  autoDetected: boolean
+}
+
 interface FormData {
   // Step 1
   incident_date: string
@@ -53,6 +77,19 @@ interface FormData {
   platform: IncidentPlatform | ''
   platform_other: string
   severity: IncidentSeverity | ''
+
+  // Step 2
+  identifiers: IdentifierItem[]
+  contact_for_subject_email: string
+}
+
+function newIdentifier(): IdentifierItem {
+  return {
+    id: crypto.randomUUID(),
+    type: 'other',
+    value: '',
+    autoDetected: false,
+  }
 }
 
 function initialFormData(): FormData {
@@ -63,8 +100,85 @@ function initialFormData(): FormData {
     platform: '',
     platform_other: '',
     severity: '',
+    identifiers: [newIdentifier()],
+    contact_for_subject_email: '',
   }
 }
+
+
+// ── Identifier helpers (klient zrcadlí utils/databaze/identifiers) ──
+
+function normalizeByType(type: IdentifierType, raw: string): string | null {
+  switch (type) {
+    case 'phone':
+      return normalizePhone(raw)
+    case 'account':
+      return normalizeAccount(raw)
+    case 'email':
+      return normalizeEmail(raw)
+    case 'facebook_url':
+      return normalizeFacebookUrl(raw)
+    case 'var_symbol':
+      return normalizeVarSymbol(raw)
+    case 'other':
+      return raw.trim() === '' ? null : raw.trim()
+    default:
+      return null
+  }
+}
+
+function isIdentifierValid(item: IdentifierItem): boolean {
+  if (!item.value.trim()) return false
+  return normalizeByType(item.type, item.value) !== null
+}
+
+interface TypeMeta {
+  icon: string
+  label: string
+  chipClass: string
+}
+
+const IDENTIFIER_TYPE_META: Record<IdentifierType, TypeMeta> = {
+  phone: {
+    icon: '📞',
+    label: 'Telefon',
+    chipClass: 'border-blue-500/30 bg-blue-500/15 text-blue-200',
+  },
+  account: {
+    icon: '🏦',
+    label: 'Číslo účtu',
+    chipClass: 'border-green-500/30 bg-green-500/15 text-green-200',
+  },
+  email: {
+    icon: '✉️',
+    label: 'E-mail',
+    chipClass: 'border-purple-500/30 bg-purple-500/15 text-purple-200',
+  },
+  facebook_url: {
+    icon: '👤',
+    label: 'Facebook profil',
+    chipClass: 'border-blue-600/30 bg-blue-600/15 text-blue-100',
+  },
+  var_symbol: {
+    icon: '🔢',
+    label: 'Variabilní symbol',
+    chipClass: 'border-amber-500/30 bg-amber-500/15 text-amber-200',
+  },
+  other: {
+    icon: '❓',
+    label: 'Jiné — upřesni typ',
+    chipClass: 'border-slate-600/40 bg-slate-700/30 text-slate-300',
+  },
+}
+
+const IDENTIFIER_TYPE_KEYS: IdentifierType[] = [
+  'phone',
+  'account',
+  'email',
+  'facebook_url',
+  'var_symbol',
+  'other',
+]
 
 
 // ── Validace per-step ────────────────────────────────
@@ -79,9 +193,20 @@ function isStep1Valid(d: FormData): boolean {
   return true
 }
 
+function isStep2Valid(d: FormData): boolean {
+  if (d.identifiers.length < 1) return false
+  if (!d.identifiers.every(isIdentifierValid)) return false
+  // Kontakt na dotčenou osobu je volitelný, ale pokud vyplněn, musí být validní.
+  if (d.contact_for_subject_email.trim() !== '' && normalizeEmail(d.contact_for_subject_email) === null) {
+    return false
+  }
+  return true
+}
+
 function isStepValid(step: number, data: FormData): boolean {
   if (step === 1) return isStep1Valid(data)
-  // Steps 2-5 jsou placeholdery, validace přijde s naplněním obsahu.
+  if (step === 2) return isStep2Valid(data)
+  // Steps 3-5 jsou placeholdery, validace přijde s naplněním obsahu.
   return true
 }
 
@@ -117,7 +242,7 @@ export function IncidentReportForm() {
 
       <div className="min-h-[280px]">
         {currentStep === 1 && <Step1 data={formData} onChange={updateFormData} />}
-        {currentStep === 2 && <Step2Placeholder />}
+        {currentStep === 2 && <Step2 data={formData} onChange={updateFormData} />}
         {currentStep === 3 && <Step3Placeholder />}
         {currentStep === 4 && <Step4Placeholder />}
         {currentStep === 5 && <Step5Placeholder />}
@@ -311,23 +436,204 @@ function Step1({ data, onChange }: Step1Props) {
 // ── Placeholder kroky ────────────────────────────────
 // Step 2-5 zatím nemají implementaci, jen TODO komentáře.
 
-function Step2Placeholder() {
+// ── Step 2 — "O kom?" (identifikátory + volitelný kontakt) ──
+
+const MAX_IDENTIFIERS = 5
+const MIN_AUTODETECT_LENGTH = 4
+
+interface Step2Props {
+  data: FormData
+  onChange: (patch: Partial<FormData>) => void
+}
+
+function Step2({ data, onChange }: Step2Props) {
+  const addIdentifier = useCallback(() => {
+    if (data.identifiers.length >= MAX_IDENTIFIERS) return
+    onChange({ identifiers: [...data.identifiers, newIdentifier()] })
+  }, [data.identifiers, onChange])
+
+  const removeIdentifier = useCallback(
+    (id: string) => {
+      onChange({ identifiers: data.identifiers.filter((i) => i.id !== id) })
+    },
+    [data.identifiers, onChange],
+  )
+
+  const updateIdentifier = useCallback(
+    (id: string, patch: Partial<IdentifierItem>) => {
+      onChange({
+        identifiers: data.identifiers.map((i) =>
+          i.id === id ? { ...i, ...patch } : i,
+        ),
+      })
+    },
+    [data.identifiers, onChange],
+  )
+
+  const handleValueChange = useCallback(
+    (id: string, newValue: string) => {
+      const trimmed = newValue.trim()
+      if (trimmed.length >= MIN_AUTODETECT_LENGTH) {
+        const detected = detectIdentifierType(newValue)
+        if (detected) {
+          updateIdentifier(id, { value: newValue, type: detected, autoDetected: true })
+          return
+        }
+        updateIdentifier(id, { value: newValue, type: 'other', autoDetected: false })
+        return
+      }
+      // Pod prahem — jen aktualizuj value, type necháme jak je.
+      updateIdentifier(id, { value: newValue })
+    },
+    [updateIdentifier],
+  )
+
+  const canAdd = data.identifiers.length < MAX_IDENTIFIERS
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <div className="flex items-center gap-2 text-pink-300">
         <AlertCircle size={18} aria-hidden="true" />
         <h2 className="text-lg font-semibold text-slate-100">O kom?</h2>
       </div>
       <p className="text-sm text-slate-400">
-        Zadej identifikátory protistrany (telefon, číslo účtu, e-mail, FB
-        profil, variabilní symbol). Identifikátory normalizuje a hashuje server.
+        Zadej identifikátor subjektu nahlášení (telefon, číslo účtu, e-mail,
+        Facebook profil nebo variabilní symbol). Hodnoty server automaticky
+        normalizuje a hashuje.
       </p>
-      {/* TODO: dynamický seznam identifikátorů — pro každý typ + value,
-          možnost přidat/odebrat řádek. Min 1.
-          Plus volitelné pole "Kontakt na dotčenou osobu (pokud znáte)". */}
-      <div className="rounded-lg border border-dashed border-slate-700 bg-slate-900/40 p-6 text-center text-xs text-slate-500">
-        Placeholder — pole pro identifikátory se doplní v další iteraci.
+
+      <div className="space-y-3">
+        {data.identifiers.map((item) => (
+          <IdentifierCard
+            key={item.id}
+            item={item}
+            onValueChange={(v) => handleValueChange(item.id, v)}
+            onTypeChange={(t) =>
+              updateIdentifier(item.id, { type: t, autoDetected: false })
+            }
+            onRemove={
+              data.identifiers.length > 1 ? () => removeIdentifier(item.id) : undefined
+            }
+          />
+        ))}
+
+        <button
+          type="button"
+          onClick={addIdentifier}
+          disabled={!canAdd}
+          className="group flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-900/50 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+        >
+          <Plus size={16} aria-hidden="true" />
+          {canAdd
+            ? 'Přidat další identifikátor'
+            : `Maximum ${MAX_IDENTIFIERS} identifikátorů na nahlášení`}
+        </button>
       </div>
+
+      {/* Volitelný kontakt na dotčenou osobu */}
+      <section className="border-t border-slate-800 pt-5">
+        <h3 className="text-sm font-semibold text-slate-100">
+          Kontakt na dotčenou osobu{' '}
+          <span className="font-normal text-slate-500">(volitelné)</span>
+        </h3>
+        <p className="mt-1 text-xs text-slate-400">
+          Pokud znáš jiný kontakt než identifikátor výše, můžeme ho použít
+          k neutrální notifikaci o záznamu. Použijeme jen e-mail.
+        </p>
+        <div className="mt-3">
+          <label htmlFor="contact_email" className="sr-only">
+            E-mail dotčené osoby
+          </label>
+          <input
+            id="contact_email"
+            type="email"
+            placeholder="kontakt@example.cz"
+            value={data.contact_for_subject_email}
+            onChange={(e) =>
+              onChange({ contact_for_subject_email: e.target.value })
+            }
+            className={FIELD_BASE}
+          />
+        </div>
+      </section>
+    </div>
+  )
+}
+
+
+interface IdentifierCardProps {
+  item: IdentifierItem
+  onValueChange: (value: string) => void
+  onTypeChange: (type: IdentifierType) => void
+  onRemove?: () => void
+}
+
+function IdentifierCard({
+  item,
+  onValueChange,
+  onTypeChange,
+  onRemove,
+}: IdentifierCardProps) {
+  const meta = IDENTIFIER_TYPE_META[item.type]
+  const trimmed = item.value.trim()
+  const valid = trimmed === '' ? null : isIdentifierValid(item)
+
+  return (
+    <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <div className="flex items-start gap-2">
+        <input
+          type="text"
+          placeholder="Vlož telefon, číslo účtu, e-mail, FB profil nebo variabilní symbol"
+          value={item.value}
+          onChange={(e) => onValueChange(e.target.value)}
+          className={`${FIELD_BASE} flex-1`}
+        />
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Smazat identifikátor"
+            className="rounded-lg p-2 text-red-400 transition hover:bg-red-500/10"
+          >
+            <Trash2 size={16} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${meta.chipClass}`}
+        >
+          <span aria-hidden="true">{meta.icon}</span>
+          {meta.label}
+        </span>
+
+        {item.autoDetected && (
+          <span className="text-xs text-slate-500">(auto)</span>
+        )}
+
+        <label className="ml-auto inline-flex items-center gap-1.5 text-xs text-slate-400">
+          <span>Změnit typ:</span>
+          <select
+            value={item.type}
+            onChange={(e) => onTypeChange(e.target.value as IdentifierType)}
+            className="rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-xs text-slate-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+          >
+            {IDENTIFIER_TYPE_KEYS.map((t) => (
+              <option key={t} value={t}>
+                {IDENTIFIER_TYPE_META[t].label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {valid === true && (
+        <p className="text-xs text-emerald-400">✓ Formát OK</p>
+      )}
+      {valid === false && (
+        <p className="text-xs text-red-400">Neplatný formát pro typ „{meta.label}".</p>
+      )}
     </div>
   )
 }
