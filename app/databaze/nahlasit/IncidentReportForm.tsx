@@ -16,10 +16,11 @@
  *   - Real submit handler — zatím jen console.warn
  */
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
+  FileText,
   Plus,
   Shield,
   Trash2,
@@ -35,6 +36,8 @@ import {
   type IncidentSeverity,
 } from '@/types/databaze'
 import {
+  ALLOWED_MIME_TYPES,
+  MAX_FILE_SIZE_BYTES,
   detectIdentifierType,
   normalizeAccount,
   normalizeEmail,
@@ -84,6 +87,9 @@ interface FormData {
   // Step 3
   amount_czk: number
   description: string
+
+  // Step 4
+  evidence_files: File[]
 }
 
 function newIdentifier(): IdentifierItem {
@@ -106,6 +112,7 @@ function initialFormData(): FormData {
     identifiers: [newIdentifier()],
     amount_czk: 0,
     description: '',
+    evidence_files: [],
   }
 }
 
@@ -216,11 +223,27 @@ function isStep3Valid(d: FormData): boolean {
   return true
 }
 
+const MIN_EVIDENCE_FILES = 2
+const MAX_EVIDENCE_FILES = 5
+
+function isFileAllowed(file: File): boolean {
+  const allowed: readonly string[] = ALLOWED_MIME_TYPES
+  return file.size <= MAX_FILE_SIZE_BYTES && allowed.includes(file.type)
+}
+
+function isStep4Valid(d: FormData): boolean {
+  const n = d.evidence_files.length
+  if (n < MIN_EVIDENCE_FILES || n > MAX_EVIDENCE_FILES) return false
+  // Defensive — files by neměly projít validací při přidání, ale check znovu
+  return d.evidence_files.every(isFileAllowed)
+}
+
 function isStepValid(step: number, data: FormData): boolean {
   if (step === 1) return isStep1Valid(data)
   if (step === 2) return isStep2Valid(data)
   if (step === 3) return isStep3Valid(data)
-  // Steps 4-5 jsou placeholdery, validace přijde s naplněním obsahu.
+  if (step === 4) return isStep4Valid(data)
+  // Step 5 je placeholder, validace přijde s naplněním obsahu.
   return true
 }
 
@@ -258,7 +281,7 @@ export function IncidentReportForm() {
         {currentStep === 1 && <Step1 data={formData} onChange={updateFormData} />}
         {currentStep === 2 && <Step2 data={formData} onChange={updateFormData} />}
         {currentStep === 3 && <Step3 data={formData} onChange={updateFormData} />}
-        {currentStep === 4 && <Step4Placeholder />}
+        {currentStep === 4 && <Step4 data={formData} onChange={updateFormData} />}
         {currentStep === 5 && <Step5Placeholder />}
       </div>
 
@@ -730,22 +753,233 @@ function Step3({ data, onChange }: Step3Props) {
 }
 
 
-function Step4Placeholder() {
+// ── Step 4 — "Důkazy" (drag & drop + file picker) ────
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} kB`
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+}
+
+interface Step4Props {
+  data: FormData
+  onChange: (patch: Partial<FormData>) => void
+}
+
+function Step4({ data, onChange }: Step4Props) {
+  const [isDragOver, setIsDragOver] = useState(false)
+  const [fileErrors, setFileErrors] = useState<string[]>([])
+  const [previewUrls, setPreviewUrls] = useState<string[]>([])
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Sync preview URLs s evidence_files. Cleanup při změně i unmountu.
+  useEffect(() => {
+    const urls = data.evidence_files.map((f) => URL.createObjectURL(f))
+    setPreviewUrls(urls)
+    return () => urls.forEach(URL.revokeObjectURL)
+  }, [data.evidence_files])
+
+  const addFiles = useCallback(
+    (incoming: File[]) => {
+      const errors: string[] = []
+      const validToAdd: File[] = []
+      const current = data.evidence_files
+      const remainingSlots = MAX_EVIDENCE_FILES - current.length
+
+      if (incoming.length > remainingSlots) {
+        errors.push(
+          `Maximum ${MAX_EVIDENCE_FILES} souborů na nahlášení. Některé soubory nebyly přidány.`,
+        )
+      }
+
+      for (const file of incoming.slice(0, remainingSlots)) {
+        if (file.size > MAX_FILE_SIZE_BYTES) {
+          errors.push(`Soubor „${file.name}" přesahuje 10 MB.`)
+          continue
+        }
+        const allowed: readonly string[] = ALLOWED_MIME_TYPES
+        if (!allowed.includes(file.type)) {
+          errors.push(`Soubor „${file.name}" má nepodporovaný formát (${file.type || 'neznámý'}).`)
+          continue
+        }
+        validToAdd.push(file)
+      }
+
+      if (validToAdd.length > 0) {
+        onChange({ evidence_files: [...current, ...validToAdd] })
+      }
+      setFileErrors(errors)
+    },
+    [data.evidence_files, onChange],
+  )
+
+  const removeFile = useCallback(
+    (idx: number) => {
+      onChange({
+        evidence_files: data.evidence_files.filter((_, i) => i !== idx),
+      })
+      setFileErrors([])
+    },
+    [data.evidence_files, onChange],
+  )
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }, [])
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }, [])
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault()
+      setIsDragOver(false)
+      const files = Array.from(e.dataTransfer.files)
+      if (files.length > 0) addFiles(files)
+    },
+    [addFiles],
+  )
+
+  const handlePickerChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files ?? [])
+      if (files.length > 0) addFiles(files)
+      // Reset input value tak aby šel nahrát stejný soubor po smazání
+      e.target.value = ''
+    },
+    [addFiles],
+  )
+
+  const fileCount = data.evidence_files.length
+  const canAddMore = fileCount < MAX_EVIDENCE_FILES
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <div className="flex items-center gap-2 text-cyan-300">
         <Upload size={18} aria-hidden="true" />
         <h2 className="text-lg font-semibold text-slate-100">Důkazy</h2>
       </div>
       <p className="text-sm text-slate-400">
-        Nahraj 2–5 souborů (screenshoty, potvrzení o platbě, komunikace). Max 10
-        MB na soubor. Povolené formáty: PNG, JPEG, WEBP, PDF.
+        Nahraj 2–5 souborů jako důkaz incidentu. Podporujeme obrázky
+        (PNG, JPG, WEBP) a PDF dokumenty. Maximum 10 MB na soubor.
       </p>
-      {/* TODO: drag & drop oblast + fallback file input,
-          preview seznam s možností odebrat,
-          klient-side velikost/MIME check (zrcadlo backendu). */}
-      <div className="rounded-lg border border-dashed border-slate-700 bg-slate-900/40 p-6 text-center text-xs text-slate-500">
-        Placeholder — upload zóna se doplní v další iteraci.
+
+      {/* Info box — co se hodí jako důkaz */}
+      <div className="rounded-md border-l-4 border-purple-500 bg-purple-500/10 p-3 text-sm text-slate-200">
+        💡 Co se hodí jako důkaz: screenshot inzerátu, screenshot komunikace,
+        potvrzení o platbě, faktura, e-mailová korespondence.
+      </div>
+
+      {/* Drop zone — visible only when room for more */}
+      {canAddMore && (
+        <label
+          htmlFor="evidence_picker"
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={`flex min-h-[200px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors ${
+            isDragOver
+              ? 'border-purple-500 bg-purple-500/10'
+              : 'border-slate-700 bg-slate-900/40 hover:border-purple-500 hover:bg-purple-500/5'
+          }`}
+        >
+          <Upload size={32} className="text-slate-400" aria-hidden="true" />
+          <p className="text-sm font-medium text-slate-200">
+            Přetáhni soubory sem nebo klikni pro výběr
+          </p>
+          <p className="text-xs text-slate-500">
+            Maximum {MAX_EVIDENCE_FILES} souborů, do 10 MB každý
+          </p>
+          <input
+            id="evidence_picker"
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ALLOWED_MIME_TYPES.join(',')}
+            onChange={handlePickerChange}
+            className="hidden"
+          />
+        </label>
+      )}
+
+      {/* Error messages */}
+      {fileErrors.length > 0 && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+          <ul className="space-y-1">
+            {fileErrors.map((err, i) => (
+              <li key={i}>• {err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Grid of uploaded files */}
+      {fileCount > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          {data.evidence_files.map((file, idx) => {
+            const isImage = file.type.startsWith('image/')
+            const previewUrl = previewUrls[idx]
+            return (
+              <div
+                key={`${file.name}_${file.lastModified}_${idx}`}
+                className="rounded-lg border border-slate-800 bg-slate-900/60 p-2"
+              >
+                <div className="relative aspect-square overflow-hidden rounded-md bg-slate-950/60">
+                  {isImage && previewUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={previewUrl}
+                      alt={file.name}
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-300">
+                      <FileText size={40} aria-hidden="true" />
+                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        PDF
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => removeFile(idx)}
+                    aria-label={`Smazat soubor ${file.name}`}
+                    className="absolute right-1.5 top-1.5 rounded-full bg-red-500 p-1.5 text-white shadow transition hover:bg-red-600"
+                  >
+                    <Trash2 size={12} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="mt-2 space-y-0.5">
+                  <p className="truncate text-xs font-medium text-slate-200" title={file.name}>
+                    {file.name}
+                  </p>
+                  <p className="text-[10px] text-slate-500">{formatFileSize(file.size)}</p>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Progress / status */}
+      <div className="text-xs" aria-live="polite">
+        <span className="text-slate-400">
+          {fileCount} / {MAX_EVIDENCE_FILES} souborů nahráno
+        </span>
+        {fileCount < MIN_EVIDENCE_FILES && (
+          <span className="ml-2 text-red-400">
+            Minimálně {MIN_EVIDENCE_FILES} soubory potřeba
+          </span>
+        )}
+        {fileCount >= MIN_EVIDENCE_FILES && fileCount < MAX_EVIDENCE_FILES && (
+          <span className="ml-2 text-emerald-400">✓ Dostatečně důkazů</span>
+        )}
+        {fileCount === MAX_EVIDENCE_FILES && (
+          <span className="ml-2 text-emerald-400">✓ Maximum nahráno</span>
+        )}
       </div>
     </div>
   )
