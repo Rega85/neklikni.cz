@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   FileText,
   Info,
+  Loader2,
   Plus,
   Shield,
   Trash2,
@@ -267,6 +268,13 @@ function isStepValid(step: number, data: FormData): boolean {
 export function IncidentReportForm() {
   const [currentStep, setCurrentStep] = useState<number>(1)
   const [formData, setFormData] = useState<FormData>(initialFormData)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [submitSuccess, setSubmitSuccess] = useState<{
+    incidentId: string
+    status: string
+    message: string
+  } | null>(null)
 
   function updateFormData(patch: Partial<FormData>) {
     setFormData((prev) => ({ ...prev, ...patch }))
@@ -280,12 +288,100 @@ export function IncidentReportForm() {
     setCurrentStep((s) => Math.min(TOTAL_STEPS, s + 1))
   }
 
-  function handleSubmit() {
-    // TODO: real submit logic — POST multipart/form-data to /api/databaze/report
-    console.warn('IncidentReportForm submit — not implemented yet (scaffold).')
+  async function handleSubmit() {
+    if (isSubmitting) return
+    setIsSubmitting(true)
+    setSubmitError(null)
+
+    try {
+      const payload = new FormData()
+      payload.append('incident_date', formData.incident_date)
+      payload.append('platform', formData.platform)
+      if (formData.platform_other) payload.append('platform_other', formData.platform_other)
+      payload.append('category', formData.category)
+      if (formData.category_other) payload.append('category_other', formData.category_other)
+      payload.append('severity', formData.severity)
+      payload.append('amount_czk', String(formData.amount_czk))
+      payload.append('description', formData.description)
+      payload.append(
+        'identifiers',
+        JSON.stringify(
+          formData.identifiers.map((i) => ({ type: i.type, value: i.value })),
+        ),
+      )
+      payload.append('truth_confirmation', 'true')
+      payload.append('data_processing_consent', 'true')
+      payload.append('law_enforcement_consent', 'true')
+      for (const file of formData.evidence_files) {
+        payload.append('evidence_files', file)
+      }
+
+      const res = await fetch('/api/databaze/report', {
+        method: 'POST',
+        body: payload,
+        // Pozor: nenastavovat Content-Type — browser doplní boundary
+      })
+
+      if (!res.ok) {
+        const errorData = (await res.json().catch(() => ({}))) as { error?: string }
+        const msg =
+          typeof errorData.error === 'string' && errorData.error
+            ? errorData.error
+            : 'Nepodařilo se odeslat nahlášení. Zkuste to znovu.'
+        throw new Error(msg)
+      }
+
+      const result = (await res.json()) as {
+        incident_id: string
+        status: string
+        message: string
+      }
+      setSubmitSuccess({
+        incidentId: result.incident_id,
+        status: result.status,
+        message: result.message,
+      })
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Neznámá chyba při odesílání.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const canProceed = isStepValid(currentStep, formData)
+
+  // ── Success state — nahrazuje celý formulář ─────────
+  if (submitSuccess) {
+    return (
+      <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 text-center">
+        <div className="flex justify-center">
+          <CheckCircle2 size={64} className="text-emerald-400" aria-hidden="true" />
+        </div>
+        <h2 className="text-2xl font-bold text-white">Nahlášení úspěšně odesláno</h2>
+        <p className="text-slate-300">{submitSuccess.message}</p>
+
+        <div className="inline-block rounded-lg bg-slate-900/50 p-3">
+          <p className="text-xs text-slate-400">ID nahlášení:</p>
+          <p className="font-mono text-sm text-purple-300">{submitSuccess.incidentId}</p>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3 pt-4">
+          <a
+            href="/databaze"
+            className="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-purple-500"
+          >
+            Otevřít databázi
+          </a>
+          <a
+            href="/"
+            className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-900"
+          >
+            Zpět na hlavní
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <section className="surface-card-elevated animate-fade-up rounded-2xl border border-slate-800/80 bg-slate-950/60 p-6 backdrop-blur-md sm:p-8">
@@ -299,11 +395,37 @@ export function IncidentReportForm() {
         {currentStep === 5 && <Step5 data={formData} onChange={updateFormData} />}
       </div>
 
+      {submitError && (
+        <div
+          role="alert"
+          className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
+        >
+          <div className="flex items-start gap-3">
+            <AlertCircle
+              size={20}
+              className="flex-shrink-0 text-red-400"
+              aria-hidden="true"
+            />
+            <div>
+              <p className="font-medium text-red-300">Nepodařilo se odeslat nahlášení</p>
+              <p className="mt-1 text-sm text-red-300/80">{submitError}</p>
+              <button
+                type="button"
+                onClick={() => setSubmitError(null)}
+                className="mt-2 text-sm text-red-300 underline hover:text-red-200"
+              >
+                Skrýt chybu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mt-8 flex items-center justify-between gap-3">
         <button
           type="button"
           onClick={goBack}
-          disabled={currentStep === 1}
+          disabled={currentStep === 1 || isSubmitting}
           className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Zpět
@@ -313,7 +435,7 @@ export function IncidentReportForm() {
           <button
             type="button"
             onClick={goNext}
-            disabled={!canProceed}
+            disabled={!canProceed || isSubmitting}
             className="brand-gradient rounded-lg px-6 py-2 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             Další
@@ -322,10 +444,17 @@ export function IncidentReportForm() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!canProceed}
-            className="brand-gradient rounded-lg px-6 py-2 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            disabled={!canProceed || isSubmitting}
+            className="brand-gradient inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
-            Odeslat nahlášení
+            {isSubmitting ? (
+              <>
+                <Loader2 size={16} className="animate-spin" aria-hidden="true" />
+                Odesílám…
+              </>
+            ) : (
+              'Odeslat nahlášení'
+            )}
           </button>
         )}
       </div>
