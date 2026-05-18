@@ -370,7 +370,14 @@ export const ALLOWED_MIME_TYPES = [
 
 
 /**
- * Maximální velikost souboru důkazu v bytech (10 MB).
- * Viz SPEC.md sekce 4 a 6.4.
+ * Maximální velikost souboru důkazu v bytech (3 MB).
+ *
+ * Kompromis mezi Vercel payload limitem (~4.5 MB pro celý multipart
+ * request) a komfortem uživatele. Pro obrázky je browser-side komprese
+ * v utils/databaze/imageCompress.ts (cílí na 1-2 MB po resize na 1920px).
+ * PDF se nekomprimují, validují se proti tomuto limitu.
+ *
+ * Server (app/api/databaze/report/route.ts) validuje stejně — defense
+ * in depth proti klientovi, který by limit obešel.
  */
-export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+export const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024

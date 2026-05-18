@@ -48,6 +48,7 @@ import {
   normalizePhone,
   normalizeVarSymbol,
 } from '@/utils/databaze/identifiers'
+import { compressImage, isCompressibleImage } from '@/utils/databaze/imageCompress'
 import { Stepper } from './components/Stepper'
 
 const TOTAL_STEPS = 5
@@ -909,10 +910,18 @@ interface Step4Props {
   onChange: (patch: Partial<FormData>) => void
 }
 
+interface CompressionResult {
+  name: string
+  original: number
+  final: number
+}
+
 function Step4({ data, onChange }: Step4Props) {
   const [isDragOver, setIsDragOver] = useState(false)
   const [fileErrors, setFileErrors] = useState<string[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
+  const [compressionInfo, setCompressionInfo] = useState<CompressionResult[]>([])
+  const [isProcessing, setIsProcessing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   // Sync preview URLs s evidence_files. Cleanup při změně i unmountu.
@@ -922,36 +931,73 @@ function Step4({ data, onChange }: Step4Props) {
     return () => urls.forEach(URL.revokeObjectURL)
   }, [data.evidence_files])
 
+  const limitMB = MAX_FILE_SIZE_BYTES / (1024 * 1024)
+
   const addFiles = useCallback(
-    (incoming: File[]) => {
-      const errors: string[] = []
-      const validToAdd: File[] = []
-      const current = data.evidence_files
-      const remainingSlots = MAX_EVIDENCE_FILES - current.length
+    async (incoming: File[]) => {
+      setIsProcessing(true)
+      try {
+        const errors: string[] = []
+        const validToAdd: File[] = []
+        const compressed: CompressionResult[] = []
+        const current = data.evidence_files
+        const remainingSlots = MAX_EVIDENCE_FILES - current.length
 
-      if (incoming.length > remainingSlots) {
-        errors.push(
-          `Maximum ${MAX_EVIDENCE_FILES} souborů na nahlášení. Některé soubory nebyly přidány.`,
-        )
-      }
-
-      for (const file of incoming.slice(0, remainingSlots)) {
-        if (file.size > MAX_FILE_SIZE_BYTES) {
-          errors.push(`Soubor „${file.name}" přesahuje 10 MB.`)
-          continue
+        if (incoming.length > remainingSlots) {
+          errors.push(
+            `Maximum ${MAX_EVIDENCE_FILES} souborů na nahlášení. Některé soubory nebyly přidány.`,
+          )
         }
-        const allowed: readonly string[] = ALLOWED_MIME_TYPES
-        if (!allowed.includes(file.type)) {
-          errors.push(`Soubor „${file.name}" má nepodporovaný formát (${file.type || 'neznámý'}).`)
-          continue
-        }
-        validToAdd.push(file)
-      }
 
-      if (validToAdd.length > 0) {
-        onChange({ evidence_files: [...current, ...validToAdd] })
+        for (const file of incoming.slice(0, remainingSlots)) {
+          let processed = file
+
+          // Browser-side komprese pro obrázky (fallback na original při chybě).
+          if (isCompressibleImage(file.type)) {
+            try {
+              const result = await compressImage(file)
+              if (result.size < file.size) {
+                compressed.push({
+                  name: file.name,
+                  original: file.size,
+                  final: result.size,
+                })
+              }
+              processed = result
+            } catch (err) {
+              console.error('Image compression failed:', err)
+            }
+          }
+
+          if (processed.size > MAX_FILE_SIZE_BYTES) {
+            const isPdf = processed.type === 'application/pdf'
+            errors.push(
+              isPdf
+                ? `Soubor „${file.name}" má ${formatFileSize(processed.size)}, limit je ${formatFileSize(MAX_FILE_SIZE_BYTES)}. Zkuste menší PDF.`
+                : `Soubor „${file.name}" má ${formatFileSize(processed.size)} i po kompresi, limit je ${formatFileSize(MAX_FILE_SIZE_BYTES)}.`,
+            )
+            continue
+          }
+
+          const allowed: readonly string[] = ALLOWED_MIME_TYPES
+          if (!allowed.includes(processed.type)) {
+            errors.push(
+              `Soubor „${file.name}" má nepodporovaný formát (${processed.type || 'neznámý'}).`,
+            )
+            continue
+          }
+
+          validToAdd.push(processed)
+        }
+
+        if (validToAdd.length > 0) {
+          onChange({ evidence_files: [...current, ...validToAdd] })
+        }
+        setFileErrors(errors)
+        setCompressionInfo(compressed)
+      } finally {
+        setIsProcessing(false)
       }
-      setFileErrors(errors)
     },
     [data.evidence_files, onChange],
   )
@@ -962,6 +1008,7 @@ function Step4({ data, onChange }: Step4Props) {
         evidence_files: data.evidence_files.filter((_, i) => i !== idx),
       })
       setFileErrors([])
+      setCompressionInfo([])
     },
     [data.evidence_files, onChange],
   )
@@ -980,20 +1027,25 @@ function Step4({ data, onChange }: Step4Props) {
     (e: React.DragEvent) => {
       e.preventDefault()
       setIsDragOver(false)
+      if (isProcessing) return
       const files = Array.from(e.dataTransfer.files)
-      if (files.length > 0) addFiles(files)
+      if (files.length > 0) void addFiles(files)
     },
-    [addFiles],
+    [addFiles, isProcessing],
   )
 
   const handlePickerChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (isProcessing) {
+        e.target.value = ''
+        return
+      }
       const files = Array.from(e.target.files ?? [])
-      if (files.length > 0) addFiles(files)
+      if (files.length > 0) void addFiles(files)
       // Reset input value tak aby šel nahrát stejný soubor po smazání
       e.target.value = ''
     },
-    [addFiles],
+    [addFiles, isProcessing],
   )
 
   const fileCount = data.evidence_files.length
@@ -1007,7 +1059,8 @@ function Step4({ data, onChange }: Step4Props) {
       </div>
       <p className="text-sm text-slate-400">
         Nahraj 2–5 souborů jako důkaz incidentu. Podporujeme obrázky
-        (PNG, JPG, WEBP) a PDF dokumenty. Maximum 10 MB na soubor.
+        (PNG, JPG, WEBP) a PDF dokumenty. Velké obrázky se automaticky
+        zoptimalizují, PDF musí být do {limitMB} MB.
       </p>
 
       {/* Info box — co se hodí jako důkaz */}
@@ -1023,19 +1076,37 @@ function Step4({ data, onChange }: Step4Props) {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
-          className={`flex min-h-[200px] w-full cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors ${
-            isDragOver
-              ? 'border-purple-500 bg-purple-500/10'
-              : 'border-slate-700 bg-slate-900/40 hover:border-purple-500 hover:bg-purple-500/5'
+          aria-busy={isProcessing}
+          className={`flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors ${
+            isProcessing
+              ? 'cursor-wait border-slate-700 bg-slate-900/40'
+              : isDragOver
+                ? 'cursor-pointer border-purple-500 bg-purple-500/10'
+                : 'cursor-pointer border-slate-700 bg-slate-900/40 hover:border-purple-500 hover:bg-purple-500/5'
           }`}
         >
-          <Upload size={32} className="text-slate-400" aria-hidden="true" />
-          <p className="text-sm font-medium text-slate-200">
-            Přetáhni soubory sem nebo klikni pro výběr
-          </p>
-          <p className="text-xs text-slate-500">
-            Maximum {MAX_EVIDENCE_FILES} souborů, do 10 MB každý
-          </p>
+          {isProcessing ? (
+            <>
+              <Loader2 size={32} className="animate-spin text-purple-400" aria-hidden="true" />
+              <p className="text-sm font-medium text-slate-200">
+                Zpracovávám obrázky…
+              </p>
+              <p className="text-xs text-slate-500">
+                Optimalizace pro rychlejší upload, počkej moment.
+              </p>
+            </>
+          ) : (
+            <>
+              <Upload size={32} className="text-slate-400" aria-hidden="true" />
+              <p className="text-sm font-medium text-slate-200">
+                Přetáhni soubory sem nebo klikni pro výběr
+              </p>
+              <p className="text-xs text-slate-500">
+                Maximum {MAX_EVIDENCE_FILES} souborů. Velké obrázky se automaticky
+                zoptimalizují. PDF max {limitMB} MB.
+              </p>
+            </>
+          )}
           <input
             id="evidence_picker"
             ref={fileInputRef}
@@ -1043,6 +1114,7 @@ function Step4({ data, onChange }: Step4Props) {
             multiple
             accept={ALLOWED_MIME_TYPES.join(',')}
             onChange={handlePickerChange}
+            disabled={isProcessing}
             className="hidden"
           />
         </label>
@@ -1054,6 +1126,25 @@ function Step4({ data, onChange }: Step4Props) {
           <ul className="space-y-1">
             {fileErrors.map((err, i) => (
               <li key={i}>• {err}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Compression feedback */}
+      {compressionInfo.length > 0 && (
+        <div
+          className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3 text-sm"
+          aria-live="polite"
+        >
+          <p className="mb-1 font-medium text-cyan-300">
+            ✓ Obrázky optimalizovány pro rychlejší upload
+          </p>
+          <ul className="space-y-0.5 text-xs text-cyan-200/80">
+            {compressionInfo.map((info, idx) => (
+              <li key={idx}>
+                {info.name}: {formatFileSize(info.original)} → {formatFileSize(info.final)}
+              </li>
             ))}
           </ul>
         </div>
