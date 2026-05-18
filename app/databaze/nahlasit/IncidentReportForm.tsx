@@ -16,11 +16,12 @@
  *   - Real submit handler — zatím jen console.warn
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertCircle,
   CheckCircle2,
   FileText,
+  Info,
   Plus,
   Shield,
   Trash2,
@@ -39,6 +40,7 @@ import {
   ALLOWED_MIME_TYPES,
   MAX_FILE_SIZE_BYTES,
   detectIdentifierType,
+  maskIdentifier,
   normalizeAccount,
   normalizeEmail,
   normalizeFacebookUrl,
@@ -90,6 +92,11 @@ interface FormData {
 
   // Step 4
   evidence_files: File[]
+
+  // Step 5
+  truth_confirmation: boolean
+  data_processing_consent: boolean
+  law_enforcement_consent: boolean
 }
 
 function newIdentifier(): IdentifierItem {
@@ -113,6 +120,9 @@ function initialFormData(): FormData {
     amount_czk: 0,
     description: '',
     evidence_files: [],
+    truth_confirmation: false,
+    data_processing_consent: false,
+    law_enforcement_consent: false,
   }
 }
 
@@ -238,12 +248,16 @@ function isStep4Valid(d: FormData): boolean {
   return d.evidence_files.every(isFileAllowed)
 }
 
+function isStep5Valid(d: FormData): boolean {
+  return d.truth_confirmation && d.data_processing_consent && d.law_enforcement_consent
+}
+
 function isStepValid(step: number, data: FormData): boolean {
   if (step === 1) return isStep1Valid(data)
   if (step === 2) return isStep2Valid(data)
   if (step === 3) return isStep3Valid(data)
   if (step === 4) return isStep4Valid(data)
-  // Step 5 je placeholder, validace přijde s naplněním obsahu.
+  if (step === 5) return isStep5Valid(data)
   return true
 }
 
@@ -282,7 +296,7 @@ export function IncidentReportForm() {
         {currentStep === 2 && <Step2 data={formData} onChange={updateFormData} />}
         {currentStep === 3 && <Step3 data={formData} onChange={updateFormData} />}
         {currentStep === 4 && <Step4 data={formData} onChange={updateFormData} />}
-        {currentStep === 5 && <Step5Placeholder />}
+        {currentStep === 5 && <Step5 data={formData} onChange={updateFormData} />}
       </div>
 
       <div className="mt-8 flex items-center justify-between gap-3">
@@ -986,23 +1000,233 @@ function Step4({ data, onChange }: Step4Props) {
 }
 
 
-function Step5Placeholder() {
+// ── Step 5 — "Potvrzení" (souhrn + 3 konsenty) ──────
+
+function formatCzechDate(iso: string): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long', day: 'numeric' })
+}
+
+const DESCRIPTION_PREVIEW_LIMIT = 200
+
+interface Step5Props {
+  data: FormData
+  onChange: (patch: Partial<FormData>) => void
+}
+
+function Step5({ data, onChange }: Step5Props) {
+  const [descriptionExpanded, setDescriptionExpanded] = useState(false)
+
+  const categoryLabel = data.category ? CATEGORY_LABELS[data.category] : '—'
+  const platformLabel = data.platform ? PLATFORM_LABELS[data.platform] : '—'
+  const severityLabel = data.severity ? SEVERITY_LABELS[data.severity] : '—'
+
+  const descriptionTooLong = data.description.length > DESCRIPTION_PREVIEW_LIMIT
+  const visibleDescription =
+    descriptionTooLong && !descriptionExpanded
+      ? data.description.slice(0, DESCRIPTION_PREVIEW_LIMIT) + '…'
+      : data.description
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <div className="flex items-center gap-2 text-emerald-300">
         <CheckCircle2 size={18} aria-hidden="true" />
         <h2 className="text-lg font-semibold text-slate-100">Potvrzení</h2>
       </div>
       <p className="text-sm text-slate-400">
-        Souhrn nahlášení + tři konsenty (pravdivost údajů, GDPR, předání orgánům
-        činným v trestním řízení).
+        Zkontroluj údaje a potvrď tři souhlasy nutné pro zveřejnění nahlášení.
       </p>
-      {/* TODO: summary card s vyplněnými hodnotami,
-          3 checkboxy: truth_confirmation, data_processing_consent,
-          law_enforcement_consent. Submit teprve když všechny tři jsou true. */}
-      <div className="rounded-lg border border-dashed border-slate-700 bg-slate-900/40 p-6 text-center text-xs text-slate-500">
-        Placeholder — souhrn a konsenty se doplní v další iteraci.
-      </div>
+
+      {/* ── Souhrn ────────────────────────────────── */}
+      <section className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+        <h3 className="text-sm font-semibold text-white">Souhrn nahlášení</h3>
+
+        {/* 1. Co se stalo */}
+        <div className="border-l-2 border-purple-500/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-purple-300">
+            <Shield size={14} aria-hidden="true" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide">Co se stalo</h4>
+          </div>
+          <dl className="space-y-1 text-sm text-slate-300">
+            <SummaryRow label="Datum" value={formatCzechDate(data.incident_date)} />
+            <SummaryRow
+              label="Kategorie"
+              value={
+                data.category === 'other' && data.category_other.trim()
+                  ? `${categoryLabel} — ${data.category_other.trim()}`
+                  : categoryLabel
+              }
+            />
+            <SummaryRow
+              label="Platforma"
+              value={
+                data.platform === 'other' && data.platform_other.trim()
+                  ? `${platformLabel} — ${data.platform_other.trim()}`
+                  : platformLabel
+              }
+            />
+            <SummaryRow label="Závažnost" value={severityLabel} />
+          </dl>
+        </div>
+
+        {/* 2. O kom */}
+        <div className="border-l-2 border-pink-500/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-pink-300">
+            <AlertCircle size={14} aria-hidden="true" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide">O kom</h4>
+          </div>
+          <ul className="space-y-1 text-sm text-slate-300">
+            {data.identifiers.map((item) => {
+              const meta = IDENTIFIER_TYPE_META[item.type]
+              const masked = item.value.trim() ? maskIdentifier(item.value, item.type) : '—'
+              return (
+                <li key={item.id} className="flex items-center gap-2">
+                  <span aria-hidden="true">{meta.icon}</span>
+                  <span className="text-slate-400">{meta.label}:</span>
+                  <span className="font-mono text-slate-200">{masked}</span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+
+        {/* 3. Detaily */}
+        <div className="border-l-2 border-purple-500/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-purple-300">
+            <AlertCircle size={14} aria-hidden="true" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide">Detaily</h4>
+          </div>
+          <dl className="space-y-1 text-sm text-slate-300">
+            <SummaryRow
+              label="Částka"
+              value={`${data.amount_czk.toLocaleString('cs-CZ')} Kč`}
+            />
+            <div>
+              <dt className="text-xs text-slate-500">Popis</dt>
+              <dd className="mt-1 whitespace-pre-wrap text-slate-200">
+                {visibleDescription}
+              </dd>
+              {descriptionTooLong && (
+                <button
+                  type="button"
+                  onClick={() => setDescriptionExpanded((s) => !s)}
+                  className="mt-1 text-xs font-medium text-purple-300 hover:text-purple-200"
+                >
+                  {descriptionExpanded ? 'Skrýt' : 'Zobrazit celý popis'}
+                </button>
+              )}
+            </div>
+          </dl>
+        </div>
+
+        {/* 4. Důkazy */}
+        <div className="border-l-2 border-cyan-500/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-cyan-300">
+            <Upload size={14} aria-hidden="true" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide">Důkazy</h4>
+          </div>
+          <p className="text-sm text-slate-300">
+            {data.evidence_files.length} {data.evidence_files.length === 1 ? 'soubor' : data.evidence_files.length >= 2 && data.evidence_files.length <= 4 ? 'soubory' : 'souborů'}
+          </p>
+          {data.evidence_files.length > 0 && (
+            <ul className="mt-1 space-y-0.5 text-xs text-slate-400">
+              {data.evidence_files.map((f, i) => (
+                <li key={`${f.name}_${f.lastModified}_${i}`} className="flex items-center gap-2">
+                  <FileText size={12} aria-hidden="true" className="text-slate-500" />
+                  <span className="truncate">{f.name}</span>
+                  <span className="text-slate-600">·</span>
+                  <span>{formatFileSize(f.size)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {/* 5. Příští kroky */}
+        <div className="border-l-2 border-blue-500/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-blue-300">
+            <Info size={14} aria-hidden="true" />
+            <h4 className="text-xs font-semibold uppercase tracking-wide">Příští kroky</h4>
+          </div>
+          <p className="text-sm text-slate-400">
+            Po odeslání projde nahlášení AI předkontrolou. Pokud poskytneš
+            e-mail dotčené osoby (jeden z identifikátorů typu e-mail), bude
+            informována a má 14 dní na vyjádření. Poté bude nahlášení
+            zveřejněno v databázi.
+          </p>
+        </div>
+      </section>
+
+      {/* ── Konsenty ──────────────────────────────── */}
+      <section className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/40 p-5">
+        <h3 className="mb-3 text-sm font-semibold text-white">Souhlasy</h3>
+
+        <ConsentRow
+          checked={data.truth_confirmation}
+          onChange={(v) => onChange({ truth_confirmation: v })}
+        >
+          Potvrzuji, že údaje, které jsem v tomto formuláři uvedl/a, jsou
+          pravdivé a vycházejí z mé osobní zkušenosti. Beru na vědomí, že
+          vědomě nepravdivé nahlášení může být klasifikováno jako pomluva
+          podle § 184 trestního zákoníku.
+        </ConsentRow>
+
+        <ConsentRow
+          checked={data.data_processing_consent}
+          onChange={(v) => onChange({ data_processing_consent: v })}
+        >
+          Souhlasím se zpracováním osobních údajů podle GDPR za účelem
+          ochrany veřejnosti před online podvody. Údaje budou uchovávány po
+          dobu 5 let, poté budou anonymizovány nebo vymazány.
+        </ConsentRow>
+
+        <ConsentRow
+          checked={data.law_enforcement_consent}
+          onChange={(v) => onChange({ law_enforcement_consent: v })}
+        >
+          Souhlasím s tím, že provozovatel může předat moje identifikační
+          údaje orgánům činným v trestním řízení na základě zákonné žádosti,
+          nebo dotčené osobě v rámci uplatnění jejích práv (GDPR článek 15).
+        </ConsentRow>
+      </section>
     </div>
+  )
+}
+
+
+interface SummaryRowProps {
+  label: string
+  value: string
+}
+
+function SummaryRow({ label, value }: SummaryRowProps) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-2">
+      <dt className="text-xs text-slate-500">{label}:</dt>
+      <dd className="text-slate-200">{value}</dd>
+    </div>
+  )
+}
+
+
+interface ConsentRowProps {
+  checked: boolean
+  onChange: (next: boolean) => void
+  children: ReactNode
+}
+
+function ConsentRow({ checked, onChange, children }: ConsentRowProps) {
+  return (
+    <label className="flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors hover:bg-slate-900/40">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 cursor-pointer accent-purple-600 focus:ring-2 focus:ring-purple-500/30"
+      />
+      <span className="text-sm text-slate-300">{children}</span>
+    </label>
   )
 }
