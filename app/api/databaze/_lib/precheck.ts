@@ -201,6 +201,16 @@ export async function runAiPrecheck(input: PrecheckInput): Promise<AiPrecheckRes
     evidence_summary: input.evidence_summary,
   })
 
+  // Dynamický prefix — Claude potřebuje znát aktuální datum, aby
+  // nesahal po stale "future date" red flagy podle data tréninku.
+  const today = new Date().toISOString().split('T')[0]
+  const systemPromptPrefix = `Aktuální datum: ${today}.
+
+Při hodnocení časové konzistence ber v úvahu, že incident_date v rozsahu posledních 5 let je normální. Pouze pokud incident_date je v budoucnosti více než 7 dní, nebo více než 5 let v minulosti, označ to jako red_flag.
+
+`
+  const fullSystemPrompt = systemPromptPrefix + SYSTEM_PROMPT
+
   try {
     const msg = await getAnthropic().messages.create({
       model: PRECHECK_MODEL,
@@ -208,7 +218,7 @@ export async function runAiPrecheck(input: PrecheckInput): Promise<AiPrecheckRes
       system: [
         {
           type: 'text',
-          text: SYSTEM_PROMPT,
+          text: fullSystemPrompt,
           cache_control: { type: 'ephemeral' },
         },
       ],
