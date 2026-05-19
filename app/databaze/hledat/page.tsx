@@ -180,19 +180,70 @@ function NotFoundPanel({ message }: { message: string }) {
             <h3 className="mb-2 text-sm font-semibold text-slate-100">
               Co dělat dál (i tak buďte opatrní):
             </h3>
-            <ul className="space-y-1.5 text-sm text-slate-300">
-              {[
-                'Trvejte na osobním vyzvednutí',
-                'Použijte escrow službu (Bazoš Bezpečně, ČSOB Pay)',
-                'Neposílejte peníze předem',
-                'Ověřte identitu (Bank iD, sken OP)',
-                'Hledejte hodnocení i jinde (Google, Heureka)',
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
+            <ul className="space-y-2 text-sm text-slate-300">
+              <li className="flex items-start gap-2">
+                <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
+                <span>Trvejte na osobním vyzvednutí.</span>
+              </li>
+
+              <li>
+                <div className="flex items-start gap-2">
                   <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
-                  <span>{item}</span>
-                </li>
-              ))}
+                  <span>Použijte escrow službu:</span>
+                </div>
+                <ul className="mt-1 ml-6 list-disc space-y-0.5 text-slate-400">
+                  <li>
+                    <a
+                      href="https://www.bazos.cz/bezpecne-platby/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-300 underline hover:text-cyan-200"
+                    >
+                      Bazoš Bezpečně
+                    </a>
+                  </li>
+                  <li>
+                    <a
+                      href="https://www.csob.cz/pay"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-300 underline hover:text-cyan-200"
+                    >
+                      ČSOB Pay
+                    </a>
+                  </li>
+                </ul>
+              </li>
+
+              <li className="flex items-start gap-2">
+                <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
+                <span>Neposílejte peníze předem.</span>
+              </li>
+
+              <li>
+                <div className="flex items-start gap-2">
+                  <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
+                  <span>Ověřte identitu:</span>
+                </div>
+                <ul className="mt-1 ml-6 list-disc space-y-0.5 text-slate-400">
+                  <li>
+                    <a
+                      href="https://www.bankid.cz/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-cyan-300 underline hover:text-cyan-200"
+                    >
+                      Bank iD
+                    </a>
+                  </li>
+                  <li>Nebo si nechte ukázat občanský průkaz (osobně).</li>
+                </ul>
+              </li>
+
+              <li className="flex items-start gap-2">
+                <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
+                <span>Hledejte hodnocení i jinde (Google, Heureka).</span>
+              </li>
             </ul>
           </div>
 
