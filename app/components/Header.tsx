@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
-import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag } from "lucide-react";
+import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -92,6 +92,9 @@ export default function Header() {
             <Link href="/blog" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
               <BookOpen size={13} /> Blog
             </Link>
+            <Link href="/databaze" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+              <Database size={13} /> Databáze
+            </Link>
           </nav>
         </div>
 
@@ -129,6 +132,9 @@ export default function Header() {
                   </Link>
                   <Link href="/blog" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
                     <BookOpen size={16} className="text-slate-500 shrink-0" /><span>Blog</span>
+                  </Link>
+                  <Link href="/databaze" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
+                    <Database size={16} className="text-slate-500 shrink-0" /><span>Databáze</span>
                   </Link>
                   <Link href="/pricing" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
                     <Tag size={16} className="text-slate-500 shrink-0" /><span>Ceník</span>
