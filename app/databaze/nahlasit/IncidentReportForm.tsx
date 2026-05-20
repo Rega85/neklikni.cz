@@ -1411,6 +1411,12 @@ function Step5({ data, onChange }: Step5Props) {
           nebo dotčené osobě v rámci uplatnění jejích práv (GDPR článek 15).
         </ConsentRow>
       </section>
+
+      <p className="border-l-2 border-slate-600 pl-3 text-xs text-slate-400">
+        Nahlášení vychází z tvé zkušenosti a zveřejňuješ ho na vlastní
+        odpovědnost. Neklikni.cz neověřuje pravdivost jednotlivých údajů
+        a neručí za ně. Za obsah nahlášení odpovídá výhradně nahlašující.
+      </p>
     </div>
   )
 }

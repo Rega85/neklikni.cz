@@ -367,6 +367,11 @@ function FoundPanel({
             předkontrolou. Subjekt nebyl posouzen soudem ani jiným orgánem jako
             protiprávní. Dotčená osoba má právo se k záznamu vyjádřit.
           </p>
+          <p className="text-xs leading-relaxed text-slate-400">
+            Záznamy pocházejí od uživatelů a neprošly soudním ani úředním
+            ověřením. Neklikni.cz neručí za jejich správnost. Rozhodnutí, jak
+            s informací naložíš, je na tobě.
+          </p>
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-3 pt-2">
