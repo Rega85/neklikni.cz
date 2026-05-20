@@ -19,7 +19,10 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
+  Copy,
+  Facebook,
   FileText,
   Info,
   Loader2,
@@ -276,6 +279,17 @@ export function IncidentReportForm() {
     status: string
     message: string
   } | null>(null)
+  const [shareCopied, setShareCopied] = useState(false)
+
+  async function handleCopyShareLink() {
+    try {
+      await navigator.clipboard.writeText('https://www.neklikni.cz/databaze')
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    } catch (err) {
+      console.error('Clipboard write failed:', err)
+    }
+  }
 
   function updateFormData(patch: Partial<FormData>) {
     setFormData((prev) => ({ ...prev, ...patch }))
@@ -379,6 +393,56 @@ export function IncidentReportForm() {
           >
             Zpět na hlavní
           </a>
+        </div>
+
+        {/* ── Viral loop — sdílej varování ─────────────── */}
+        <div className="mt-6 space-y-3 border-t border-emerald-500/20 pt-6">
+          <h3 className="text-lg font-bold text-white">
+            Díky. Tvoje varování může ušetřit někomu peníze i nervy.
+          </h3>
+          <p className="mx-auto max-w-md text-sm text-slate-300">
+            Čím víc lidí ví, tím méně dalších naletí. Sdílej, ať se to dostane
+            k těm, koho by to mohlo potkat.
+          </p>
+
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            <a
+              href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.neklikni.cz%2Fdatabaze"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="brand-gradient inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]"
+            >
+              <Facebook size={16} aria-hidden="true" />
+              Sdílet na Facebook
+            </a>
+            <button
+              type="button"
+              onClick={handleCopyShareLink}
+              aria-live="polite"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-900"
+            >
+              {shareCopied ? (
+                <>
+                  <Check size={16} className="text-emerald-400" aria-hidden="true" />
+                  Zkopírováno
+                </>
+              ) : (
+                <>
+                  <Copy size={16} aria-hidden="true" />
+                  Zkopírovat odkaz
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="pt-2">
+            <a
+              href="/databaze/nahlasit"
+              className="text-sm text-purple-300 underline transition hover:text-purple-200"
+            >
+              Nahlásit další incident
+            </a>
+          </div>
         </div>
       </div>
     )
