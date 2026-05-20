@@ -189,7 +189,7 @@ function NotFoundPanel({ message }: { message: string }) {
               <li>
                 <div className="flex items-start gap-2">
                   <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
-                  <span>Použijte escrow službu:</span>
+                  <span>Použijte ověřenou platbu / escrow:</span>
                 </div>
                 <ul className="mt-1 ml-6 list-disc space-y-0.5 text-slate-400">
                   <li>
@@ -204,14 +204,15 @@ function NotFoundPanel({ message }: { message: string }) {
                   </li>
                   <li>
                     <a
-                      href="https://www.csob.cz/pay"
+                      href="https://www.sbazar.cz/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-cyan-300 underline hover:text-cyan-200"
                     >
-                      ČSOB Pay
+                      Sbazar Bezpečný nákup
                     </a>
                   </li>
+                  <li>Dobírka (platba při převzetí).</li>
                 </ul>
               </li>
 
