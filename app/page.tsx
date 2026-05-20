@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Loader2, Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import HomeSections from "./components/HomeSections";
+import DatabazeGateway from "./components/DatabazeGateway";
 import { HomeSchema } from "./components/StructuredData";
 import { trackEvent } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -571,6 +572,8 @@ export default function Home() {
             );
           })()}
         </div>
+
+        <DatabazeGateway />
 
         <ErrorBoundary>
           <HomeSections />
