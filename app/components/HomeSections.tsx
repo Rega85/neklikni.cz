@@ -29,8 +29,8 @@ const STEPS = [
 const BENEFITS = [
   {
     icon: Zap,
-    title: "Výsledek do 3 sekund",
-    text: "Žádné čekání. Stihneš to dřív, než stihneš kliknout.",
+    title: "Výsledek do 10 sekund",
+    text: "Žádné dlouhé čekání. Stihneš to dřív, než stihneš poslat peníze.",
   },
   {
     icon: Eye,
@@ -138,7 +138,7 @@ export default function HomeSections() {
               label: "provedených analýz",
               color: "text-purple-300",
             },
-            { value: "<3s",  label: "průměrný čas analýzy", color: "text-blue-300" },
+            { value: "<10s", label: "průměrný čas analýzy", color: "text-blue-300" },
             { value: "100%", label: "anonymních dotazů",     color: "text-emerald-300" },
           ].map((s) => (
             <div key={s.label} className="surface-card p-4 sm:p-6 text-center">

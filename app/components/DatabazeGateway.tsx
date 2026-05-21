@@ -52,25 +52,16 @@ export default function DatabazeGateway() {
 
   return (
     <section className="w-full max-w-4xl mx-auto px-4 mt-12 sm:mt-16">
-      {/* Divider "NEBO" */}
-      <div className="flex items-center gap-4 mb-10" aria-hidden="true">
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
-        <span className="text-xs font-bold uppercase tracking-widest text-slate-500">
-          nebo
-        </span>
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-700 to-transparent" />
-      </div>
-
-      {/* Header */}
+      {/* Header — twin gateway pod společným nadpisem v page.tsx */}
       <div className="text-center mb-6">
         <div className="inline-flex items-center justify-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/5 px-4 py-1.5 text-xs font-medium text-purple-300 mb-4">
           <Database size={14} aria-hidden="true" />
           <span>Databáze incidentů</span>
         </div>
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
-          Ověř konkrétní osobu, účet nebo číslo
-        </h2>
-        <p className="mt-3 text-sm sm:text-base text-slate-300 max-w-2xl mx-auto">
+        <h3 className="text-lg sm:text-xl font-bold text-slate-200">
+          Chystáš se někomu poslat peníze?
+        </h3>
+        <p className="mt-2 text-sm text-slate-400 max-w-2xl mx-auto">
           Komunitní databáze nahlášených incidentů. Zjisti, zda byl subjekt už
           někým nahlášen — dřív než pošleš peníze.
         </p>

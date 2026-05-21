@@ -324,6 +324,21 @@ export default function Home() {
 
           </div>
 
+          {/* Joint umbrella heading for both gateways (AI + Database) */}
+          <div className="pt-6 space-y-2">
+            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+              Dva způsoby, jak se chránit
+            </h2>
+            <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
+              Prověř podezřelou zprávu, nebo si ověř člověka, než mu pošleš peníze.
+            </p>
+          </div>
+
+          {/* AI gateway subheading */}
+          <h3 className="text-lg sm:text-xl font-bold text-slate-200 pt-2">
+            Máš podezřelou zprávu?
+          </h3>
+
           <div className="flex flex-wrap justify-center gap-2.5">
               {EXAMPLES.map((ex) => (
                 <button
