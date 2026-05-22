@@ -896,9 +896,18 @@ function Step3({ data, onChange }: Step3Props) {
           max={AMOUNT_MAX}
           step={1}
           placeholder="0"
-          value={Number.isFinite(data.amount_czk) ? data.amount_czk : 0}
+          value={
+            Number.isFinite(data.amount_czk) && data.amount_czk > 0
+              ? data.amount_czk
+              : ''
+          }
           onChange={(e) => {
-            const parsed = Math.floor(Number(e.target.value))
+            const raw = e.target.value
+            if (raw === '') {
+              onChange({ amount_czk: 0 })
+              return
+            }
+            const parsed = Math.floor(Number(raw))
             onChange({ amount_czk: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 })
           }}
           className={`${FIELD_BASE} text-lg font-semibold`}
