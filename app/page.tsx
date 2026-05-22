@@ -317,9 +317,9 @@ export default function Home() {
       <HomeSchema />
       <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
         <HeroParticles />
-        <div ref={spotlightRef} className="spotlight max-w-4xl w-full space-y-4 text-center relative z-10">
+        <div className="max-w-4xl w-full space-y-4 text-center relative z-10">
 
-          <div className="space-y-2 relative z-10">
+          <div ref={spotlightRef} className="spotlight space-y-2 relative z-10">
             <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal font-mono-fallback">
               <DecoderText
                 text="PROVĚŘ"
