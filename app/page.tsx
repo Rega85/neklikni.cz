@@ -370,6 +370,7 @@ export default function Home() {
               ))}
             </div>
 
+          {(!loading || result) && (
           <div
             className={`scan-border relative mx-auto max-w-3xl rounded-[32px] transition-all duration-300 ${
               isFocused
@@ -487,6 +488,7 @@ export default function Home() {
             </div>
             </div>
           </div>
+          )}
 
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
