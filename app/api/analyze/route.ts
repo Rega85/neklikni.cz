@@ -3,6 +3,11 @@ import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Anthropic from "@anthropic-ai/sdk";
+import {
+  extractIdentifiers,
+  checkIdentifiersInDatabase,
+  type DatabaseMatch,
+} from "../databaze/_lib/crossReference";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -88,12 +93,27 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
   const shareId = await saveResult(null, text, result, "free");
   void (async () => { try { await supabaseAdmin().rpc("increment_total_analyses"); } catch {} })();
 
+  const database_matches = await runCrossReference(text);
+
   return NextResponse.json({
     ...result,
     shareId,
+    database_matches,
     remainingChecks: ANON_DAILY_LIMIT - currentCount - 1,
     tier: "free",
   });
+}
+
+async function runCrossReference(text: string | null | undefined): Promise<DatabaseMatch[]> {
+  if (!text || typeof text !== "string") return [];
+  try {
+    const identifiers = extractIdentifiers(text);
+    if (identifiers.length === 0) return [];
+    return await checkIdentifiersInDatabase(supabaseAdmin() as any, identifiers);
+  } catch (err) {
+    console.warn("Cross-reference failed:", err);
+    return [];
+  }
 }
 
 export async function POST(req: Request) {
@@ -210,9 +230,12 @@ export async function POST(req: Request) {
 
     void (async () => { try { await supabaseAdmin().rpc("increment_total_analyses"); } catch {} })();
 
+    const database_matches = await runCrossReference(text ?? null);
+
     return NextResponse.json({
       ...result,
       shareId,
+      database_matches,
       credits: newCredits,
       tier,
     });

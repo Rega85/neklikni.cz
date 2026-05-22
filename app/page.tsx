@@ -13,6 +13,13 @@ import UpsellModal from "./components/UpsellModal";
 import DecoderText from "./components/DecoderText";
 import HeroParticles from "./components/HeroParticles";
 
+type DatabaseMatch = {
+  type: "phone" | "account" | "email" | "facebook_url" | "var_symbol" | "other";
+  value_masked: string;
+  incident_count: number;
+  trust_score: number;
+};
+
 type AnalysisResult = {
   risk: number;
   verdict: string;
@@ -25,6 +32,16 @@ type AnalysisResult = {
   tier?: string;
   remainingChecks?: number;
   limitReached?: boolean;
+  database_matches?: DatabaseMatch[];
+};
+
+const DB_MATCH_TYPE_LABEL: Record<DatabaseMatch["type"], string> = {
+  phone: "Telefon",
+  account: "Číslo účtu",
+  email: "E-mail",
+  facebook_url: "Facebook profil",
+  var_symbol: "Variabilní symbol",
+  other: "Identifikátor",
 };
 
 type UserProfile = { tier: string; credits_remaining?: number };
@@ -539,6 +556,45 @@ export default function Home() {
                   ⚠️ {DISCLAIMER}
                 </p>
               </div>
+            </div>
+          )}
+
+          {result?.database_matches && result.database_matches.length > 0 && (
+            <div className="max-w-3xl mx-auto w-full rounded-[32px] border-2 border-red-500/40 bg-red-950/30 backdrop-blur-3xl shadow-2xl p-8 sm:p-10 text-left space-y-5">
+              <div className="space-y-1">
+                <h3 className="text-xl sm:text-2xl font-black text-red-200">
+                  🚨 Nález v databázi nahlášených incidentů
+                </h3>
+                <p className="text-sm text-red-200/80">
+                  V textu zprávy jsme našli identifikátory, které jsou evidovány v databázi nahlášených incidentů.
+                </p>
+              </div>
+              <ul className="space-y-3">
+                {result.database_matches.map((m, i) => (
+                  <li
+                    key={`${m.type}-${m.value_masked}-${i}`}
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-2xl border border-red-500/30 bg-red-500/5 p-4"
+                  >
+                    <div className="text-sm text-slate-100">
+                      <span className="font-bold">{DB_MATCH_TYPE_LABEL[m.type] ?? "Identifikátor"}</span>{" "}
+                      <span className="font-mono text-red-200">{m.value_masked}</span>
+                      <span className="text-slate-300"> — nahlášeno v {m.incident_count}{" "}
+                        {m.incident_count === 1
+                          ? "incidentu"
+                          : m.incident_count >= 2 && m.incident_count <= 4
+                          ? "incidentech"
+                          : "incidentech"}
+                      </span>
+                    </div>
+                    <a
+                      href={`/databaze/hledat?q=${encodeURIComponent(m.value_masked)}`}
+                      className="shrink-0 text-xs font-semibold text-red-200 hover:text-white underline underline-offset-2"
+                    >
+                      Zobrazit v databázi →
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
 
