@@ -487,10 +487,6 @@ export default function Home() {
             </div>
           </div>
 
-          <p className="text-slate-400 text-sm text-center max-w-3xl mx-auto leading-relaxed">
-            ⚠️ {DISCLAIMER}
-          </p>
-
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
           {result && (

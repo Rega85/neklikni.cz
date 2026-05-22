@@ -115,7 +115,7 @@ export default function DatabazeGateway() {
       <div className="flex flex-wrap items-center justify-center gap-4">
         <Link
           href="/databaze/nahlasit"
-          className="brand-gradient inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-bold uppercase tracking-widest text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]"
+          className="brand-gradient pulse-glow inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-bold uppercase tracking-widest text-white transition hover:scale-[1.02]"
         >
           Nahlásit incident
         </Link>

@@ -189,9 +189,10 @@ export default async function DatabazePage() {
           <CtaCard
             href="/databaze/nahlasit"
             icon={<Plus size={24} aria-hidden="true" />}
-            iconColor="text-purple-300"
+            iconColor="text-white"
             title="Nahlásit incident"
             description="Sdílej zkušenost s ostatními"
+            emphasize
           />
           <CtaCard
             href="/databaze/hledat"
@@ -283,19 +284,31 @@ interface CtaCardProps {
   iconColor: string
   title: string
   description: string
+  emphasize?: boolean
 }
 
-function CtaCard({ href, icon, iconColor, title, description }: CtaCardProps) {
+function CtaCard({ href, icon, iconColor, title, description, emphasize }: CtaCardProps) {
+  const wrapperClass = emphasize
+    ? 'group brand-gradient pulse-glow flex flex-col gap-2 rounded-xl border border-purple-400/40 p-5 transition hover:scale-[1.01]'
+    : 'group surface-card-elevated flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900/40 p-5 transition hover:border-purple-500/50 hover:bg-slate-900/60'
+
+  const iconWrapperClass = emphasize
+    ? `inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 ${iconColor} transition group-hover:scale-105`
+    : `inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950/60 ${iconColor} transition group-hover:scale-105`
+
+  const titleClass = emphasize
+    ? 'text-base font-bold text-white'
+    : 'text-base font-semibold text-slate-100'
+
+  const descClass = emphasize
+    ? 'text-sm text-white/85'
+    : 'text-sm text-slate-400'
+
   return (
-    <Link
-      href={href}
-      className="group surface-card-elevated flex flex-col gap-2 rounded-xl border border-slate-800 bg-slate-900/40 p-5 transition hover:border-purple-500/50 hover:bg-slate-900/60"
-    >
-      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-lg bg-slate-950/60 ${iconColor} transition group-hover:scale-105`}>
-        {icon}
-      </span>
-      <h3 className="text-base font-semibold text-slate-100">{title}</h3>
-      <p className="text-sm text-slate-400">{description}</p>
+    <Link href={href} className={wrapperClass}>
+      <span className={iconWrapperClass}>{icon}</span>
+      <h3 className={titleClass}>{title}</h3>
+      <p className={descClass}>{description}</p>
     </Link>
   )
 }
