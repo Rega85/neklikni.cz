@@ -12,6 +12,7 @@ import RiskGauge from "./components/RiskGauge";
 import UpsellModal from "./components/UpsellModal";
 import DecoderText from "./components/DecoderText";
 import HeroParticles from "./components/HeroParticles";
+import AnalysisScanner from "./components/AnalysisScanner";
 
 type DatabaseMatch = {
   type: "phone" | "account" | "email" | "facebook_url" | "var_symbol" | "other";
@@ -488,6 +489,8 @@ export default function Home() {
           </div>
 
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
+
+          {loading && !result && <AnalysisScanner />}
 
           {result && (
             <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left max-w-3xl mx-auto w-full`}>

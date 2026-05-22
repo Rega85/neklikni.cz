@@ -217,6 +217,49 @@ body {
   .spotlight::before { display: none; }
 }
 
+/* ── Analysis scanner (loading state on AI analyze) ─────── */
+@keyframes scanner-line {
+  0%   { transform: translateY(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+@keyframes scanner-sweep {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+.analysis-scanner__line {
+  top: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(168, 85, 247, 0.85) 30%,
+    rgba(56, 189, 248, 0.95) 50%,
+    rgba(168, 85, 247, 0.85) 70%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 12px rgba(168, 85, 247, 0.7),
+    0 0 24px rgba(56, 189, 248, 0.4);
+  animation: scanner-line 1.5s ease-in-out infinite;
+}
+.analysis-scanner__sweep {
+  top: -6rem;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(168, 85, 247, 0.10) 50%,
+    transparent 100%
+  );
+  animation: scanner-sweep 1.5s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .analysis-scanner__line,
+  .analysis-scanner__sweep { display: none; }
+}
+
 /* ── Pulse glow (subtle attention pull on key CTAs) ──────── */
 @keyframes pulse-glow {
   0%, 100% {
