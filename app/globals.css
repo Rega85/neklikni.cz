@@ -189,34 +189,6 @@ body {
   opacity: 0.4;
 }
 
-/* ── Spotlight (mouse-follow radial glow) ─────────────────── */
-.spotlight {
-  --spot-x: 50%;
-  --spot-y: 50%;
-  position: relative;
-  isolation: isolate;
-}
-.spotlight::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(
-    600px circle at var(--spot-x) var(--spot-y),
-    rgba(168, 85, 247, 0.10),
-    transparent 60%
-  );
-  opacity: 0;
-  transition: opacity 0.35s ease;
-  z-index: 0;
-}
-.spotlight:hover::before {
-  opacity: 1;
-}
-@media (hover: none), (prefers-reduced-motion: reduce) {
-  .spotlight::before { display: none; }
-}
-
 /* ── Analysis scanner (loading state on AI analyze) ─────── */
 @keyframes scanner-line {
   0%   { transform: translateY(0); opacity: 0; }

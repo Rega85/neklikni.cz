@@ -83,21 +83,6 @@ export default function Home() {
   const [isFocused, setIsFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const spotlightRef = useRef<HTMLDivElement>(null);
-
-  // Hero spotlight: track mouse and update CSS vars for radial gradient
-  useEffect(() => {
-    const el = spotlightRef.current;
-    if (!el) return;
-    if (window.matchMedia?.("(hover: none)").matches) return;
-    const handler = (e: MouseEvent) => {
-      const rect = el.getBoundingClientRect();
-      el.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
-      el.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
-    };
-    el.addEventListener("mousemove", handler);
-    return () => el.removeEventListener("mousemove", handler);
-  }, []);
 
   const PLACEHOLDERS = [
     "Vložte podezřelou zprávu, SMS nebo odkaz...",
@@ -334,7 +319,7 @@ export default function Home() {
         <HeroParticles />
         <div className="max-w-4xl w-full space-y-4 text-center relative z-10">
 
-          <div ref={spotlightRef} className="spotlight space-y-2 relative z-10">
+          <div className="space-y-2 relative z-10">
             <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal font-mono-fallback">
               <DecoderText
                 text="PROVĚŘ"
