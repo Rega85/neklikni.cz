@@ -158,6 +158,20 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
+  // Reset analysis state when user clicks logo/Home while already on "/"
+  useEffect(() => {
+    const reset = () => {
+      setInput("");
+      setResult(null);
+      setError(null);
+      setImage(null);
+      setImagePreview(null);
+      setUpsellReason(null);
+    };
+    window.addEventListener("homeReset", reset);
+    return () => window.removeEventListener("homeReset", reset);
+  }, []);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";

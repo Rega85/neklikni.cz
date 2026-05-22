@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database } from "lucide-react";
 import BrandLogo from "./BrandLogo";
@@ -14,6 +15,7 @@ const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 };
 
 export default function Header() {
+  const pathname = usePathname();
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -63,6 +65,19 @@ export default function Header() {
   // Close mobile drawer when route changes (Link click)
   const closeMobile = () => setMobileNavOpen(false);
 
+  // When user clicks a "home" link and is already on /, no navigation happens
+  // (Next.js doesn't re-mount). Reset homepage state via custom event so the
+  // analysis result/text clears and the page returns to its initial state.
+  const handleHomeClick = (e: React.MouseEvent) => {
+    if (pathname === "/") {
+      e.preventDefault();
+      window.dispatchEvent(new CustomEvent("homeReset"));
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      setMobileNavOpen(false);
+      setMenuOpen(false);
+    }
+  };
+
   const handleSignOut = async () => {
     setMenuOpen(false);
     await supabase.auth.signOut();
@@ -79,14 +94,14 @@ export default function Header() {
       <div className="max-w-7xl mx-auto h-full px-4 sm:px-6 flex items-center justify-between">
 
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex items-center gap-2 shrink-0 group">
+          <Link href="/" onClick={handleHomeClick} className="flex items-center gap-2 shrink-0 group">
             <BrandLogo size={32} className="group-hover:scale-105 transition-transform" />
             <span className="font-black text-lg text-white uppercase tracking-tighter">
               NEKLIKNI<span className="brand-gradient-text">.CZ</span>
             </span>
           </Link>
           <nav className="hidden sm:flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+            <Link href="/" onClick={handleHomeClick} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
               <Home size={13} /> Domů
             </Link>
             <Link href="/blog" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
@@ -127,7 +142,11 @@ export default function Header() {
             {mobileNavOpen && (
               <div className="absolute right-0 top-12 w-64 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden z-50 animate-fade-up">
                 <div className="p-2 space-y-0.5">
-                  <Link href="/" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
+                  <Link
+                    href="/"
+                    onClick={(e) => { handleHomeClick(e); closeMobile(); }}
+                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold"
+                  >
                     <Home size={16} className="text-slate-500 shrink-0" /><span>Domů</span>
                   </Link>
                   <Link href="/blog" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
@@ -216,7 +235,11 @@ export default function Header() {
                   </div>
 
                   <div className="p-2 space-y-0.5">
-                    <Link href="/" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
+                    <Link
+                      href="/"
+                      onClick={(e) => { handleHomeClick(e); setMenuOpen(false); }}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm"
+                    >
                       <Home size={16} className="text-slate-500 shrink-0" /><span>Hlavní stránka</span>
                     </Link>
                     <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
