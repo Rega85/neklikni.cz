@@ -48,6 +48,7 @@ import type {
 } from '@/types/databaze'
 import type { DatabazeDatabase } from '../_lib/database'
 import { runAiPrecheck } from '../_lib/precheck'
+import { sendReporterConfirmation } from '../_lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -713,9 +714,17 @@ export async function POST(req: Request) {
   }
 
   // 12. Notification email + status='notified' transition
-  // TODO: Notification email + status='notified' transition will
-  // be added when Resend integration is implemented (next prompt).
+  // TODO: Notification email k subjektu (email B) bude přidána později.
+  // Status zůstává initialStatus — žádný přechod na 'notified'.
   const finalStatus: IncidentStatus = initialStatus
+
+  // 12b. Best-effort potvrzení nahlašovateli (email A).
+  // Selhání NESMÍ shodit request — incident je už uložený.
+  try {
+    await sendReporterConfirmation(userEmail, incidentId)
+  } catch (err) {
+    console.error('Reporter confirmation email exception:', err)
+  }
 
   // 13. Audit log
   try {
