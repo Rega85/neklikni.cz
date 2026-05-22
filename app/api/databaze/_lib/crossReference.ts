@@ -33,6 +33,12 @@ export interface ExtractedIdentifier {
 export interface DatabaseMatch {
   type: IdentifierType
   value_masked: string
+  /**
+   * Původní (nemaskovaná) hodnota tak, jak ji uživatel napsal v textu
+   * analýzy. Slouží VÝHRADNĚ pro deep-link do /databaze/hledat — UI ji
+   * nikdy nezobrazuje. GDPR: pochází z vlastního vstupu uživatele.
+   */
+  query_value: string
   incident_count: number
   trust_score: number
 }
@@ -90,6 +96,7 @@ export function extractIdentifiers(text: string): ExtractedIdentifier[] {
 
 interface NormalizedIdentifier {
   type: IdentifierType
+  rawValue: string
   normalized: string
   hash: string
 }
@@ -113,7 +120,7 @@ async function normalizeForLookup(
   }
   if (!normalized) return null
   const hash = await hashIdentifier(normalized)
-  return { type: ext.type, normalized, hash }
+  return { type: ext.type, rawValue: ext.rawValue, normalized, hash }
 }
 
 /**
@@ -206,6 +213,7 @@ export async function checkIdentifiersInDatabase(
       matches.push({
         type: norm.type,
         value_masked: row.value_masked ?? maskIdentifier(norm.normalized, norm.type),
+        query_value: norm.rawValue,
         incident_count,
         trust_score: trustBySubject.get(row.subject_id) ?? 0,
       })

@@ -16,6 +16,7 @@ import HeroParticles from "./components/HeroParticles";
 type DatabaseMatch = {
   type: "phone" | "account" | "email" | "facebook_url" | "var_symbol" | "other";
   value_masked: string;
+  query_value: string;
   incident_count: number;
   trust_score: number;
 };
@@ -587,7 +588,7 @@ export default function Home() {
                       </span>
                     </div>
                     <a
-                      href={`/databaze/hledat?q=${encodeURIComponent(m.value_masked)}`}
+                      href={`/databaze/hledat?q=${encodeURIComponent(m.query_value)}`}
                       className="shrink-0 text-xs font-semibold text-red-200 hover:text-white underline underline-offset-2"
                     >
                       Zobrazit v databázi →
