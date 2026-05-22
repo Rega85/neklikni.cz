@@ -381,7 +381,7 @@ export default function Home() {
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <div className="bg-gradient-to-b from-slate-900/60 to-slate-950/60 backdrop-blur-2xl border border-white/10 rounded-[32px] shadow-2xl flex flex-col relative overflow-hidden">
+            <div className="bg-gradient-to-b from-slate-900/95 to-slate-950/95 backdrop-blur-2xl border border-white/10 rounded-[32px] shadow-2xl flex flex-col relative overflow-hidden">
             {isDragging && (
               <div className="absolute inset-0 rounded-[32px] bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
                 <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>

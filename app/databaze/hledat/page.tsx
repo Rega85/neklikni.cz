@@ -264,10 +264,13 @@ function NotFoundPanel({ message }: { message: string }) {
 function FoundPanel({
   subject,
   normalizedValue,
+  tier,
 }: {
   subject: SearchResultSubject
   normalizedValue?: string
+  tier: string | null
 }) {
+  const isPaidTier = tier === 'basic' || tier === 'pro' || tier === 'oneshot' || tier === 'easy'
   const isDanger = subject.trust_score < 50
   const cardClass = isDanger
     ? 'border-red-500/30 bg-red-500/10'
@@ -375,12 +378,14 @@ function FoundPanel({
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-3 pt-2">
-            <Link
-              href="/pricing"
-              className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-5 py-2.5 text-sm font-medium text-purple-200 transition hover:border-purple-400 hover:bg-purple-500/20"
-            >
-              Více detailů s Basic plánem
-            </Link>
+            {!isPaidTier && (
+              <Link
+                href="/pricing"
+                className="rounded-lg border border-purple-500/40 bg-purple-500/10 px-5 py-2.5 text-sm font-medium text-purple-200 transition hover:border-purple-400 hover:bg-purple-500/20"
+              >
+                Více detailů s Basic plánem
+              </Link>
+            )}
             <Link
               href="/databaze/claim"
               className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-900"
@@ -462,6 +467,16 @@ export default function HledatPage() {
   const [result, setResult] = useState<SearchResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [tier, setTier] = useState<string | null>(null)
+
+  useEffect(() => {
+    fetch('/api/me', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.profile?.tier) setTier(d.profile.tier as string)
+      })
+      .catch(() => {})
+  }, [])
 
   const performSearch = useCallback(async (q: string) => {
     setIsLoading(true)
@@ -554,7 +569,11 @@ export default function HledatPage() {
           {isLoading && <LoadingPanel />}
           {result && !isLoading && (
             result.found && result.subject ? (
-              <FoundPanel subject={result.subject} normalizedValue={result.normalized_value} />
+              <FoundPanel
+                subject={result.subject}
+                normalizedValue={result.normalized_value}
+                tier={tier}
+              />
             ) : (
               <NotFoundPanel message={result.message ?? 'Žádný výsledek.'} />
             )
