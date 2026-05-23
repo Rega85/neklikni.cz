@@ -56,7 +56,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.warn("Portal Error:", error);
-    return NextResponse.json({ error: "Kritická chyba serveru" }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error("Portal billingPortal.sessions.create failed:", msg, error);
+    return NextResponse.json({ error: "Nepodařilo se otevřít Stripe portál. Zkus to prosím znovu." }, { status: 500 });
   }
 }

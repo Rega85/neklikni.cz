@@ -7,6 +7,7 @@ import Link from "next/link";
 export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
   const [data, setData] = useState<{user: any, profile: any} | null>(null);
 
   useEffect(() => {
@@ -19,11 +20,25 @@ export default function BillingPage() {
 
   const handlePortal = async () => {
     setPortalLoading(true);
+    setPortalError(null);
     try {
       const res = await fetch("/api/portal", { method: "POST" });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch {
+      const payload = await res.json().catch(() => ({} as { url?: string; error?: string }));
+      if (!res.ok) {
+        const msg = payload?.error || `Chyba ${res.status}. Zkus to prosím znovu nebo nás kontaktuj.`;
+        console.error("Portal request failed:", res.status, payload);
+        setPortalError(msg);
+        return;
+      }
+      if (payload?.url) {
+        window.location.href = payload.url;
+        return;
+      }
+      console.error("Portal response missing url:", payload);
+      setPortalError("Server nevrátil URL portálu. Zkus to prosím znovu.");
+    } catch (err) {
+      console.error("Portal request exception:", err);
+      setPortalError("Nepodařilo se spojit se serverem. Zkontroluj připojení a zkus to znovu.");
     } finally {
       setPortalLoading(false);
     }
@@ -79,6 +94,14 @@ export default function BillingPage() {
             {portalLoading ? <Loader2 size={16} className="animate-spin" /> : <ExternalLink size={16} />}
             Spravovat platby ve Stripe
           </button>
+          {portalError && (
+            <div
+              role="alert"
+              className="w-full bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-300 text-left"
+            >
+              {portalError}
+            </div>
+          )}
         </div>
       </div>
     </main>
