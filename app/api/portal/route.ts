@@ -43,13 +43,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Nemáš aktivní předplatné" }, { status: 400 });
     }
 
-    // 5. Zjištění odkud uživatel přišel (funguje pro localhost i produkci)
-    const origin = req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    // 5. Server-controlled URL only — never trust the Origin header here,
+    // since an attacker can hit this endpoint from evil.com and exfiltrate
+    // the customer via a redirect to their domain.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
     // 6. Vygenerování odkazu do Stripe Portálu
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: `${origin}/profile`, // Hodí ho to zpět na profil
+      return_url: `${appUrl}/profile`,
     });
 
     return NextResponse.json({ url: session.url });

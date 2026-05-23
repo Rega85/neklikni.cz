@@ -58,10 +58,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Musíš být přihlášený" }, { status: 401 });
     }
 
-    const origin =
-      req.headers.get("origin") ??
-      process.env.NEXT_PUBLIC_APP_URL ??
-      "http://localhost:3000";
+    // Server-controlled URL only — never trust the Origin header here, since
+    // an attacker can hit this endpoint from evil.com and steal session_id
+    // via a redirect to their domain.
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
     const selected = PRICES[plan as Plan];
     if (!selected.priceId) {
@@ -72,8 +72,8 @@ export async function POST(req: Request) {
       customer_email: user.email,
       line_items: [{ price: selected.priceId, quantity: 1 }],
       mode: selected.mode,
-      success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/pricing?canceled=true`,
+      success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/pricing?canceled=true`,
       allow_promotion_codes: true,
       metadata: { user_id: user.id, plan },
     });
