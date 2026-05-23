@@ -1,8 +1,20 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { checkIpRateLimit, escapeHtml, getClientIp } from "../_lib/security";
+
+const CONTACT_RATE_LIMIT = 3;
+const CONTACT_RATE_WINDOW_MS = 60 * 60 * 1000; // 1h
 
 export async function POST(req: Request) {
   try {
+    const ip = getClientIp(req);
+    if (!checkIpRateLimit(ip, "contact", CONTACT_RATE_LIMIT, CONTACT_RATE_WINDOW_MS)) {
+      return NextResponse.json(
+        { error: "Příliš mnoho požadavků. Zkuste to později." },
+        { status: 429 }
+      );
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
     const { name, email, message, website } = await req.json();
 
@@ -33,12 +45,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Server error" }, { status: 500 });
     }
 
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safeMessage = escapeHtml(message).replace(/\r?\n/g, "<br/>");
+
     await resend.emails.send({
       from: fromEmail,
       to: toEmail,
       replyTo: email,
-      subject: `Kontaktní formulář: ${name}`,
-      html: `<p><strong>Jméno:</strong> ${name}</p><p><strong>E-mail:</strong> ${email}</p><p><strong>Zpráva:</strong><br/>${message}</p>`,
+      // Subject is a plain-text header — don't HTML-escape, but strip newlines
+      // to prevent header injection.
+      subject: `Kontaktní formulář: ${name.replace(/[\r\n]/g, " ")}`,
+      html: `<p><strong>Jméno:</strong> ${safeName}</p><p><strong>E-mail:</strong> ${safeEmail}</p><p><strong>Zpráva:</strong><br/>${safeMessage}</p>`,
     });
 
     return NextResponse.json({ ok: true });

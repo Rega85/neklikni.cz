@@ -13,7 +13,10 @@ export default async function Image({ params }: { params: Promise<{ id: string }
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/shared_results?id=eq.${resolvedParams.id}&select=*`, {
+    // URL-encode id — without this, an attacker-supplied value containing
+    // `&` or `=` could splice extra PostgREST filters into the query.
+    const safeId = encodeURIComponent(resolvedParams.id);
+    const res = await fetch(`${supabaseUrl}/rest/v1/shared_results?id=eq.${safeId}&select=*`, {
       headers: {
         apikey: supabaseKey,
         Authorization: `Bearer ${supabaseKey}`
