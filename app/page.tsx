@@ -1,10 +1,10 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, MessageSquare, UserSearch } from "lucide-react";
+import { Loader2, Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, MessageSquare, UserSearch, Plus, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import HomeSections from "./components/HomeSections";
-import DatabazeGateway from "./components/DatabazeGateway";
 import { HomeSchema } from "./components/StructuredData";
 import { trackEvent } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -632,6 +632,24 @@ export default function Home() {
                           nahlášení
                         </span>
                       </div>
+
+                      {/* Secondary actions: contribute + learn more */}
+                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3 border-t border-white/5">
+                        <Link
+                          href="/databaze/nahlasit"
+                          className="inline-flex items-center gap-2 rounded-lg border border-purple-500/40 bg-purple-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-purple-200 hover:border-purple-400 hover:bg-purple-500/10 transition-colors"
+                        >
+                          <Plus size={14} />
+                          Nahlásit incident
+                        </Link>
+                        <Link
+                          href="/databaze"
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-purple-300 transition-colors"
+                        >
+                          Jak databáze funguje
+                          <ArrowRight size={12} />
+                        </Link>
+                      </div>
                     </div>
                   )}
 
@@ -805,8 +823,6 @@ export default function Home() {
             );
           })()}
         </div>
-
-        <DatabazeGateway />
 
         <ErrorBoundary>
           <HomeSections />

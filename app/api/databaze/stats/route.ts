@@ -2,7 +2,8 @@
  * GET /api/databaze/stats
  *
  * Veřejný endpoint vracející agregované counts pro modul `/databaze`.
- * Používá se na homepage v `DatabazeGateway` (client-side fetch).
+ * Používá se na homepage v hero tabu "Ověřit subjekt" a na `/databaze`
+ * (client-side fetch).
  *
  * Response:
  *   { subjects: number | null, incidents: number | null, reporters: number | null }
