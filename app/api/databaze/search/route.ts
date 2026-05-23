@@ -68,8 +68,15 @@ function checkAndRecordRateLimit(key: string, limit: number): boolean {
 // ── Helpers ──────────────────────────────────────────
 
 async function hashIp(ip: string): Promise<string> {
-  const salt = process.env.IP_SALT || 'temp-salt'
-  const data = new TextEncoder().encode(ip + salt)
+  const pepper = process.env.IP_PEPPER
+  if (!pepper) {
+    // Fail loudly rather than fall back to a known constant — a guessable
+    // pepper makes the SHA-256 IP hash deanonymisable via a rainbow table
+    // over the IPv4 space.
+    console.error('hashIp: IP_PEPPER env missing — refusing to hash')
+    throw new Error('IP_PEPPER not configured')
+  }
+  const data = new TextEncoder().encode(ip + pepper)
   const digest = await crypto.subtle.digest('SHA-256', data)
   const bytes = new Uint8Array(digest)
   let hex = ''
