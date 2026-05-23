@@ -79,6 +79,7 @@ export default function Home() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [upsellReason, setUpsellReason] = useState<"anon_daily" | "no_credits" | null>(null);
+  const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState("");
@@ -140,6 +141,11 @@ export default function Home() {
     fetch('/api/me', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.profile) setProfile(d.profile); })
+      .catch(() => {});
+
+    fetch('/api/stats', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (typeof d?.total === 'number') setTotalAnalyses(d.total); })
       .catch(() => {});
   }, []);
 
@@ -318,6 +324,23 @@ export default function Home() {
       <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
         <HeroParticles />
         <div className="max-w-4xl w-full space-y-4 text-center relative z-10">
+
+          {totalAnalyses !== null && totalAnalyses > 0 && (
+            <div className="flex justify-center">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+                </span>
+                <span>
+                  <span className="font-semibold text-white">
+                    {totalAnalyses.toLocaleString("cs-CZ")}
+                  </span>{" "}
+                  zpráv prověřeno
+                </span>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2 relative z-10">
             <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal font-mono-fallback">
