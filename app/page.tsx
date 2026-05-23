@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles } from "lucide-react";
+import { Loader2, Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, MessageSquare, UserSearch } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import HomeSections from "./components/HomeSections";
 import DatabazeGateway from "./components/DatabazeGateway";
@@ -10,7 +10,6 @@ import { trackEvent } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
 import RiskGauge from "./components/RiskGauge";
 import UpsellModal from "./components/UpsellModal";
-import DecoderText from "./components/DecoderText";
 import HeroParticles from "./components/HeroParticles";
 import AnalysisScanner from "./components/AnalysisScanner";
 
@@ -83,6 +82,9 @@ export default function Home() {
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [placeholderText, setPlaceholderText] = useState("");
+  const [activeTab, setActiveTab] = useState<"zprava" | "subjekt">("zprava");
+  const [subjectQuery, setSubjectQuery] = useState("");
+  const [dbStats, setDbStats] = useState<{ subjects: number | null; incidents: number | null }>({ subjects: null, incidents: null });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const PLACEHOLDERS = [
@@ -146,6 +148,18 @@ export default function Home() {
     fetch('/api/stats', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (typeof d?.total === 'number') setTotalAnalyses(d.total); })
+      .catch(() => {});
+
+    fetch('/api/databaze/stats', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d && typeof d === 'object') {
+          setDbStats({
+            subjects: typeof d.subjects === 'number' ? d.subjects : null,
+            incidents: typeof d.incidents === 'number' ? d.incidents : null,
+          });
+        }
+      })
       .catch(() => {});
   }, []);
 
@@ -323,194 +337,318 @@ export default function Home() {
       <HomeSchema />
       <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
         <HeroParticles />
-        <div className="max-w-4xl w-full space-y-4 text-center relative z-10">
 
-          {totalAnalyses !== null && totalAnalyses > 0 && (
-            <div className="flex justify-center">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
-                <span className="relative flex h-2 w-2" aria-hidden="true">
-                  <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+        {/* ── HERO: two-column editorial layout ────────────── */}
+        <section className="max-w-7xl w-full relative z-10">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start">
+
+            {/* LEFT COLUMN — text */}
+            <div className="space-y-6 text-left lg:pt-6">
+              {totalAnalyses !== null && totalAnalyses > 0 && (
+                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
+                  <span className="relative flex h-2 w-2" aria-hidden="true">
+                    <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+                  </span>
+                  <span>
+                    <span className="font-semibold text-white">
+                      {totalAnalyses.toLocaleString("cs-CZ")}
+                    </span>{" "}
+                    zpráv prověřeno
+                  </span>
+                </div>
+              )}
+
+              <h1 className="font-sans font-black tracking-tight text-white text-5xl sm:text-6xl lg:text-7xl leading-[0.95]">
+                Prověř{" "}
+                <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
+                  než klikneš.
                 </span>
-                <span>
-                  <span className="font-semibold text-white">
-                    {totalAnalyses.toLocaleString("cs-CZ")}
-                  </span>{" "}
-                  zpráv prověřeno
-                </span>
-              </div>
-            </div>
-          )}
+              </h1>
 
-          <div className="space-y-2 relative z-10">
-            <h1 className="flex flex-col items-center justify-center font-black uppercase tracking-normal font-mono-fallback">
-              <DecoderText
-                text="PROVĚŘ"
-                className="text-4xl sm:text-5xl md:text-6xl text-white leading-tight"
-              />
-              <DecoderText
-                text="NEŽ KLIKNEŠ"
-                duration={1100}
-                className="text-xl sm:text-3xl md:text-5xl text-transparent bg-clip-text bg-gradient-to-b from-purple-400 to-purple-700 leading-tight"
-              />
-            </h1>
-
-            <p className="text-slate-400 text-sm">
-              <span>✓ 100% anonymní</span>
-              <span className="mx-2 text-slate-600">·</span>
-              <span>✓ Základní prověření zdarma</span>
-              <span className="mx-2 text-slate-600">·</span>
-              <span>✓ Neukládáme váš obsah</span>
-            </p>
-
-          </div>
-
-          {/* Joint umbrella heading for both gateways (AI + Database) */}
-          <div className="pt-6 space-y-2">
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Dva způsoby, jak se chránit
-            </h2>
-            <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto">
-              Prověř podezřelou zprávu, nebo si ověř člověka, než mu pošleš peníze.
-            </p>
-          </div>
-
-          {/* AI gateway subheading */}
-          <h3 className="text-lg sm:text-xl font-bold text-slate-200 pt-2">
-            Máš podezřelou zprávu?
-          </h3>
-
-          <div className="flex flex-wrap justify-center gap-2.5">
-              {EXAMPLES.map((ex) => (
-                <button
-                  key={ex.label}
-                  onClick={() => { setInput(ex.text); setResult(null); setError(null); }}
-                  className="group px-4 py-2 rounded-full text-[13px] font-semibold text-slate-300 bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-500/15 hover:to-blue-500/15 hover:text-white hover:border-purple-400/40 active:scale-95 transition-all duration-200"
-                >
-                  {ex.label}
-                </button>
-              ))}
-            </div>
-
-          {(!loading || result) && (
-          <div
-            className={`scan-border relative mx-auto max-w-3xl rounded-[32px] transition-all duration-300 ${
-              isFocused
-                ? "ring-2 ring-purple-500/40 shadow-[0_0_60px_-15px_rgba(168,85,247,0.45)]"
-                : isDragging
-                  ? "ring-2 ring-purple-500/60 shadow-[0_0_60px_-15px_rgba(168,85,247,0.55)]"
-                  : ""
-            }`}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            <div className="bg-gradient-to-b from-slate-900/95 to-slate-950/95 backdrop-blur-2xl border border-white/10 rounded-[32px] shadow-2xl flex flex-col relative overflow-hidden">
-            {isDragging && (
-              <div className="absolute inset-0 rounded-[32px] bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
-                <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
-              </div>
-            )}
-
-            {/* Header row with friendly prompt + clear icon button */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-1">
-              <p className="flex items-center gap-2 text-slate-200 text-sm font-semibold text-left">
-                <Sparkles size={14} className="text-purple-400" />
-                Vlož zprávu, AI odhalí podvod během chvilky
+              <p className="text-slate-300 text-base sm:text-lg lg:text-xl leading-relaxed max-w-xl">
+                Vlož podezřelou SMS, e-mail nebo screenshot. AI v češtině odhalí
+                phishing, falešné banky a podvody dřív, než stihnou ublížit.
               </p>
-              {(input || image || result || error) && (
-                <button
-                  onClick={handleClear}
-                  aria-label="Vymazat vstup"
-                  className="shrink-0 w-7 h-7 rounded-full text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              )}
+
+              <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300">
+                <li className="inline-flex items-center gap-1.5">
+                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                  100% anonymní
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                  Bez registrace
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                  Česky, do 10 sekund
+                </li>
+              </ul>
             </div>
 
+            {/* RIGHT COLUMN — product card with tabs */}
             <div className="relative">
-              {!input && !isFocused && (
-                <div className="absolute inset-0 px-6 pt-2 pb-5 pointer-events-none text-slate-600 text-base sm:text-lg leading-normal">
-                  {placeholderText}<span className="animate-pulse">|</span>
-                </div>
-              )}
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                rows={3}
-                aria-label="Vstupní pole pro analýzu zprávy"
-                className="w-full bg-transparent px-6 pt-2 pb-5 focus:outline-none text-white text-base sm:text-lg resize-none placeholder:text-slate-600"
-              />
-            </div>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/png, image/jpeg, image/webp"
-              className="hidden"
-              onChange={handleImageSelect}
-            />
-
-            <div className="p-4 border-t border-white/5 bg-white/[0.02] space-y-3">
-              {/* Main CTA — gradient + sparkles, friendlier sentence-case */}
-              <button
-                onClick={handleAnalysis}
-                disabled={loading || (!input.trim() && !image)}
-                className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-4 rounded-2xl font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+              <div
+                className="relative rounded-2xl p-[1.5px] bg-gradient-to-br from-violet-500/50 via-fuchsia-500/30 to-cyan-500/40 shadow-[0_0_80px_-20px_rgba(168,85,247,0.5)]"
+                onDragOver={activeTab === "zprava" ? handleDragOver : undefined}
+                onDragLeave={activeTab === "zprava" ? handleDragLeave : undefined}
+                onDrop={activeTab === "zprava" ? handleDrop : undefined}
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="animate-spin" size={18} /> Analyzuji…
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
-                    Prověřit zprávu
-                  </>
-                )}
-              </button>
+                <div className="rounded-2xl bg-slate-950/90 backdrop-blur-2xl overflow-hidden">
 
-              {/* Screenshot upload - secondary */}
-              {imagePreview ? (
-                <div className="flex items-center gap-3 px-1">
-                  <img src={imagePreview} alt="Náhled" className="w-10 h-10 object-cover rounded-lg border border-white/10 shrink-0" />
-                  <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
-                  <button
-                    type="button"
-                    onClick={() => { setImage(null); setImagePreview(null); }}
-                    aria-label="Odebrat screenshot"
-                    className="w-7 h-7 rounded-full text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
+                  {/* Card chrome: macOS dots + mono path */}
+                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 bg-white/[0.02]">
+                    <div className="flex gap-1.5" aria-hidden="true">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
+                    </div>
+                    <span className="flex-1 text-center font-mono text-[11px] text-slate-400 tracking-tight">
+                      neklikni://prover
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-500">v2.1</span>
+                  </div>
+
+                  {/* Tabs */}
+                  <div className="flex border-b border-white/5" role="tablist">
+                    <button
+                      role="tab"
+                      aria-selected={activeTab === "zprava"}
+                      onClick={() => setActiveTab("zprava")}
+                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors ${
+                        activeTab === "zprava"
+                          ? "text-white"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <MessageSquare size={15} />
+                      <span>SMS / E-mail</span>
+                      {activeTab === "zprava" && (
+                        <span className="absolute inset-x-3 -bottom-px h-[2px] bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 rounded-full" />
+                      )}
+                    </button>
+                    <button
+                      role="tab"
+                      aria-selected={activeTab === "subjekt"}
+                      onClick={() => setActiveTab("subjekt")}
+                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors ${
+                        activeTab === "subjekt"
+                          ? "text-white"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      <UserSearch size={15} />
+                      <span>Ověřit subjekt</span>
+                      {activeTab === "subjekt" && (
+                        <span className="absolute inset-x-3 -bottom-px h-[2px] bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 rounded-full" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* TAB 1 — Message analysis */}
+                  {activeTab === "zprava" && (
+                    <div className="relative">
+                      {isDragging && (
+                        <div className="absolute inset-0 bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
+                          <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
+                        </div>
+                      )}
+
+                      {/* Example chips */}
+                      <div className="flex flex-wrap gap-2 px-5 pt-4">
+                        {EXAMPLES.map((ex) => (
+                          <button
+                            key={ex.label}
+                            onClick={() => { setInput(ex.text); setResult(null); setError(null); }}
+                            className="px-3 py-1.5 rounded-full text-[12px] font-semibold text-slate-300 bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-500/15 hover:to-blue-500/15 hover:text-white hover:border-purple-400/40 active:scale-95 transition-all duration-200"
+                          >
+                            {ex.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Header row */}
+                      <div className="flex items-center justify-between px-5 pt-4 pb-1">
+                        <p className="flex items-center gap-2 text-slate-200 text-[13px] font-semibold">
+                          <Sparkles size={13} className="text-purple-400" />
+                          Vlož zprávu, AI odhalí podvod během chvilky
+                        </p>
+                        {(input || image || result || error) && (
+                          <button
+                            onClick={handleClear}
+                            aria-label="Vymazat vstup"
+                            className="shrink-0 w-7 h-7 rounded-full text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Textarea */}
+                      <div className={`relative mx-3 mb-3 rounded-xl transition-all ${
+                        isFocused
+                          ? "ring-2 ring-purple-500/40 shadow-[0_0_40px_-15px_rgba(168,85,247,0.45)]"
+                          : ""
+                      }`}>
+                        {!input && !isFocused && (
+                          <div className="absolute inset-0 px-4 pt-3 pb-4 pointer-events-none text-slate-600 text-[15px] leading-normal">
+                            {placeholderText}<span className="animate-pulse">|</span>
+                          </div>
+                        )}
+                        <textarea
+                          value={input}
+                          onChange={(e) => setInput(e.target.value)}
+                          onKeyDown={handleKeyDown}
+                          onFocus={() => setIsFocused(true)}
+                          onBlur={() => setIsFocused(false)}
+                          rows={4}
+                          aria-label="Vstupní pole pro analýzu zprávy"
+                          className="w-full bg-black/30 rounded-xl px-4 pt-3 pb-4 focus:outline-none text-white text-[15px] resize-none placeholder:text-slate-600 border border-white/5"
+                        />
+                      </div>
+
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png, image/jpeg, image/webp"
+                        className="hidden"
+                        onChange={handleImageSelect}
+                      />
+
+                      <div className="px-3 pb-3 space-y-2.5">
+                        <button
+                          onClick={handleAnalysis}
+                          disabled={loading || (!input.trim() && !image)}
+                          className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                        >
+                          {loading ? (
+                            <>
+                              <Loader2 className="animate-spin" size={18} /> Analyzuji…
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
+                              Prověřit zprávu
+                            </>
+                          )}
+                        </button>
+
+                        {imagePreview ? (
+                          <div className="flex items-center gap-3 px-1">
+                            <img src={imagePreview} alt="Náhled" className="w-10 h-10 object-cover rounded-lg border border-white/10 shrink-0" />
+                            <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
+                            <button
+                              type="button"
+                              onClick={() => { setImage(null); setImagePreview(null); }}
+                              aria-label="Odebrat screenshot"
+                              className="w-7 h-7 rounded-full text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : canUploadImage ? (
+                          <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
+                          >
+                            <Camera size={14} /> Přidat screenshot
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => { window.location.href = "/pricing"; }}
+                            className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
+                          >
+                            <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
+                          </button>
+                        )}
+
+                        <p className="text-slate-600 text-[10px] text-center hidden sm:block">
+                          Ctrl + Enter pro odeslání · Esc pro smazání
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 2 — Subject lookup */}
+                  {activeTab === "subjekt" && (
+                    <div className="p-5 space-y-4">
+                      <div>
+                        <p className="flex items-center gap-2 text-slate-200 text-[13px] font-semibold mb-1">
+                          <UserSearch size={13} className="text-cyan-300" />
+                          Ověř protistranu v databázi nahlášených incidentů
+                        </p>
+                        <p className="text-xs text-slate-400 leading-relaxed">
+                          Vlož telefon, e-mail nebo číslo účtu. Najdeš záznam, nebo doporučení, jak ověřit jinak.
+                        </p>
+                      </div>
+
+                      <form
+                        action="/databaze/hledat"
+                        method="get"
+                        className="space-y-2.5"
+                      >
+                        <label htmlFor="hero_db_q" className="sr-only">
+                          Identifikátor k vyhledání
+                        </label>
+                        <input
+                          id="hero_db_q"
+                          name="q"
+                          type="search"
+                          required
+                          value={subjectQuery}
+                          onChange={(e) => setSubjectQuery(e.target.value)}
+                          placeholder="+420 ... | email@... | 12345/0100"
+                          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3.5 text-[15px] text-white placeholder:text-slate-600 focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                        />
+                        <button
+                          type="submit"
+                          className="group w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white py-3.5 font-bold text-sm sm:text-base shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 active:scale-[0.98] transition-all"
+                        >
+                          <SearchIcon size={16} />
+                          Ověřit v databázi
+                        </button>
+                      </form>
+
+                      {/* DB stats inline */}
+                      <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 pt-1">
+                        <span>
+                          <span className="font-semibold text-slate-200">
+                            {dbStats.subjects !== null && dbStats.subjects > 0
+                              ? dbStats.subjects.toLocaleString("cs-CZ")
+                              : "—"}
+                          </span>{" "}
+                          subjektů
+                        </span>
+                        <span className="text-slate-600">·</span>
+                        <span>
+                          <span className="font-semibold text-slate-200">
+                            {dbStats.incidents !== null && dbStats.incidents > 0
+                              ? dbStats.incidents.toLocaleString("cs-CZ")
+                              : "—"}
+                          </span>{" "}
+                          nahlášení
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer */}
+                  <div className="px-5 py-2.5 border-t border-white/5 bg-white/[0.02]">
+                    <p className="font-mono text-[10px] tracking-[0.18em] text-slate-500 text-center">
+                      ŠIFROVÁNO • ANONYMNÍ • OBSAH SE NEUKLÁDÁ
+                    </p>
+                  </div>
                 </div>
-              ) : canUploadImage ? (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
-                >
-                  <Camera size={14} /> Přidat screenshot
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => { window.location.href = "/pricing"; }}
-                  className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
-                >
-                  <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
-                </button>
-              )}
-
-              <p className="text-slate-600 text-[10px] text-center hidden sm:block">Ctrl + Enter pro odeslání · Esc pro smazání</p>
-            </div>
+              </div>
             </div>
           </div>
-          )}
+        </section>
+
+        {/* ── Results / scanner / cross-reference / viral share ──── */}
+        <div className="max-w-3xl w-full space-y-4 text-center relative z-10 mt-10">
 
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
