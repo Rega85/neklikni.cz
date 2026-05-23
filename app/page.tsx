@@ -314,7 +314,7 @@ export default function Home() {
 
   const DISCLAIMER = "Výsledky analýzy vygenerované umělou inteligencí mají informativní charakter. Technologie se může mýlit — poslední rozhodnutí je vždy na Vás.";
 
-  const canUploadImage = !!profile?.tier && ["basic", "pro", "oneshot", "easy"].includes(profile.tier);
+  const canUploadImage = !!profile?.tier && ["basic", "pro", "oneshot"].includes(profile.tier);
 
   const riskBorderColor = !result ? "" : result.risk >= 70 ? "border-red-500/30" : result.risk >= 40 ? "border-yellow-500/30" : "border-green-500/30";
 

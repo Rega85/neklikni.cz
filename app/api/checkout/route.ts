@@ -13,15 +13,12 @@ function getStripe() {
 //   STRIPE_PRICE_ONESHOT  — 49 Kč one-time, 1 prémiová PRO analýza
 //   STRIPE_PRICE_BASIC    — 99 Kč/měs, 50 analýz
 //   STRIPE_PRICE_PRO      — 199 Kč/měs, 150 analýz
-//   STRIPE_PRICE_EASY     — (legacy, optional) — keep only if grandfathering test users
 type PlanConfig = { priceId: string | undefined; mode: "payment" | "subscription" };
 
 const PRICES: Record<string, PlanConfig> = {
   oneshot: { priceId: process.env.STRIPE_PRICE_ONESHOT, mode: "payment" },
   basic:   { priceId: process.env.STRIPE_PRICE_BASIC,   mode: "subscription" },
   pro:     { priceId: process.env.STRIPE_PRICE_PRO,     mode: "subscription" },
-  // Legacy plan — only available if STRIPE_PRICE_EASY is configured
-  easy:    { priceId: process.env.STRIPE_PRICE_EASY,    mode: "payment" },
 };
 
 type Plan = keyof typeof PRICES;

@@ -6,7 +6,7 @@ import { Check, Zap, Shield, Crown, X, ChevronDown, ShieldCheck, RotateCcw, Badg
 import { PricingSchema } from "../components/StructuredData";
 import { trackEvent } from "../lib/analytics";
 
-type Plan = "easy" | "basic" | "pro";
+type Plan = "oneshot" | "basic" | "pro";
 
 type PlanCard = {
   key: Plan | "family";
@@ -24,7 +24,7 @@ type PlanCard = {
 
 const PLANS: PlanCard[] = [
   {
-    key: "easy",
+    key: "oneshot",
     name: "JEDNORÁZOVÁ",
     tagline: "Když to opravdu MUSÍ sedět",
     price: 49,
@@ -95,18 +95,18 @@ const PLANS: PlanCard[] = [
   },
 ];
 
-const COMPARE: { label: string; free: string; easy: string; basic: string; pro: string; highlight?: boolean }[] = [
-  { label: "Cena",                            free: "0 Kč",        easy: "49 Kč",       basic: "99 Kč / měs",   pro: "199 Kč / měs", highlight: true },
-  { label: "Počet analýz",                    free: "2 / den",     easy: "1",           basic: "50 / měs",      pro: "150 / měs", highlight: true },
-  { label: "AI model",                        free: "Claude Haiku",easy: "Claude Opus", basic: "Claude Sonnet", pro: "Claude Opus" },
-  { label: "Maximální délka textu",           free: "5 000 znaků", easy: "12 000 znaků",basic: "8 000 znaků",   pro: "12 000 znaků" },
-  { label: "Analýza obrázků / screenshotů",   free: "—",            easy: "—",           basic: "✓",             pro: "✓" },
-  { label: "Hloubkový rozbor + taktiky",      free: "—",            easy: "✓",           basic: "—",             pro: "✓" },
-  { label: "Konkrétní kroky co dělat dál",    free: "—",            easy: "rozšířené",   basic: "rozšířené",     pro: "rozšířené" },
-  { label: "Sdílení a varování přes odkaz",   free: "✓",            easy: "✓",           basic: "✓",             pro: "✓" },
-  { label: "PDF report ke stažení",           free: "✓",            easy: "✓",           basic: "✓",             pro: "✓" },
-  { label: "Expirace kreditů",                free: "—",            easy: "ihned po použití", basic: "až +1 měsíc",   pro: "až +1 měsíc" },
-  { label: "Závazek",                         free: "žádný",        easy: "žádný",       basic: "zrušit kdykoli",pro: "zrušit kdykoli" },
+const COMPARE: { label: string; free: string; oneshot: string; basic: string; pro: string; highlight?: boolean }[] = [
+  { label: "Cena",                            free: "0 Kč",        oneshot: "49 Kč",       basic: "99 Kč / měs",   pro: "199 Kč / měs", highlight: true },
+  { label: "Počet analýz",                    free: "2 / den",     oneshot: "1",           basic: "50 / měs",      pro: "150 / měs", highlight: true },
+  { label: "AI model",                        free: "Claude Haiku",oneshot: "Claude Opus", basic: "Claude Sonnet", pro: "Claude Opus" },
+  { label: "Maximální délka textu",           free: "5 000 znaků", oneshot: "12 000 znaků",basic: "8 000 znaků",   pro: "12 000 znaků" },
+  { label: "Analýza obrázků / screenshotů",   free: "—",            oneshot: "—",           basic: "✓",             pro: "✓" },
+  { label: "Hloubkový rozbor + taktiky",      free: "—",            oneshot: "✓",           basic: "—",             pro: "✓" },
+  { label: "Konkrétní kroky co dělat dál",    free: "—",            oneshot: "rozšířené",   basic: "rozšířené",     pro: "rozšířené" },
+  { label: "Sdílení a varování přes odkaz",   free: "✓",            oneshot: "✓",           basic: "✓",             pro: "✓" },
+  { label: "PDF report ke stažení",           free: "✓",            oneshot: "✓",           basic: "✓",             pro: "✓" },
+  { label: "Expirace kreditů",                free: "—",            oneshot: "ihned po použití", basic: "až +1 měsíc",   pro: "až +1 měsíc" },
+  { label: "Závazek",                         free: "žádný",        oneshot: "žádný",       basic: "zrušit kdykoli",pro: "zrušit kdykoli" },
 ];
 
 const FAQ: { q: string; a: string }[] = [
@@ -413,7 +413,7 @@ export default function PricingPage() {
               >
                 <div className="p-3 sm:p-4 text-slate-300">{row.label}</div>
                 <div className="p-3 sm:p-4 text-center text-slate-500">{row.free}</div>
-                <div className="p-3 sm:p-4 text-center text-slate-300">{row.easy}</div>
+                <div className="p-3 sm:p-4 text-center text-slate-300">{row.oneshot}</div>
                 <div className="p-3 sm:p-4 text-center text-blue-300 bg-blue-500/5">{row.basic}</div>
                 <div className="p-3 sm:p-4 text-center text-purple-300">{row.pro}</div>
               </div>

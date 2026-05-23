@@ -270,7 +270,7 @@ function FoundPanel({
   normalizedValue?: string
   tier: string | null
 }) {
-  const isPaidTier = tier === 'basic' || tier === 'pro' || tier === 'oneshot' || tier === 'easy'
+  const isPaidTier = tier === 'basic' || tier === 'pro' || tier === 'oneshot'
   const isDanger = subject.trust_score < 50
   const cardClass = isDanger
     ? 'border-red-500/30 bg-red-500/10'

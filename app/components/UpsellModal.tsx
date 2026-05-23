@@ -79,7 +79,7 @@ export default function UpsellModal({ reason, onClose, tier }: Props) {
 
           <Link
             href="/pricing"
-            onClick={() => trackEvent("cta_upgrade_clicked", { from: "upsell_modal", action: "easy", tier })}
+            onClick={() => trackEvent("cta_upgrade_clicked", { from: "upsell_modal", action: "oneshot", tier })}
             className="group flex items-center gap-3 surface-card hover:bg-white/[0.04] p-4 transition-all"
           >
             <div className="bg-blue-500/15 text-blue-300 p-2.5 rounded-xl shrink-0">
