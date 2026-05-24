@@ -4,6 +4,10 @@ import { useState } from "react";
 import { Mail, Download, Check, AlertTriangle } from "lucide-react";
 import { trackEvent } from "../lib/analytics";
 
+// Verze znění souhlasu vedle checkboxu níže. Posílá se s POST /api/lead
+// a perzistuje v leads.consent_version. Bump při jakékoli změně textu.
+const LEAD_CONSENT_VERSION = "2026-05";
+
 export default function LeadMagnet() {
   const [email, setEmail] = useState("");
   const [consent, setConsent] = useState(false);
@@ -20,7 +24,12 @@ export default function LeadMagnet() {
       const res = await fetch("/api/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, source: "homepage_pdf" }),
+        body: JSON.stringify({
+          email,
+          source: "homepage_pdf",
+          consent,
+          consent_version: LEAD_CONSENT_VERSION,
+        }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));

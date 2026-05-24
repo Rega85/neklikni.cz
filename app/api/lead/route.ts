@@ -9,6 +9,12 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.neklikni.cz";
 const LEAD_RATE_LIMIT = 5;
 const LEAD_RATE_WINDOW_MS = 60 * 60 * 1000; // 1h
 
+// Whitelist přijatelných verzí znění souhlasu (LeadMagnet checkbox).
+// Klient pošle aktuální verzi (LEAD_CONSENT_VERSION v LeadMagnet.tsx).
+// "legacy" je rezervováno pro backfill v DB — nikdy se nesmí přijmout
+// ze síťového vstupu.
+const ACCEPTED_LEAD_CONSENT_VERSIONS: ReadonlySet<string> = new Set(["2026-05"]);
+
 export const dynamic = "force-dynamic";
 
 function unsubscribeUrl(token: string): string {
@@ -67,18 +73,44 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const email = String(body?.email ?? "").trim().toLowerCase();
     const source = String(body?.source ?? "homepage_pdf").slice(0, 64);
+    const consent = body?.consent === true;
+    const consentVersion = typeof body?.consent_version === "string" ? body.consent_version : "";
 
     if (!email || !EMAIL_RE.test(email) || email.length > 254) {
       return NextResponse.json({ error: "Neplatný e-mail" }, { status: 400 });
     }
 
+    // GDPR čl. 7: souhlas musí být aktivní a doložitelný. Frontend gate ne-
+    // stačí — server musí enforce, jinak by stačil curl pro insert bez souhlasu.
+    if (!consent) {
+      return NextResponse.json(
+        { error: "Pro odeslání musíš odsouhlasit zpracování e-mailu." },
+        { status: 400 }
+      );
+    }
+
+    if (!ACCEPTED_LEAD_CONSENT_VERSIONS.has(consentVersion)) {
+      return NextResponse.json(
+        { error: "Neplatná verze znění souhlasu." },
+        { status: 400 }
+      );
+    }
+
     // Vygeneruj token předem — pro nové leady jde do INSERTu, pro duplicitní
     // (23505) ho nahradíme tokenem z existujícího řádku přes SELECT.
     const generatedToken = crypto.randomUUID().replace(/-/g, "");
+    const consentAt = new Date().toISOString();
 
     const { error: insertErr } = await supabaseAdmin
       .from("leads")
-      .insert({ email, source, unsubscribe_token: generatedToken });
+      .insert({
+        email,
+        source,
+        unsubscribe_token: generatedToken,
+        consent: true,
+        consent_at: consentAt,
+        consent_version: consentVersion,
+      });
 
     // 23505 = unique violation (already in DB) — treat as success and re-send email
     if (insertErr && insertErr.code !== "23505") {
