@@ -19,6 +19,7 @@ export default function Header() {
   const [supabase] = useState(() => createClient());
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -31,12 +32,16 @@ export default function Header() {
       const res = await fetch('/api/me', { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
-        if (mountedRef.current) { setUser(data.user); setProfile(data.profile); }
+        if (mountedRef.current) {
+          setUser(data.user);
+          setProfile(data.profile);
+          setIsAdmin(data.is_admin === true);
+        }
       } else {
-        if (mountedRef.current) { setUser(null); setProfile(null); }
+        if (mountedRef.current) { setUser(null); setProfile(null); setIsAdmin(false); }
       }
     } catch {
-      if (mountedRef.current) { setUser(null); setProfile(null); }
+      if (mountedRef.current) { setUser(null); setProfile(null); setIsAdmin(false); }
     } finally {
       if (mountedRef.current) setInitialLoading(false);
     }
@@ -185,6 +190,17 @@ export default function Header() {
                       <Gift size={16} className="text-emerald-400 shrink-0" /><span>Pozvi přátele <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider ml-1">+5</span></span>
                     </Link>
                   )}
+                  {isAdmin && (
+                    <Link
+                      href="/admin/moderace"
+                      onClick={closeMobile}
+                      className="flex items-center gap-3 px-3 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white ring-1 ring-purple-500/30 transition-colors text-sm font-semibold"
+                    >
+                      <Flag size={16} className="text-purple-300 shrink-0" />
+                      <span>Moderace</span>
+                      <span className="ml-auto text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-100 px-1.5 py-0.5 rounded">ADMIN</span>
+                    </Link>
+                  )}
                 </div>
 
                 {!initialLoading && user && tier === "free" && (
@@ -273,6 +289,17 @@ export default function Header() {
                     <Link href="/referral" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
                       <Gift size={16} className="text-emerald-400 shrink-0" /><span>Pozvi přátele <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider ml-1">+5 kreditů</span></span>
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin/moderace"
+                        onClick={() => setMenuOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white ring-1 ring-purple-500/30 transition-colors text-sm"
+                      >
+                        <Flag size={16} className="text-purple-300 shrink-0" />
+                        <span>Moderace</span>
+                        <span className="ml-auto text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-100 px-1.5 py-0.5 rounded">ADMIN</span>
+                      </Link>
+                    )}
                     <Link href="/update-password" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
                       <KeyRound size={16} className="text-slate-500 shrink-0" /><span>Změna hesla</span>
                     </Link>
