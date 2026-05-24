@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   title: 'Nahlásit incident — Neklikni.cz',
   description:
     'Pomoz varovat ostatní — nahlas evidovaný obchodní incident do veřejné databáze.',
+  robots: { index: false, follow: false },
 }
 
 export default async function NahlasitPage() {

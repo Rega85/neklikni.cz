@@ -6,7 +6,16 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/auth/", "/profile", "/billing", "/update-password"],
+        disallow: [
+          "/api/",
+          "/auth/",
+          "/profile",
+          "/billing",
+          "/update-password",
+          "/databaze/hledat",
+          "/databaze/nahlasit",
+          "/databaze/claim",
+        ],
       },
     ],
     sitemap: "https://www.neklikni.cz/sitemap.xml",

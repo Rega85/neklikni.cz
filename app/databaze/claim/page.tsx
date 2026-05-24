@@ -18,6 +18,7 @@ export const metadata: Metadata = {
   title: 'Chci se vyjádřit k záznamu — Neklikni.cz',
   description:
     'Pokud je o tobě záznam v databázi nahlášených incidentů, máš právo se vyjádřit, požádat o opravu nebo stažení.',
+  robots: { index: false, follow: false },
 }
 
 const CONTACT_EMAIL = 'info@neklikni.cz'
