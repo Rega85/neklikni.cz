@@ -6,12 +6,14 @@ import { trackEvent } from "../lib/analytics";
 
 export default function LeadMagnet() {
   const [email, setEmail] = useState("");
+  const [consent, setConsent] = useState(false);
   const [state, setState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (state === "loading" || state === "success") return;
+    if (!consent) return;
     setState("loading");
     setErrorMsg("");
     try {
@@ -158,18 +160,36 @@ export default function LeadMagnet() {
                 </div>
               )}
 
+              <label className="flex items-start gap-2.5 text-xs text-slate-400 leading-relaxed cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  disabled={state === "loading"}
+                  className="mt-0.5 w-4 h-4 shrink-0 rounded border-white/20 bg-slate-950/60 text-violet-500 accent-violet-500 focus:ring-2 focus:ring-violet-500/40 focus:ring-offset-0 cursor-pointer"
+                />
+                <span>
+                  Souhlasím se zasláním PDF a občasných tipů o podvodech na e-mail. Odhlásit se můžeš kdykoli.{" "}
+                  <a
+                    href="/gdpr"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-violet-400 hover:text-violet-300 underline underline-offset-2"
+                  >
+                    Zásady ochrany osobních údajů
+                  </a>
+                  .
+                </span>
+              </label>
+
               <button
                 type="submit"
-                disabled={state === "loading"}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                disabled={state === "loading" || !consent}
+                aria-disabled={state === "loading" || !consent}
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-purple-500/30 disabled:active:scale-100"
               >
                 <Download size={16} /> {state === "loading" ? "Odesílám…" : "Poslat PDF"}
               </button>
-
-              <p className="text-[10px] text-slate-500 text-center leading-relaxed">
-                Odesláním souhlasíš se{" "}
-                <a href="/gdpr" className="underline hover:text-slate-300">zpracováním osobních údajů</a>. Žádný spam, kdykoli se odhlásíš.
-              </p>
             </>
           )}
         </form>
