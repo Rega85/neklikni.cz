@@ -13,7 +13,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
-import { AlertTriangle, Check, FileText, Flag, X } from 'lucide-react'
+import { AlertTriangle, FileText, Flag } from 'lucide-react'
 import {
   CATEGORY_LABELS,
   PLATFORM_LABELS,
@@ -25,6 +25,8 @@ import {
 } from '@/types/databaze'
 import type { DatabazeDatabase } from '../../api/databaze/_lib/database'
 import { getAdminIdentity } from '../../api/admin/_lib/auth'
+import { RevealIdentifier } from './_components/RevealIdentifier'
+import { ModerationActions } from './_components/ModerationActions'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,7 +35,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-const QUEUE_STATUSES: IncidentStatus[] = ['ai_reviewed', 'pending']
+const QUEUE_STATUSES: IncidentStatus[] = ['ai_reviewed', 'pending', 'needs_more_info']
 
 interface QueueRow {
   id: string
@@ -46,11 +48,12 @@ interface QueueRow {
   severity: IncidentSeverity
   amount_czk: number
   description: string
-  status: 'ai_reviewed' | 'pending'
+  status: 'ai_reviewed' | 'pending' | 'needs_more_info'
   subject_id: string
   ai_confidence_score: number | null
   ai_summary: string | null
   ai_red_flags: unknown
+  admin_note: string | null
   reporter_id: string
 }
 
@@ -89,7 +92,7 @@ export default async function ModeracePage() {
   const { data: incidents, error } = await sb
     .from('incidents')
     .select(
-      'id, created_at, incident_date, category, category_other, platform, platform_other, severity, amount_czk, description, status, subject_id, ai_confidence_score, ai_summary, ai_red_flags, reporter_id',
+      'id, created_at, incident_date, category, category_other, platform, platform_other, severity, amount_czk, description, status, subject_id, ai_confidence_score, ai_summary, ai_red_flags, admin_note, reporter_id',
     )
     .in('status', QUEUE_STATUSES)
     .order('created_at', { ascending: false })
@@ -104,7 +107,7 @@ export default async function ModeracePage() {
     subjectIds.length > 0
       ? sb
           .from('subject_identifiers')
-          .select('subject_id, type, value_masked')
+          .select('id, subject_id, type, value_masked')
           .in('subject_id', subjectIds)
       : Promise.resolve({ data: [], error: null }),
     incidentIds.length > 0
@@ -115,10 +118,10 @@ export default async function ModeracePage() {
       : Promise.resolve({ data: [], error: null }),
   ])
 
-  const identifiersBySubject = new Map<string, Array<{ type: string; value_masked: string }>>()
-  for (const row of (identifiersRes.data as Array<{ subject_id: string; type: string; value_masked: string }> | null) ?? []) {
+  const identifiersBySubject = new Map<string, Array<{ id: string; type: string; value_masked: string }>>()
+  for (const row of (identifiersRes.data as Array<{ id: string; subject_id: string; type: string; value_masked: string }> | null) ?? []) {
     const list = identifiersBySubject.get(row.subject_id) ?? []
-    list.push({ type: row.type, value_masked: row.value_masked })
+    list.push({ id: row.id, type: row.type, value_masked: row.value_masked })
     identifiersBySubject.set(row.subject_id, list)
   }
 
@@ -167,6 +170,8 @@ export default async function ModeracePage() {
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider ${
                       row.status === 'pending'
                         ? 'bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/30'
+                        : row.status === 'needs_more_info'
+                        ? 'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/30'
                         : 'bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/30'
                     }`}>{row.status}</span>
                   </div>
@@ -189,11 +194,14 @@ export default async function ModeracePage() {
                       {idents.length === 0 ? (
                         <span className="text-xs text-slate-500">—</span>
                       ) : (
-                        idents.map((id, i) => (
-                          <span key={i} className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-950/60 px-2.5 py-1 text-xs">
-                            <span className="text-slate-400">{id.type}:</span>
-                            <span className="font-mono text-slate-200">{id.value_masked}</span>
-                          </span>
+                        idents.map((id) => (
+                          <RevealIdentifier
+                            key={id.id}
+                            identifierId={id.id}
+                            incidentId={row.id}
+                            type={id.type}
+                            valueMasked={id.value_masked}
+                          />
                         ))
                       )}
                     </div>
@@ -226,28 +234,14 @@ export default async function ModeracePage() {
                     </div>
                   )}
 
-                  <div className="mt-5 flex gap-2">
-                    <form action="/api/admin/moderace" method="POST">
-                      <input type="hidden" name="incident_id" value={row.id} />
-                      <input type="hidden" name="action" value="approve" />
-                      <button
-                        type="submit"
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/15 px-4 py-2 text-sm font-semibold text-emerald-300 ring-1 ring-emerald-500/40 hover:bg-emerald-500/25"
-                      >
-                        <Check size={14} /> Schválit
-                      </button>
-                    </form>
-                    <form action="/api/admin/moderace" method="POST">
-                      <input type="hidden" name="incident_id" value={row.id} />
-                      <input type="hidden" name="action" value="reject" />
-                      <button
-                        type="submit"
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-red-500/15 px-4 py-2 text-sm font-semibold text-red-300 ring-1 ring-red-500/40 hover:bg-red-500/25"
-                      >
-                        <X size={14} /> Zamítnout
-                      </button>
-                    </form>
-                  </div>
+                  {row.admin_note && (
+                    <div className="mt-3 rounded-xl border border-orange-500/30 bg-orange-500/5 p-3">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-orange-300">Předchozí admin poznámka</p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-orange-100/90">{row.admin_note}</p>
+                    </div>
+                  )}
+
+                  <ModerationActions incidentId={row.id} />
                 </li>
               )
             })}

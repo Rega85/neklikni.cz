@@ -109,6 +109,7 @@ export type IncidentStatus =
   | 'published'
   | 'objected'
   | 'removed'
+  | 'needs_more_info'
 
 
 /**
