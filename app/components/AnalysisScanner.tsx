@@ -30,7 +30,7 @@ export default function AnalysisScanner() {
     <div
       role="status"
       aria-live="polite"
-      className="analysis-scanner relative mx-auto w-full max-w-md overflow-hidden rounded-2xl border border-violet-500/25 bg-slate-950/70 backdrop-blur-xl shadow-[0_0_60px_-20px_rgba(139,92,246,0.55)] px-6 py-5"
+      className="analysis-scanner relative w-full overflow-hidden rounded-xl border border-violet-500/25 bg-slate-950/70 backdrop-blur-xl shadow-[0_0_40px_-15px_rgba(139,92,246,0.55)] px-5 py-4"
     >
       {!reduceMotion && (
         <>

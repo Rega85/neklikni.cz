@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Loader2, Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, MessageSquare, UserSearch, Plus, ArrowRight } from "lucide-react";
+import { Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, MessageSquare, UserSearch, Plus, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import HomeSections from "./components/HomeSections";
@@ -179,10 +179,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (loading && resultRef.current) {
+    if (result && resultRef.current) {
       resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [loading]);
+  }, [result]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -524,63 +524,55 @@ export default function Home() {
                       />
 
                       <div className="px-3 pb-3 space-y-2.5">
-                        <button
-                          onClick={handleAnalysis}
-                          disabled={loading || (!input.trim() && !image)}
-                          aria-busy={loading}
-                          className={`group relative w-full overflow-hidden py-3.5 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:cursor-not-allowed ${
-                            loading
-                              ? "bg-slate-900/70 border border-white/10 text-slate-400"
-                              : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-40 disabled:shadow-none"
-                          }`}
-                        >
-                          {loading ? (
-                            <>
-                              <Loader2 className="animate-spin" size={14} />
-                              <span className="text-xs font-medium tracking-wide">Analyzuji…</span>
-                            </>
-                          ) : (
-                            <>
+                        {loading ? (
+                          <AnalysisScanner />
+                        ) : (
+                          <>
+                            <button
+                              onClick={handleAnalysis}
+                              disabled={!input.trim() && !image}
+                              className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                            >
                               <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
                               Prověřit zprávu
-                            </>
-                          )}
-                        </button>
-
-                        {imagePreview ? (
-                          <div className="flex items-center gap-3 px-1">
-                            <img src={imagePreview} alt="Náhled" className="w-10 h-10 object-cover rounded-lg border border-white/10 shrink-0" />
-                            <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
-                            <button
-                              type="button"
-                              onClick={() => { setImage(null); setImagePreview(null); }}
-                              aria-label="Odebrat screenshot"
-                              className="w-7 h-7 rounded-full text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors"
-                            >
-                              <X size={14} />
                             </button>
-                          </div>
-                        ) : canUploadImage ? (
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
-                          >
-                            <Camera size={14} /> Přidat screenshot
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => { window.location.href = "/pricing"; }}
-                            className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
-                          >
-                            <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
-                          </button>
-                        )}
 
-                        <p className="text-slate-600 text-[10px] text-center hidden sm:block">
-                          Ctrl + Enter pro odeslání · Esc pro smazání
-                        </p>
+                            {imagePreview ? (
+                              <div className="flex items-center gap-3 px-1">
+                                <img src={imagePreview} alt="Náhled" className="w-10 h-10 object-cover rounded-lg border border-white/10 shrink-0" />
+                                <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
+                                <button
+                                  type="button"
+                                  onClick={() => { setImage(null); setImagePreview(null); }}
+                                  aria-label="Odebrat screenshot"
+                                  className="w-7 h-7 rounded-full text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            ) : canUploadImage ? (
+                              <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
+                              >
+                                <Camera size={14} /> Přidat screenshot
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => { window.location.href = "/pricing"; }}
+                                className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
+                              >
+                                <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
+                              </button>
+                            )}
+
+                            <p className="text-slate-600 text-[10px] text-center hidden sm:block">
+                              Ctrl + Enter pro odeslání · Esc pro smazání
+                            </p>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}
@@ -683,8 +675,6 @@ export default function Home() {
         <div ref={resultRef} className="w-full max-w-3xl px-4 space-y-4 text-center scroll-mt-24">
 
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
-
-          {loading && !result && <AnalysisScanner />}
 
           {result && (
             <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left max-w-3xl mx-auto w-full`}>
