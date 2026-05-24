@@ -11,8 +11,13 @@ const LEAD_RATE_WINDOW_MS = 60 * 60 * 1000; // 1h
 
 export const dynamic = "force-dynamic";
 
-function magnetEmailHtml(email: string) {
+function unsubscribeUrl(token: string): string {
+  return `${APP_URL}/api/unsubscribe?token=${encodeURIComponent(token)}`;
+}
+
+function magnetEmailHtml(email: string, unsubscribeToken: string) {
   const link = `${APP_URL}/podvody-2026`;
+  const unsubLink = unsubscribeUrl(unsubscribeToken);
   const safeEmail = escapeHtml(email);
   return `<!DOCTYPE html>
 <html lang="cs"><head><meta charset="utf-8"><title>10 nejčastějších českých podvodů 2026</title></head>
@@ -35,7 +40,8 @@ function magnetEmailHtml(email: string) {
         </td></tr>
         <tr><td style="padding:24px 32px;background:#f8fafc;border-top:1px solid #e2e8f0">
           <p style="margin:0 0 8px;font-size:13px;color:#475569"><strong>Tip:</strong> Až ti přijde podezřelá SMS nebo e-mail, vlož ji na <a href="${APP_URL}" style="color:#7c3aed">neklikni.cz</a> — AI ti řekne do 3 sekund, jestli je to podvod.</p>
-          <p style="margin:0;font-size:12px;color:#94a3b8">Tento e-mail jsi obdržel(a), protože ses přihlásil(a) na ${safeEmail}. Pokud jsi tak neučinil(a), e-mail ignoruj.</p>
+          <p style="margin:0 0 8px;font-size:12px;color:#94a3b8">Tento e-mail jsi obdržel(a), protože ses přihlásil(a) na ${safeEmail}.</p>
+          <p style="margin:0;font-size:12px;color:#94a3b8">Nechceš už další e-maily? <a href="${unsubLink}" style="color:#7c3aed">Odhlásit se</a> (jeden klik).</p>
         </td></tr>
       </table>
     </td></tr>
@@ -66,9 +72,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Neplatný e-mail" }, { status: 400 });
     }
 
+    // Vygeneruj token předem — pro nové leady jde do INSERTu, pro duplicitní
+    // (23505) ho nahradíme tokenem z existujícího řádku přes SELECT.
+    const generatedToken = crypto.randomUUID().replace(/-/g, "");
+
     const { error: insertErr } = await supabaseAdmin
       .from("leads")
-      .insert({ email, source });
+      .insert({ email, source, unsubscribe_token: generatedToken });
 
     // 23505 = unique violation (already in DB) — treat as success and re-send email
     if (insertErr && insertErr.code !== "23505") {
@@ -76,16 +86,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Nepodařilo se uložit" }, { status: 500 });
     }
 
+    // Po insertu (nebo při 23505) si vytáhni aktuální token a stav unsubscribed.
+    // Token z DB bere přednost před generatedToken — duplicit může mít už dávno
+    // vygenerovaný token z prvního insertu.
+    let leadToken = generatedToken;
+    let leadUnsubscribed = false;
+    {
+      const { data: leadRow, error: selectErr } = await supabaseAdmin
+        .from("leads")
+        .select("unsubscribe_token, unsubscribed")
+        .eq("email", email)
+        .eq("source", source)
+        .maybeSingle();
+
+      if (selectErr) {
+        console.warn("Lead post-insert select failed:", selectErr.message);
+      } else if (leadRow) {
+        leadToken = leadRow.unsubscribe_token ?? generatedToken;
+        leadUnsubscribed = leadRow.unsubscribed === true;
+      }
+    }
+
     // Send the lead-magnet email if Resend is configured. Failures are logged
     // but don't break the flow — the email is in DB and can be resent later.
-    if (process.env.RESEND_API_KEY && process.env.RESEND_FROM_EMAIL) {
+    // Pokud lead je už odhlášený, e-mail NEPOSÍLAT (porušilo by to odvolání souhlasu).
+    if (
+      !leadUnsubscribed &&
+      process.env.RESEND_API_KEY &&
+      process.env.RESEND_FROM_EMAIL
+    ) {
       try {
         const resend = new Resend(process.env.RESEND_API_KEY);
+        const unsubLink = `${APP_URL}/api/unsubscribe?token=${encodeURIComponent(leadToken)}`;
         await resend.emails.send({
           from: process.env.RESEND_FROM_EMAIL,
           to: email,
           subject: "10 nejčastějších českých podvodů 2026 — tvůj přehled",
-          html: magnetEmailHtml(email),
+          html: magnetEmailHtml(email, leadToken),
+          headers: {
+            // RFC 2369 — viditelné v hlavičkách, MUA z toho dělá tlačítko "Unsubscribe".
+            "List-Unsubscribe": `<${unsubLink}>`,
+            // RFC 8058 — souhlas s jednoklikovým POST, MUA na to neudělá redirect.
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
         });
       } catch (e) {
         console.warn("Lead magnet email send failed:", e);
