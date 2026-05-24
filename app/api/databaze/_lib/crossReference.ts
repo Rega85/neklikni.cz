@@ -23,7 +23,7 @@ import {
 } from '@/utils/databaze/identifiers'
 import type { IdentifierType, IncidentStatus } from '@/types/databaze'
 
-const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified', 'ai_reviewed']
+const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified']
 
 export interface ExtractedIdentifier {
   type: IdentifierType

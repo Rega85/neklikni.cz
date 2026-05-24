@@ -19,7 +19,7 @@ import type { DatabazeDatabase } from '../_lib/database'
 
 export const dynamic = 'force-dynamic'
 
-const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified', 'ai_reviewed']
+const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified']
 
 export async function GET() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL

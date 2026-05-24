@@ -48,7 +48,7 @@ import type {
 } from '@/types/databaze'
 import type { DatabazeDatabase } from '../_lib/database'
 import { runAiPrecheck } from '../_lib/precheck'
-import { sendReporterConfirmation } from '../_lib/email'
+import { sendAdminNewIncidentNotification, sendReporterConfirmation } from '../_lib/email'
 
 export const dynamic = 'force-dynamic'
 
@@ -738,6 +738,25 @@ export async function POST(req: Request) {
     await sendReporterConfirmation(userEmail, incidentId)
   } catch (err) {
     console.error('Reporter confirmation email exception:', err)
+  }
+
+  // 12c. Notifikace adminovi o nově příchozím záznamu v moderační frontě.
+  // Pošle se jen pokud incident reálně skončil ve frontě (ai_reviewed/pending);
+  // notified/published by neměly nastat bez admin akce, ale chrání nás explicit
+  // whitelist.
+  if (finalStatus === 'ai_reviewed' || finalStatus === 'pending' || finalStatus === 'pending_merge_review') {
+    try {
+      await sendAdminNewIncidentNotification({
+        incidentId,
+        status: finalStatus,
+        category: parsed.category,
+        severity: parsed.severity,
+        aiConfidence: aiResult.confidence_score,
+        descriptionExcerpt: parsed.description.slice(0, 240),
+      })
+    } catch (err) {
+      console.error('Admin notification email exception:', err)
+    }
   }
 
   // 13. Audit log

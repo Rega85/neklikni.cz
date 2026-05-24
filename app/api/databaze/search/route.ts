@@ -160,7 +160,10 @@ interface SearchResponse {
 }
 
 
-const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified', 'ai_reviewed']
+// Veřejně viditelné stavy. ai_reviewed sem už NEpatří — od přepnutí na
+// manuální schvalování čeká AI-prověřený incident ve frontě
+// /admin/moderace, dokud admin neudělá explicit "Schválit".
+const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified']
 
 
 // ── POST handler ─────────────────────────────────────

@@ -38,7 +38,7 @@ export const metadata: Metadata = {
 
 // ── Stats fetcher ────────────────────────────────────
 
-const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified', 'ai_reviewed']
+const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified']
 
 interface Stats {
   subjects: number | null
