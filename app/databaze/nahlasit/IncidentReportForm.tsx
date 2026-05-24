@@ -1149,6 +1149,20 @@ function Step4({ data, onChange }: Step4Props) {
         potvrzení o platbě, faktura, e-mailová korespondence.
       </div>
 
+      {/* Varování — co NEnahrávat (GDPR / minimalizace dat) */}
+      <div className="rounded-md border-l-4 border-amber-500 bg-amber-500/10 p-3 text-sm text-amber-100">
+        <p className="font-semibold">⚠️ Nenahrávejte:</p>
+        <ul className="mt-1 ml-4 list-disc space-y-0.5 text-amber-100/90">
+          <li>doklady totožnosti (občanský průkaz, pas, řidičský průkaz)</li>
+          <li>rodná čísla a čísla dokladů</li>
+          <li>údaje o platebních kartách (PAN, CVV, expirace)</li>
+          <li>intimní nebo nahý obsah</li>
+        </ul>
+        <p className="mt-2 text-amber-100/80">
+          Nahrávejte pouze screenshoty komunikace a inzerátů potřebné k doložení incidentu.
+        </p>
+      </div>
+
       {/* Drop zone — visible only when room for more */}
       {canAddMore && (
         <label
