@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database } from "lucide-react";
+import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database, Flag } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -84,6 +84,21 @@ export default function Header() {
     window.location.href = "/";
   };
 
+  const isHomeActive = pathname === "/";
+  const isBlogActive = pathname === "/blog" || pathname.startsWith("/blog/");
+  const isNahlasitActive = pathname.startsWith("/databaze/nahlasit");
+  const isDatabazeActive = pathname === "/databaze" || (pathname.startsWith("/databaze") && !isNahlasitActive);
+
+  const navBase = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors";
+  const navInactive = "text-slate-400 hover:text-white";
+  const navActive = "text-white bg-slate-900/60 ring-1 ring-purple-500/25";
+  const navReportInactive = "text-purple-300 ring-1 ring-purple-500/30 hover:text-white hover:ring-purple-500/50";
+  const navReportActive = "text-white bg-purple-500/15 ring-1 ring-purple-500/50";
+
+  const mobileBase = "flex items-center gap-3 px-3 py-3 rounded-xl transition-colors text-sm font-semibold";
+  const mobileInactive = "hover:bg-white/5 text-slate-300 hover:text-white";
+  const mobileActive = "bg-purple-500/10 text-white ring-1 ring-purple-500/30";
+
   const tier = profile?.tier || "free";
   const tc = TIER_CONFIG[tier] || TIER_CONFIG.free;
   const credits = profile?.credits_remaining ?? 0;
@@ -100,15 +115,18 @@ export default function Header() {
               NEKLIKNI<span className="brand-gradient-text">.CZ</span>
             </span>
           </Link>
-          <nav className="hidden sm:flex items-center gap-4">
-            <Link href="/" onClick={handleHomeClick} className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+          <nav className="hidden sm:flex items-center gap-2">
+            <Link href="/" onClick={handleHomeClick} aria-current={isHomeActive ? "page" : undefined} className={`${navBase} ${isHomeActive ? navActive : navInactive}`}>
               <Home size={13} /> Domů
             </Link>
-            <Link href="/blog" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+            <Link href="/blog" aria-current={isBlogActive ? "page" : undefined} className={`${navBase} ${isBlogActive ? navActive : navInactive}`}>
               <BookOpen size={13} /> Blog
             </Link>
-            <Link href="/databaze" className="flex items-center gap-1.5 text-slate-400 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors">
+            <Link href="/databaze" aria-current={isDatabazeActive ? "page" : undefined} className={`${navBase} ${isDatabazeActive ? navActive : navInactive}`}>
               <Database size={13} /> Databáze
+            </Link>
+            <Link href="/databaze/nahlasit" aria-current={isNahlasitActive ? "page" : undefined} className={`${navBase} ${isNahlasitActive ? navReportActive : navReportInactive}`}>
+              <Flag size={13} /> Nahlásit
             </Link>
           </nav>
         </div>
@@ -145,18 +163,22 @@ export default function Header() {
                   <Link
                     href="/"
                     onClick={(e) => { handleHomeClick(e); closeMobile(); }}
-                    className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold"
+                    aria-current={isHomeActive ? "page" : undefined}
+                    className={`${mobileBase} ${isHomeActive ? mobileActive : mobileInactive}`}
                   >
-                    <Home size={16} className="text-slate-500 shrink-0" /><span>Domů</span>
+                    <Home size={16} className={`shrink-0 ${isHomeActive ? "text-purple-300" : "text-slate-500"}`} /><span>Domů</span>
                   </Link>
-                  <Link href="/blog" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
-                    <BookOpen size={16} className="text-slate-500 shrink-0" /><span>Blog</span>
+                  <Link href="/blog" onClick={closeMobile} aria-current={isBlogActive ? "page" : undefined} className={`${mobileBase} ${isBlogActive ? mobileActive : mobileInactive}`}>
+                    <BookOpen size={16} className={`shrink-0 ${isBlogActive ? "text-purple-300" : "text-slate-500"}`} /><span>Blog</span>
                   </Link>
-                  <Link href="/databaze" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
-                    <Database size={16} className="text-slate-500 shrink-0" /><span>Databáze</span>
+                  <Link href="/databaze" onClick={closeMobile} aria-current={isDatabazeActive ? "page" : undefined} className={`${mobileBase} ${isDatabazeActive ? mobileActive : mobileInactive}`}>
+                    <Database size={16} className={`shrink-0 ${isDatabazeActive ? "text-purple-300" : "text-slate-500"}`} /><span>Databáze</span>
                   </Link>
-                  <Link href="/pricing" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
-                    <Tag size={16} className="text-slate-500 shrink-0" /><span>Ceník</span>
+                  <Link href="/databaze/nahlasit" onClick={closeMobile} aria-current={isNahlasitActive ? "page" : undefined} className={`${mobileBase} ${isNahlasitActive ? mobileActive : "text-purple-300 hover:text-white ring-1 ring-purple-500/30 hover:ring-purple-500/50"}`}>
+                    <Flag size={16} className="text-purple-300 shrink-0" /><span>Nahlásit</span>
+                  </Link>
+                  <Link href="/pricing" onClick={closeMobile} aria-current={pathname === "/pricing" ? "page" : undefined} className={`${mobileBase} ${pathname === "/pricing" ? mobileActive : mobileInactive}`}>
+                    <Tag size={16} className={`shrink-0 ${pathname === "/pricing" ? "text-purple-300" : "text-slate-500"}`} /><span>Ceník</span>
                   </Link>
                   {user && (
                     <Link href="/referral" onClick={closeMobile} className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm font-semibold">
