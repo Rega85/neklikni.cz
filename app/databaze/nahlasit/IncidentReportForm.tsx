@@ -58,6 +58,12 @@ const TOTAL_STEPS = 5
 
 const STEP_LABELS = ['Co se stalo?', 'O kom?', 'Detaily', 'Důkazy', 'Potvrzení']
 
+// Verze znění tří souhlasů (Step 5). Posílá se do API a perzistuje
+// v audit_log.metadata.consent.version — kdyby se znění v budoucnu
+// změnilo, existující záznamy zachovají vazbu na text, který uživatel
+// reálně viděl. Bump při jakékoli změně textu v ConsentRow níže.
+const CONSENT_VERSION = '2026-05'
+
 // Typované option arrays — `Object.entries` ztrácí specifický typ klíče.
 const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS) as Array<[IncidentCategory, string]>
 const PLATFORM_OPTIONS = Object.entries(PLATFORM_LABELS) as Array<[IncidentPlatform, string]>
@@ -324,9 +330,10 @@ export function IncidentReportForm() {
           formData.identifiers.map((i) => ({ type: i.type, value: i.value })),
         ),
       )
-      payload.append('truth_confirmation', 'true')
-      payload.append('data_processing_consent', 'true')
-      payload.append('law_enforcement_consent', 'true')
+      payload.append('truth_confirmation', String(formData.truth_confirmation))
+      payload.append('data_processing_consent', String(formData.data_processing_consent))
+      payload.append('law_enforcement_consent', String(formData.law_enforcement_consent))
+      payload.append('consent_version', CONSENT_VERSION)
       for (const file of formData.evidence_files) {
         payload.append('evidence_files', file)
       }

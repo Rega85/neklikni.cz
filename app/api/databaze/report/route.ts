@@ -150,7 +150,14 @@ interface ParsedFields {
   truth_confirmation: boolean
   data_processing_consent: boolean
   law_enforcement_consent: boolean
+  consent_version: string
 }
+
+// Whitelist přijatelných verzí znění souhlasu. Klient pošle aktuální
+// verzi (CONSENT_VERSION v IncidentReportForm.tsx). Cokoli mimo whitelist
+// odmítáme — chrání proti zfalšované hodnotě, která by ublížila integritě
+// audit trailu.
+const ACCEPTED_CONSENT_VERSIONS: ReadonlySet<string> = new Set(['2026-05'])
 
 
 // ── Helpers ──────────────────────────────────────────
@@ -306,6 +313,12 @@ function parseFormData(form: FormData): ParsedFields | string {
     return 'Musíte souhlasit s předáním údajů orgánům činným v trestním řízení'
   }
 
+  const consentVersionRaw = form.get('consent_version')
+  if (typeof consentVersionRaw !== 'string' || !ACCEPTED_CONSENT_VERSIONS.has(consentVersionRaw)) {
+    return 'Neplatná verze znění souhlasu'
+  }
+  const consent_version = consentVersionRaw
+
   // soubory
   const filesRaw = form.getAll('evidence_files')
   const files: File[] = []
@@ -339,6 +352,7 @@ function parseFormData(form: FormData): ParsedFields | string {
     truth_confirmation,
     data_processing_consent,
     law_enforcement_consent,
+    consent_version,
   }
 }
 
@@ -730,6 +744,10 @@ export async function POST(req: Request) {
   try {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
     const userAgent = req.headers.get('user-agent') || null
+    // consent_at je server-side čas přijetí submitu — referenční bod pro
+    // doložitelnost při právním sporu. Drží se pohromadě s IP+UA, takže
+    // jeden audit_log řádek tvoří kompletní forenzní snímek.
+    const consentAt = new Date().toISOString()
     await supabaseAdmin()
       .from('audit_log')
       .insert({
@@ -751,6 +769,13 @@ export async function POST(req: Request) {
           new_identifiers_count: newIdentifiersToInsert.length,
           needs_merge_review: needsMergeReview,
           conflicting_subject_ids: conflictingSubjectIds,
+          consent: {
+            truth_confirmed: parsed.truth_confirmation,
+            data_processing_consent: parsed.data_processing_consent,
+            law_enforcement_consent: parsed.law_enforcement_consent,
+            version: parsed.consent_version,
+            consent_at: consentAt,
+          },
         },
       })
   } catch (err) {
