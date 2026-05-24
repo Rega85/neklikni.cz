@@ -86,6 +86,7 @@ export default function Home() {
   const [subjectQuery, setSubjectQuery] = useState("");
   const [dbStats, setDbStats] = useState<{ subjects: number | null; incidents: number | null }>({ subjects: null, incidents: null });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const PLACEHOLDERS = [
     "Vložte podezřelou zprávu, SMS nebo odkaz...",
@@ -176,6 +177,12 @@ export default function Home() {
     window.addEventListener("homeReset", reset);
     return () => window.removeEventListener("homeReset", reset);
   }, []);
+
+  useEffect(() => {
+    if (loading && resultRef.current) {
+      resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [loading]);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -520,11 +527,17 @@ export default function Home() {
                         <button
                           onClick={handleAnalysis}
                           disabled={loading || (!input.trim() && !image)}
-                          className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                          aria-busy={loading}
+                          className={`group relative w-full overflow-hidden py-3.5 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:cursor-not-allowed ${
+                            loading
+                              ? "bg-slate-900/70 border border-white/10 text-slate-400"
+                              : "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 disabled:opacity-40 disabled:shadow-none"
+                          }`}
                         >
                           {loading ? (
                             <>
-                              <Loader2 className="animate-spin" size={18} /> Analyzuji…
+                              <Loader2 className="animate-spin" size={14} />
+                              <span className="text-xs font-medium tracking-wide">Analyzuji…</span>
                             </>
                           ) : (
                             <>
@@ -666,7 +679,7 @@ export default function Home() {
         </section>
 
         {/* ── Results / scanner / cross-reference / viral share ──── */}
-        <div className="max-w-3xl w-full space-y-4 text-center relative z-10 mt-10">
+        <div ref={resultRef} className="max-w-3xl w-full mx-auto px-4 space-y-4 text-center relative z-10 mt-10 scroll-mt-24">
 
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
