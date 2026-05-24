@@ -679,7 +679,8 @@ export default function Home() {
         </section>
 
         {/* ── Results / scanner / cross-reference / viral share ──── */}
-        <div ref={resultRef} className="max-w-3xl w-full mx-auto px-4 space-y-4 text-center relative z-10 mt-10 scroll-mt-24">
+        <section className="w-full flex justify-center relative z-10 mt-10">
+        <div ref={resultRef} className="w-full max-w-3xl px-4 space-y-4 text-center scroll-mt-24">
 
           {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
@@ -836,6 +837,7 @@ export default function Home() {
             );
           })()}
         </div>
+        </section>
 
         <ErrorBoundary>
           <HomeSections />
