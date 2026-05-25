@@ -30,6 +30,7 @@ import { cookies } from 'next/headers'
 import {
   normalizePhone,
   normalizeAccount,
+  normalizeIban,
   normalizeEmail,
   normalizeFacebookUrl,
   normalizeVarSymbol,
@@ -170,7 +171,7 @@ function normalizeByType(
     case 'phone':
       return normalizePhone(raw)
     case 'account':
-      return normalizeAccount(raw)
+      return normalizeAccount(raw) ?? normalizeIban(raw)
     case 'email':
       return normalizeEmail(raw)
     case 'facebook_url':

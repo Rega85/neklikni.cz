@@ -35,6 +35,7 @@ import {
   type IncidentCategory,
   type SubjectVisibility,
 } from '@/types/databaze'
+import { identifierLabel } from '@/utils/databaze/identifiers'
 
 
 // ── API response shapes ──────────────────────────────
@@ -355,7 +356,7 @@ function FoundPanel({
                       className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs"
                     >
                       <Icon size={12} className="text-slate-400" aria-hidden="true" />
-                      <span className="text-slate-400">{TYPE_LABEL[id.type]}:</span>
+                      <span className="text-slate-400">{identifierLabel(id.type, id.value_masked)}:</span>
                       <span className="font-mono text-slate-200">{id.value_masked}</span>
                     </span>
                   )

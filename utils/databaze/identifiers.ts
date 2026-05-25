@@ -61,6 +61,41 @@ export function normalizePhone(raw: string): string | null {
 
 
 /**
+ * Detekuje a normalizuje IBAN (mezinárodní formát čísla účtu).
+ *
+ * IBAN má 2 písmena ISO země + 2 kontrolní číslice + 11-30 alfanumerických
+ * znaků (celková délka 15-34). Normalizace: strip mezer, uppercase.
+ *
+ * Příklady: `LT983130010177064564` (Revolut LT),
+ * `CZ6508000000192000145399` (Česká spořitelna CZ),
+ * `DE89370400440532013000` (DE).
+ *
+ * Nepoužíváme úplnou MOD-97 validaci — pro účely lookup-key stačí formát.
+ *
+ * @example
+ *   normalizeIban('LT98 3130 0101 7706 4564') // 'LT983130010177064564'
+ *   normalizeIban('cz6508000000192000145399') // 'CZ6508000000192000145399'
+ *   normalizeIban('12345/0100')               // null  (česky účet, viz normalizeAccount)
+ *   normalizeIban('abc')                      // null
+ */
+export function normalizeIban(raw: string): string | null {
+  if (typeof raw !== 'string') return null
+  const cleaned = raw.replace(/\s/g, '').toUpperCase()
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(cleaned)) return null
+  return cleaned
+}
+
+
+/**
+ * Vrátí true, pokud (potenciálně maskovaný) string vypadá jako IBAN —
+ * tj. začíná 2 písmeny + 2 čísly. Použité pro výběr labelu při zobrazení.
+ */
+export function looksLikeIban(value: string): boolean {
+  return typeof value === 'string' && /^[A-Z]{2}\d{2}/.test(value)
+}
+
+
+/**
  * Normalizuje české číslo účtu do tvaru `[prefix-]number/bank`.
  *
  * Akceptuje: "12345/0100", "12345-6789/0100", "0000-12345/0100".
@@ -193,10 +228,39 @@ export function detectIdentifierType(raw: string): IdentifierType | null {
   if (normalizeEmail(raw) !== null) return 'email'
   if (normalizeFacebookUrl(raw) !== null) return 'facebook_url'
   if (normalizeAccount(raw) !== null) return 'account'
+  if (normalizeIban(raw) !== null) return 'account'
   if (normalizePhone(raw) !== null) return 'phone'
   if (normalizeVarSymbol(raw) !== null) return 'var_symbol'
 
   return null
+}
+
+
+/**
+ * Lidsky čitelný popisek typu identifikátoru pro UI (admin moderace,
+ * veřejný search FoundPanel, homepage DB match list). Pokud je hodnota
+ * (případně maskovaná) ve tvaru IBAN, vrátí "Číslo účtu (IBAN)", aby
+ * admin/uživatel poznal, že nejde o český formát.
+ *
+ * `valueMasked` je volitelné — bez něj se vrátí obecný label pro `account`.
+ */
+export function identifierLabel(type: IdentifierType, valueMasked?: string): string {
+  switch (type) {
+    case 'phone':
+      return 'Telefon'
+    case 'email':
+      return 'E-mail'
+    case 'facebook_url':
+      return 'Profil na platformě'
+    case 'var_symbol':
+      return 'Variabilní symbol'
+    case 'account':
+      if (valueMasked && looksLikeIban(valueMasked)) return 'Číslo účtu (IBAN)'
+      return 'Číslo účtu'
+    case 'other':
+    default:
+      return 'Neurčený identifikátor'
+  }
 }
 
 
@@ -249,6 +313,7 @@ export function maskIdentifier(value: string, type: IdentifierType): string {
     case 'phone':
       return maskPhone(value)
     case 'account':
+      if (looksLikeIban(value)) return maskIban(value)
       return maskAccount(value)
     case 'email':
       return maskEmail(value)
@@ -269,6 +334,17 @@ function maskPhone(value: string): string {
   if (!match) return maskFallback(value)
   const [, country, firstDigit, lastTwo] = match
   return `${country} ${firstDigit}** *** *${lastTwo}`
+}
+
+
+function maskIban(value: string): string {
+  // IBAN: ponech country prefix (LT/CZ/...) + 2 kontrolní cifry + posledních 4 znaků
+  // např. "LT983130010177064564" → "LT98 **** **** **** 4564"
+  const cleaned = value.replace(/\s/g, '').toUpperCase()
+  if (cleaned.length < 8) return maskFallback(cleaned)
+  const head = cleaned.slice(0, 4)
+  const tail = cleaned.slice(-4)
+  return `${head}${'*'.repeat(Math.max(4, cleaned.length - 8))}${tail}`
 }
 
 

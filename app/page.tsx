@@ -36,14 +36,21 @@ type AnalysisResult = {
   database_matches?: DatabaseMatch[];
 };
 
-const DB_MATCH_TYPE_LABEL: Record<DatabaseMatch["type"], string> = {
-  phone: "Telefon",
-  account: "Číslo účtu",
-  email: "E-mail",
-  facebook_url: "Facebook profil",
-  var_symbol: "Variabilní symbol",
-  other: "Identifikátor",
-};
+// DB match labels — pro `account` rozlišujeme IBAN (zahr. účet) od českého
+// čísla účtu podle prefixu maskované hodnoty. Sjednoceno s identifierLabel()
+// v utils/databaze/identifiers.ts.
+function dbMatchLabel(type: DatabaseMatch["type"], valueMasked: string): string {
+  switch (type) {
+    case "phone":         return "Telefon";
+    case "email":         return "E-mail";
+    case "facebook_url":  return "Profil na platformě";
+    case "var_symbol":    return "Variabilní symbol";
+    case "account":
+      return /^[A-Z]{2}\d{2}/.test(valueMasked) ? "Číslo účtu (IBAN)" : "Číslo účtu";
+    case "other":
+    default:              return "Neurčený identifikátor";
+  }
+}
 
 type UserProfile = { tier: string; credits_remaining?: number };
 
@@ -814,7 +821,7 @@ export default function Home() {
                     className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-2xl border border-red-500/30 bg-red-500/5 p-4"
                   >
                     <div className="text-sm text-slate-100">
-                      <span className="font-bold">{DB_MATCH_TYPE_LABEL[m.type] ?? "Identifikátor"}</span>{" "}
+                      <span className="font-bold">{dbMatchLabel(m.type, m.value_masked)}</span>{" "}
                       <span className="font-mono text-red-200">{m.value_masked}</span>
                       <span className="text-slate-300"> — nahlášeno v {m.incident_count}{" "}
                         {m.incident_count === 1

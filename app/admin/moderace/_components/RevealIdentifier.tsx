@@ -8,6 +8,8 @@
 
 import { useState } from 'react'
 import { Eye, EyeOff, Loader2 } from 'lucide-react'
+import { identifierLabel } from '@/utils/databaze/identifiers'
+import type { IdentifierType } from '@/types/databaze'
 
 interface Props {
   identifierId: string
@@ -17,6 +19,7 @@ interface Props {
 }
 
 export function RevealIdentifier({ identifierId, incidentId, type, valueMasked }: Props) {
+  const label = identifierLabel(type as IdentifierType, valueMasked)
   const [revealed, setRevealed] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -51,7 +54,7 @@ export function RevealIdentifier({ identifierId, incidentId, type, valueMasked }
 
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-950/60 px-2.5 py-1 text-xs">
-      <span className="text-slate-400">{type}:</span>
+      <span className="text-slate-400">{label}:</span>
       <span className="font-mono text-slate-200">{revealed ?? valueMasked}</span>
       {revealed ? (
         <button

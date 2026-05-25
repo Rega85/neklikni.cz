@@ -35,6 +35,7 @@ import {
   normalizeAccount,
   normalizeEmail,
   normalizeFacebookUrl,
+  normalizeIban,
   normalizePhone,
   normalizeVarSymbol,
 } from '@/utils/databaze/identifiers'
@@ -92,7 +93,7 @@ function normalizeByType(type: IdentifierType, raw: string): string | null {
     case 'phone':
       return normalizePhone(raw)
     case 'account':
-      return normalizeAccount(raw)
+      return normalizeAccount(raw) ?? normalizeIban(raw)
     case 'email':
       return normalizeEmail(raw)
     case 'facebook_url':
