@@ -13,6 +13,9 @@ export async function GET(request: Request) {
   const code = searchParams.get('code')
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type')
+  // Supabase posts auth errors back as ?error=...&error_description=...
+  const errorParam = searchParams.get('error')
+  const errorDescription = searchParams.get('error_description')
   // Validate next: must be a relative path starting with "/" and no double slashes or protocol
   const rawNext = searchParams.get('next') ?? '/'
   const next = /^\/[^/\\]/.test(rawNext) || rawNext === '/' ? rawNext : '/'
@@ -47,12 +50,19 @@ export async function GET(request: Request) {
     cookieStore.delete('neklikni_ref')
   }
 
+  // If Supabase forwarded an error (expired link, access denied), surface it
+  if (errorParam) {
+    const reason = encodeURIComponent(errorDescription || errorParam)
+    return NextResponse.redirect(`${origin}/login?error=${reason}`)
+  }
+
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       await tryApplyReferral()
       return NextResponse.redirect(`${origin}${next}`)
     }
+    console.warn('exchangeCodeForSession failed:', error.message)
   }
 
   if (token_hash && type) {
@@ -64,7 +74,8 @@ export async function GET(request: Request) {
       if (type === 'signup') await tryApplyReferral()
       return NextResponse.redirect(`${origin}${next}`)
     }
+    console.warn('verifyOtp failed:', error.message)
   }
 
-  return NextResponse.redirect(`${origin}/login?error=Prihlaseni_selhalo`)
+  return NextResponse.redirect(`${origin}/login?error=link_expired`)
 }

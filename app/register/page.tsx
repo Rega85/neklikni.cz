@@ -58,7 +58,13 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
       <CheckCircle2 className="w-20 h-20 text-green-400 mb-6 animate-bounce" />
       <h1 className="text-3xl font-bold text-white mb-4">Zkontroluj e-mail!</h1>
-      <p className="text-slate-400">Poslali jsme ti potvrzovací odkaz na <span className="text-white font-bold">{email}</span>.</p>
+      <p className="text-slate-400 max-w-md">
+        Poslali jsme ti potvrzovací odkaz na <span className="text-white font-bold">{email}</span>.
+        Klikni na tlačítko v e-mailu a jsi rovnou přihlášen — heslo nemusíš zadávat znovu.
+      </p>
+      <p className="text-slate-500 text-sm mt-4 max-w-md">
+        Nedorazil? Zkontroluj složku <span className="text-slate-300">Spam / Hromadné</span>.
+      </p>
       <button onClick={() => router.push('/login')} className="mt-8 text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">
         Zpět na přihlášení
       </button>

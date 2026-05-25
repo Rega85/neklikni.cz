@@ -6,16 +6,29 @@ import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 type Mode = "password" | "magic";
 
+function translateAuthError(raw: string | null): string {
+  if (!raw) return '';
+  const msg = raw.toLowerCase();
+  if (msg.includes('expired') || msg.includes('link_expired'))
+    return 'Odkaz už není platný (vypršel nebo byl použit). Pošli si nový níže.';
+  if (msg.includes('access_denied') || msg.includes('otp_expired'))
+    return 'Odkaz vypršel. Pošli si nový níže.';
+  if (msg === 'prihlaseni_selhalo')
+    return 'Přihlášení se nepodařilo. Zkus to znovu, nebo si pošli nový odkaz.';
+  return decodeURIComponent(raw).replace(/\+/g, ' ');
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [mode, setMode] = useState<Mode>("password");
-  const [error, setError] = useState('');
 
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect');
+  const initialError = translateAuthError(searchParams.get('error'));
+  const [error, setError] = useState(initialError);
 
   // Validate redirect: must be a relative path starting with single "/"
   // (protects against open-redirect attacks via "//evil.com" or "https://...").
@@ -82,7 +95,13 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
       <CheckCircle2 className="w-20 h-20 text-green-400 mb-6 animate-bounce" />
       <h1 className="text-3xl font-bold text-white mb-4">Zkontroluj e-mail!</h1>
-      <p className="text-slate-400">Poslali jsme ti odkaz na {email}.</p>
+      <p className="text-slate-400 max-w-md">
+        Poslali jsme ti přihlašovací odkaz na <span className="text-white font-bold">{email}</span>.
+        Klikni na něj a jsi přihlášen — žádné heslo není potřeba.
+      </p>
+      <p className="text-slate-500 text-sm mt-4 max-w-md">
+        Nedorazil? Zkontroluj složku <span className="text-slate-300">Spam / Hromadné</span>.
+      </p>
     </div>
   );
 
@@ -91,7 +110,9 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center">
         <h1 className="text-3xl font-bold text-white mb-2">Přihlášení</h1>
         <p className="text-slate-400 mb-8">
-          {mode === "password" ? "Přihlas se e-mailem a heslem." : "Pošleme ti magický odkaz."}
+          {mode === "password"
+            ? "Přihlas se e-mailem a heslem."
+            : "Pošleme ti e-mailem odkaz, klikneš a jsi přihlášen."}
         </p>
 
         {/* Přepínač módu */}
@@ -101,14 +122,14 @@ export default function LoginPage() {
             onClick={() => { setMode("password"); setError(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === "password" ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}
           >
-            Heslo
+            Heslem
           </button>
           <button
             type="button"
             onClick={() => { setMode("magic"); setError(''); }}
             className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${mode === "magic" ? "bg-purple-600 text-white" : "text-slate-400 hover:text-white"}`}
           >
-            Magic link
+            Odkazem v e-mailu
           </button>
         </div>
 
@@ -163,7 +184,7 @@ export default function LoginPage() {
             className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
           >
             {loading ? "Zpracovávám..." : <>
-              {mode === "password" ? "Přihlásit se" : "Poslat magic link"}
+              {mode === "password" ? "Přihlásit se" : "Poslat přihlašovací odkaz"}
               <ArrowRight size={20} />
             </>}
           </button>
