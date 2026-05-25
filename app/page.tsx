@@ -74,8 +74,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [ctaCopied, setCtaCopied] = useState(false);
-  const [image, setImage] = useState<string | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [images, setImages] = useState<string[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [upsellReason, setUpsellReason] = useState<"anon_daily" | "no_credits" | null>(null);
   const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
@@ -170,8 +169,7 @@ export default function Home() {
       setInput("");
       setResult(null);
       setError(null);
-      setImage(null);
-      setImagePreview(null);
+      setImages([]);
       setUpsellReason(null);
     };
     window.addEventListener("homeReset", reset);
@@ -184,39 +182,77 @@ export default function Home() {
     }
   }, [result]);
 
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    if (file.size > 4 * 1024 * 1024) {
-      setError("Obrázek je příliš velký. Maximum jsou 4 MB.");
+  const MAX_IMAGES = 4;
+  const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => resolve(ev.target?.result as string);
+      reader.onerror = () => reject(new Error("Soubor nelze přečíst."));
+      reader.readAsDataURL(file);
+    });
+
+  const addImageFiles = async (files: File[]) => {
+    if (files.length === 0) return;
+    setError(null);
+    const remaining = MAX_IMAGES - images.length;
+    if (remaining <= 0) {
+      setError(`Maximum ${MAX_IMAGES} screenshotů na jednu analýzu.`);
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const b64 = ev.target?.result as string;
-      setImage(b64);
-      setImagePreview(b64);
+    const toProcess = files.slice(0, remaining);
+    const truncated = files.length > remaining;
+    const newOnes: string[] = [];
+    for (const f of toProcess) {
+      if (!f.type.startsWith("image/")) {
+        setError("Lze nahrávat pouze obrázky (PNG, JPG, WEBP).");
+        continue;
+      }
+      if (f.size > MAX_IMAGE_BYTES) {
+        setError(`Obrázek "${f.name}" je příliš velký (max 4 MB).`);
+        continue;
+      }
+      try {
+        newOnes.push(await readFileAsDataUrl(f));
+      } catch {
+        setError("Některý soubor se nepodařilo přečíst.");
+      }
+    }
+    if (newOnes.length > 0) {
+      setImages((prev) => [...prev, ...newOnes]);
       setInput("");
       setResult(null);
-      setError(null);
-    };
-    reader.readAsDataURL(file);
+    }
+    if (truncated) {
+      setError(`Přijal jsem prvních ${remaining}. Limit je ${MAX_IMAGES} screenshotů.`);
+    }
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length > 0) await addImageFiles(files);
+  };
+
+  const removeImageAt = (idx: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleAnalysis = useCallback(async () => {
-    if ((!input.trim() && !image) || loading) return;
+    const hasImages = images.length > 0;
+    if ((!input.trim() && !hasImages) || loading) return;
     setLoading(true);
     setResult(null);
     setError(null);
-    trackEvent("analyze_started", { kind: image ? "image" : "text" });
+    trackEvent("analyze_started", { kind: hasImages ? "image" : "text", image_count: images.length });
 
     try {
       const res = await fetch("/api/analyze", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(image ? { image } : { text: input }),
+        body: JSON.stringify(hasImages ? { images } : { text: input }),
       });
 
       const contentType = res.headers.get("content-type");
@@ -249,9 +285,9 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [input, image, loading, profile?.tier]);
+  }, [input, images, loading, profile?.tier]);
 
-  const handleClear = () => { setInput(""); setResult(null); setError(null); setImage(null); setImagePreview(null); };
+  const handleClear = () => { setInput(""); setResult(null); setError(null); setImages([]); };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -263,16 +299,8 @@ export default function Home() {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) { setError("Lze přetáhnout pouze obrázky."); return; }
-    if (file.size > 4 * 1024 * 1024) { setError("Obrázek je příliš velký. Maximum jsou 4 MB."); return; }
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const b64 = ev.target?.result as string;
-      setImage(b64); setImagePreview(b64); setInput(""); setResult(null); setError(null);
-    };
-    reader.readAsDataURL(file);
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (files.length > 0) void addImageFiles(files);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -481,7 +509,7 @@ export default function Home() {
                           <Sparkles size={13} className="text-purple-400" />
                           Vlož zprávu, AI odhalí podvod během chvilky
                         </p>
-                        {(input || image || result || error) && (
+                        {(input || images.length > 0 || result || error) && (
                           <button
                             onClick={handleClear}
                             aria-label="Vymazat vstup"
@@ -518,6 +546,7 @@ export default function Home() {
                       <input
                         ref={fileInputRef}
                         type="file"
+                        multiple
                         accept="image/png, image/jpeg, image/webp"
                         className="hidden"
                         onChange={handleImageSelect}
@@ -530,42 +559,67 @@ export default function Home() {
                           <>
                             <button
                               onClick={handleAnalysis}
-                              disabled={!input.trim() && !image}
+                              disabled={!input.trim() && images.length === 0}
                               className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                             >
                               <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
                               Prověřit zprávu
                             </button>
 
-                            {imagePreview ? (
-                              <div className="flex items-center gap-3 px-1">
-                                <img src={imagePreview} alt="Náhled" className="w-10 h-10 object-cover rounded-lg border border-white/10 shrink-0" />
-                                <p className="flex-1 text-xs text-slate-400 truncate">Screenshot připraven k analýze</p>
+                            {images.length > 0 && (
+                              <div className="px-1 space-y-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <p className="text-slate-400">
+                                    Screenshoty připravené k analýze · {images.length}/{MAX_IMAGES}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => setImages([])}
+                                    className="text-slate-500 hover:text-red-400 transition-colors"
+                                  >
+                                    Vymazat vše
+                                  </button>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {images.map((src, idx) => (
+                                    <div key={idx} className="relative group/thumb">
+                                      <img
+                                        src={src}
+                                        alt={`Screenshot ${idx + 1}`}
+                                        className="w-14 h-14 object-cover rounded-lg border border-white/10"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => removeImageAt(idx)}
+                                        aria-label={`Odebrat screenshot ${idx + 1}`}
+                                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 border border-white/20 text-slate-300 hover:text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors"
+                                      >
+                                        <X size={11} />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {images.length < MAX_IMAGES && (
+                              canUploadImage ? (
                                 <button
                                   type="button"
-                                  onClick={() => { setImage(null); setImagePreview(null); }}
-                                  aria-label="Odebrat screenshot"
-                                  className="w-7 h-7 rounded-full text-slate-500 hover:text-red-400 hover:bg-red-500/10 flex items-center justify-center transition-colors"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
                                 >
-                                  <X size={14} />
+                                  <Camera size={14} /> {images.length === 0 ? "Přidat screenshot" : "Přidat další"} <span className="text-purple-400/60 ml-1">(až {MAX_IMAGES})</span>
                                 </button>
-                              </div>
-                            ) : canUploadImage ? (
-                              <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
-                              >
-                                <Camera size={14} /> Přidat screenshot
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => { window.location.href = "/pricing"; }}
-                                className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
-                              >
-                                <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
-                              </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => { window.location.href = "/pricing"; }}
+                                  className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
+                                >
+                                  <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
+                                </button>
+                              )
                             )}
 
                             <p className="text-slate-600 text-[10px] text-center hidden sm:block">

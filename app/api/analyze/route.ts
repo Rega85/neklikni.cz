@@ -116,28 +116,45 @@ async function runCrossReference(text: string | null | undefined): Promise<Datab
   }
 }
 
+const MAX_IMAGES = 4;
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { text, image } = body;
+    const { text } = body;
 
-    if (!image && (!text || text.trim().length < 3)) {
+    // Akceptujeme buď `images: string[]` (multi-screenshot) nebo `image: string`
+    // (legacy single-shot). Normalizujeme na pole.
+    const rawImages: unknown[] = Array.isArray(body?.images)
+      ? body.images
+      : typeof body?.image === "string"
+        ? [body.image]
+        : [];
+    const images: string[] = [];
+    for (const item of rawImages) {
+      if (typeof item === "string" && item.length > 0) images.push(item);
+    }
+
+    if (images.length === 0 && (!text || text.trim().length < 3)) {
       return NextResponse.json({ error: "Zadejte text nebo nahrajte obrázek ke kontrole." }, { status: 400 });
     }
 
-    if (!image && text && text.length > 5000) {
+    if (images.length === 0 && text && text.length > 5000) {
       return NextResponse.json({ error: "Text je příliš dlouhý. Maximum je 5000 znaků." }, { status: 400 });
     }
 
-    if (image) {
-      if (typeof image !== "string") {
-        return NextResponse.json({ error: "Neplatný formát obrázku." }, { status: 400 });
-      }
-      const base64Data = image.split(",")[1] ?? image;
-      if (Math.ceil(base64Data.length * 0.75) > 4 * 1024 * 1024) {
-        return NextResponse.json({ error: "Obrázek je příliš velký. Maximum jsou 4 MB." }, { status: 400 });
+    if (images.length > MAX_IMAGES) {
+      return NextResponse.json({ error: `Maximum ${MAX_IMAGES} obrázků na jednu analýzu.` }, { status: 400 });
+    }
+
+    for (const img of images) {
+      const base64Data = img.split(",")[1] ?? img;
+      if (Math.ceil(base64Data.length * 0.75) > MAX_IMAGE_BYTES) {
+        return NextResponse.json({ error: "Některý obrázek je příliš velký. Maximum jsou 4 MB na obrázek." }, { status: 400 });
       }
     }
+    const hasImages = images.length > 0;
 
     // ── PŘIHLÁŠENÝ UŽIVATEL — zkus cookies i Bearer token ─────────────────
     let userId: string | null = null;
@@ -171,7 +188,7 @@ export async function POST(req: Request) {
 
     // ── FALLBACK NA ANONYMNÍ REŽIM ─────────────────────────────────────────
     if (!userId) {
-      if (image) {
+      if (hasImages) {
         return NextResponse.json({
           error: "Pro analýzu obrázků se musíte přihlásit a mít tarif BASIC nebo PRO.",
           upgradeRequired: true,
@@ -192,7 +209,7 @@ export async function POST(req: Request) {
 
     const tier = profile.tier || "free";
 
-    if (image && !["basic", "pro", "oneshot", "easy"].includes(tier)) {
+    if (hasImages && !["basic", "pro", "oneshot", "easy"].includes(tier)) {
       return NextResponse.json({
         error: "Analýza obrázků je dostupná pouze pro tarif BASIC a PRO.",
         upgradeRequired: true,
@@ -225,8 +242,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const result = await runAnalysis(text ?? null, tier, image ?? null);
-    const shareId = await saveResult(userId, image ? "[Analýza obrázku]" : text, result, tier);
+    const result = await runAnalysis(text ?? null, tier, images);
+    const shareId = await saveResult(
+      userId,
+      hasImages ? `[Analýza ${images.length > 1 ? images.length + " obrázků" : "obrázku"}]` : text,
+      result,
+      tier,
+    );
 
     void (async () => { try { await supabaseAdmin().rpc("increment_total_analyses"); } catch {} })();
 
@@ -299,19 +321,26 @@ function extractJson(raw: string): any {
   throw new Error("AI nevrátila validní JSON");
 }
 
-async function runAnalysis(text: string | null, tier: string, imageBase64?: string | null) {
+async function runAnalysis(text: string | null, tier: string, images: string[] = []) {
   const model = TIER_MODELS[tier] || TIER_MODELS.free;
   const systemPrompt = ["pro", "easy"].includes(tier) ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
   const maxTokens = ["pro", "easy"].includes(tier) ? 2000 : tier === "basic" ? 1500 : 800;
 
   let userContent: any;
-  if (imageBase64) {
-    const match = imageBase64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
-    const mediaType = (match?.[1] ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
-    const data = match?.[2] ?? imageBase64;
+  if (images.length > 0) {
+    const imageBlocks = images.map((b64) => {
+      const match = b64.match(/^data:(image\/[a-zA-Z]+);base64,(.+)$/);
+      const mediaType = (match?.[1] ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
+      const data = match?.[2] ?? b64;
+      return { type: "image", source: { type: "base64", media_type: mediaType, data } };
+    });
+    const instructionText =
+      images.length === 1
+        ? "Nejdříve extrahuj veškerý text z tohoto obrázku, poté ho analyzuj na phishing/podvodné indikátory. Odpověz ve stejném JSON formátu."
+        : `Toto je ${images.length} screenshotů jedné zprávy nebo konverzace (rozdělené napříč více obrázky). Posuď je jako JEDEN celek: extrahuj veškerý text ze všech screenshotů, slož ho dohromady v pořadí ${images.length} obrázků a analyzuj výsledný celek na phishing/podvodné indikátory. Odpověz ve stejném JSON formátu.`;
     userContent = [
-      { type: "image", source: { type: "base64", media_type: mediaType, data } },
-      { type: "text", text: "Nejdříve extrahuj veškerý text z tohoto obrázku, poté ho analyzuj na phishing/podvodné indikátory. Odpověz ve stejném JSON formátu." },
+      ...imageBlocks,
+      { type: "text", text: instructionText },
     ];
   } else {
     userContent = `Analyzuj tuto zprávu/odkaz na phishing a podvody:\n\n${text}`;
