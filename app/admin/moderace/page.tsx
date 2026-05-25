@@ -11,9 +11,10 @@
  */
 
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
-import { AlertTriangle, FileText, Flag } from 'lucide-react'
+import { AlertTriangle, FileText, Flag, Paperclip } from 'lucide-react'
 import {
   CATEGORY_LABELS,
   PLATFORM_LABELS,
@@ -36,6 +37,7 @@ export const metadata: Metadata = {
 }
 
 const QUEUE_STATUSES: IncidentStatus[] = ['ai_reviewed', 'pending', 'needs_more_info']
+const EVIDENCE_URL_EXPIRY_SECONDS = 600 // 10 min — admin si stihne projít a obnovit přes reload
 
 interface QueueRow {
   id: string
@@ -55,6 +57,29 @@ interface QueueRow {
   ai_red_flags: unknown
   admin_note: string | null
   reporter_id: string
+}
+
+interface EvidenceItem {
+  id: string
+  file_path: string
+  mime_type: string
+  file_size_bytes: number
+  signedUrl: string | null
+}
+
+function isImageMime(mime: string): boolean {
+  return mime.startsWith('image/')
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} kB`
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function fileBaseName(p: string): string {
+  const parts = p.split('/')
+  return parts[parts.length - 1] || p
 }
 
 function formatDate(iso: string): string {
@@ -113,8 +138,9 @@ export default async function ModeracePage() {
     incidentIds.length > 0
       ? sb
           .from('evidence')
-          .select('incident_id')
+          .select('id, incident_id, file_path, mime_type, file_size_bytes, deleted_at')
           .in('incident_id', incidentIds)
+          .is('deleted_at', null)
       : Promise.resolve({ data: [], error: null }),
   ])
 
@@ -125,9 +151,72 @@ export default async function ModeracePage() {
     identifiersBySubject.set(row.subject_id, list)
   }
 
-  const evidenceCountByIncident = new Map<string, number>()
-  for (const row of (evidenceRes.data as Array<{ incident_id: string }> | null) ?? []) {
-    evidenceCountByIncident.set(row.incident_id, (evidenceCountByIncident.get(row.incident_id) ?? 0) + 1)
+  const evidenceRows = (evidenceRes.data as Array<{
+    id: string
+    incident_id: string
+    file_path: string
+    mime_type: string
+    file_size_bytes: number
+  }> | null) ?? []
+
+  // Vygeneruj signed URL pro každý soubor přes service_role. Krátká
+  // expirace + bucket zůstává private = link platí jen po dobu této session,
+  // nelze ho trvale sdílet.
+  const signedUrlByPath = new Map<string, string | null>()
+  if (evidenceRows.length > 0) {
+    const paths = evidenceRows.map((r) => r.file_path)
+    const { data: signed, error: signedErr } = await sb.storage
+      .from('evidence')
+      .createSignedUrls(paths, EVIDENCE_URL_EXPIRY_SECONDS)
+    if (signedErr) {
+      console.error('moderace: createSignedUrls failed', signedErr)
+    }
+    for (const item of signed ?? []) {
+      if (item && item.path) {
+        signedUrlByPath.set(item.path, item.error ? null : item.signedUrl)
+      }
+    }
+  }
+
+  const evidenceByIncident = new Map<string, EvidenceItem[]>()
+  for (const row of evidenceRows) {
+    const list = evidenceByIncident.get(row.incident_id) ?? []
+    list.push({
+      id: row.id,
+      file_path: row.file_path,
+      mime_type: row.mime_type,
+      file_size_bytes: row.file_size_bytes,
+      signedUrl: signedUrlByPath.get(row.file_path) ?? null,
+    })
+    evidenceByIncident.set(row.incident_id, list)
+  }
+
+  // Audit log: každý incident, ke kterému byly vygenerovány signed URL =
+  // admin reálně viděl důkazy. Per-incident řádek, aby šlo dohledat kdo
+  // a kdy se na konkrétní incident díval.
+  if (evidenceByIncident.size > 0) {
+    const headerStore = await headers()
+    const ip = headerStore.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+    const userAgent = headerStore.get('user-agent') || null
+    const auditRows = [...evidenceByIncident.entries()].map(([incidentId, items]) => ({
+      actor_type: 'admin' as const,
+      actor_id: admin.userId,
+      action: 'view_evidence' as const,
+      target_type: 'incident' as const,
+      target_id: incidentId,
+      ip_address: ip,
+      user_agent: userAgent,
+      metadata: {
+        phase: 'moderation_render',
+        evidence_count: items.length,
+        evidence_ids: items.map((i) => i.id),
+      },
+    }))
+    try {
+      await sb.from('audit_log').insert(auditRows)
+    } catch (err) {
+      console.error('moderace: audit_log insert failed', err)
+    }
   }
 
   return (
@@ -155,7 +244,8 @@ export default async function ModeracePage() {
             {queue.map((row) => {
               const idents = identifiersBySubject.get(row.subject_id) ?? []
               const redFlags = parseRedFlags(row.ai_red_flags)
-              const evidenceCount = evidenceCountByIncident.get(row.id) ?? 0
+              const evidenceItems = evidenceByIncident.get(row.id) ?? []
+              const evidenceCount = evidenceItems.length
               return (
                 <li key={row.id} className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -206,6 +296,64 @@ export default async function ModeracePage() {
                       )}
                     </div>
                   </div>
+
+                  {evidenceItems.length > 0 && (
+                    <div className="mt-4">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                        Důkazy ({evidenceCount}) <span className="text-slate-600 normal-case font-normal">· odkazy platné cca {Math.round(EVIDENCE_URL_EXPIRY_SECONDS / 60)} min</span>
+                      </p>
+                      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        {evidenceItems.map((ev) => {
+                          if (!ev.signedUrl) {
+                            return (
+                              <div
+                                key={ev.id}
+                                className="flex flex-col items-center justify-center gap-1 rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-center text-[11px] text-red-300"
+                              >
+                                <Paperclip size={14} />
+                                <span>URL se nepodařilo vygenerovat</span>
+                                <span className="font-mono text-slate-500 text-[10px]">{fileBaseName(ev.file_path)}</span>
+                              </div>
+                            )
+                          }
+                          if (isImageMime(ev.mime_type)) {
+                            return (
+                              <a
+                                key={ev.id}
+                                href={ev.signedUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={`${fileBaseName(ev.file_path)} · ${formatBytes(ev.file_size_bytes)}`}
+                                className="group relative block overflow-hidden rounded-lg border border-slate-700 bg-slate-950/60 hover:border-purple-500/50 transition-colors"
+                              >
+                                <img
+                                  src={ev.signedUrl}
+                                  alt="Důkaz"
+                                  className="aspect-square w-full object-cover"
+                                />
+                                <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {formatBytes(ev.file_size_bytes)} · klikni pro zvětšení
+                                </span>
+                              </a>
+                            )
+                          }
+                          return (
+                            <a
+                              key={ev.id}
+                              href={ev.signedUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-slate-700 bg-slate-950/60 hover:border-purple-500/50 hover:bg-slate-900 transition-colors p-2 text-center"
+                            >
+                              <FileText size={22} className="text-purple-300" />
+                              <span className="text-[11px] font-semibold text-slate-200">{ev.mime_type.split('/')[1]?.toUpperCase() ?? 'Soubor'}</span>
+                              <span className="text-[10px] text-slate-500">{formatBytes(ev.file_size_bytes)}</span>
+                            </a>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   <div className="mt-4">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Popis nahlašovatele</p>
