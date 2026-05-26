@@ -145,21 +145,34 @@ export async function POST(req: Request) {
   // mail je backlog.
   if (action === 'reject' || action === 'needs_more_info') {
     try {
-      const { data: reporter } = await sb
+      const { data: reporter, error: reporterErr } = await sb
         .from('reporters')
         .select('email')
         .eq('id', updated.reporter_id)
         .maybeSingle()
+      if (reporterErr) {
+        console.error('Reporter lookup failed for moderation notification:', {
+          incidentId,
+          reporterId: updated.reporter_id,
+          err: reporterErr,
+        })
+      }
       const reporterEmail = reporter?.email ?? null
-      if (reporterEmail) {
-        if (action === 'reject') {
-          await sendReporterIncidentRejected(reporterEmail, incidentId, note)
-        } else {
-          await sendReporterIncidentNeedsInfo(reporterEmail, incidentId, note)
-        }
+      if (!reporterEmail) {
+        // Tichý skip by skryl, že reporter nemá email — log to explicitly, ať
+        // jde z produkčních logů poznat, proč mail nedorazil.
+        console.warn('Skipping reporter notification — no email on file', {
+          incidentId,
+          reporterId: updated.reporter_id,
+          action,
+        })
+      } else if (action === 'reject') {
+        await sendReporterIncidentRejected(reporterEmail, incidentId, note)
+      } else {
+        await sendReporterIncidentNeedsInfo(reporterEmail, incidentId, note)
       }
     } catch (err) {
-      console.error('Reporter notification email failed:', err)
+      console.error('Reporter notification email failed:', { incidentId, action, err })
     }
   }
 
