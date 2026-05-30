@@ -24,6 +24,8 @@ import {
   Hash,
   HelpCircle,
   Loader2,
+  CheckCircle2,
+  Lightbulb,
   Lock,
   Mail,
   Megaphone,
@@ -31,6 +33,7 @@ import {
   Search as SearchIcon,
   ShieldCheck,
   Sparkles,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -490,6 +493,52 @@ function LoadingPanel() {
 }
 
 
+function AuthedEmptyTip({
+  stats,
+}: {
+  stats: { subjects: number | null; incidents: number | null } | null
+}) {
+  const hasStats =
+    stats && (typeof stats.subjects === 'number' || typeof stats.incidents === 'number')
+  return (
+    <section className="rounded-2xl border border-slate-800 bg-slate-900/30 p-5 sm:p-6">
+      <div className="flex items-start gap-3">
+        <Lightbulb size={18} className="mt-0.5 flex-shrink-0 text-amber-300" aria-hidden="true" />
+        <div className="flex-1 space-y-2">
+          <p className="text-sm leading-relaxed text-slate-300">
+            <span className="font-medium text-slate-100">Tip:</span> Můžeš ověřit
+            telefon (+420…), e-mail, číslo účtu (12345/0100), Facebook profil
+            nebo variabilní symbol. Hledá se přes maskované hashe, neukládáme
+            zadané hodnoty v plné podobě.
+          </p>
+          {hasStats && (
+            <p className="text-xs text-slate-500">
+              V databázi je{' '}
+              {typeof stats!.subjects === 'number' ? (
+                <span className="font-medium text-slate-300">
+                  {stats!.subjects.toLocaleString('cs-CZ')} subjektů
+                </span>
+              ) : (
+                '—'
+              )}
+              {typeof stats!.incidents === 'number' && (
+                <>
+                  {' · '}
+                  <span className="font-medium text-slate-300">
+                    {stats!.incidents.toLocaleString('cs-CZ')} nahlášení
+                  </span>
+                </>
+              )}
+              .
+            </p>
+          )}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
 function ErrorPanel({ error, onDismiss }: { error: string; onDismiss: () => void }) {
   return (
     <section
@@ -529,6 +578,8 @@ export default function HledatPage() {
   const [error, setError] = useState<string | null>(null)
   const [tier, setTier] = useState<string | null>(null)
   const [isAuthed, setIsAuthed] = useState<boolean | null>(null)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [stats, setStats] = useState<{ subjects: number | null; incidents: number | null } | null>(null)
   const [limitReached, setLimitReached] = useState<LimitReachedState | null>(null)
 
   useEffect(() => {
@@ -542,11 +593,31 @@ export default function HledatPage() {
         return r.json()
       })
       .then((d) => {
-        if (d?.user?.id) setIsAuthed(true)
+        if (d?.user?.id) {
+          setIsAuthed(true)
+          if (typeof d.user.email === 'string') setUserEmail(d.user.email)
+        }
         if (d?.profile?.tier) setTier(d.profile.tier as string)
       })
       .catch(() => setIsAuthed(false))
   }, [])
+
+  // Stats fetch — jen pro přihlášené (anon má hint vlevo nahoře a my chceme
+  // zachovat lehkost). Selhání fetch je tichý fallback na `null`.
+  useEffect(() => {
+    if (isAuthed !== true) return
+    fetch('/api/databaze/stats', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d && typeof d === 'object') {
+          setStats({
+            subjects: typeof d.subjects === 'number' ? d.subjects : null,
+            incidents: typeof d.incidents === 'number' ? d.incidents : null,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [isAuthed])
 
   const performSearch = useCallback(async (q: string) => {
     setIsLoading(true)
@@ -630,6 +701,26 @@ export default function HledatPage() {
               </span>
             </p>
           )}
+          {isAuthed === true && (
+            <div className="mx-auto mt-4 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1.5 text-xs text-slate-400">
+              <span className="inline-flex items-center gap-1.5">
+                <UserCheck size={12} className="text-slate-500" aria-hidden="true" />
+                {userEmail ? (
+                  <>
+                    Přihlášen jako{' '}
+                    <span className="font-medium text-slate-300">{userEmail}</span>
+                  </>
+                ) : (
+                  <span>Přihlášen</span>
+                )}
+              </span>
+              <span aria-hidden="true" className="text-slate-700">·</span>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/20 bg-emerald-500/5 px-2.5 py-0.5 text-[11px] font-medium text-emerald-300">
+                <CheckCircle2 size={11} aria-hidden="true" />
+                Neomezené ověřování
+              </span>
+            </div>
+          )}
         </header>
 
         <form onSubmit={handleSubmit} className="mb-8 flex flex-col gap-3 sm:flex-row">
@@ -678,6 +769,11 @@ export default function HledatPage() {
                 searchedQuery={lastQuery}
               />
             )
+          )}
+          {/* Empty-state tip pro přihlášené před prvním dotazem — zaplňuje
+              prázdno užitečným kontextem, nezavádí žádné konverzní CTA. */}
+          {isAuthed === true && !isLoading && !error && !limitReached && !result && (
+            <AuthedEmptyTip stats={stats} />
           )}
         </div>
       </div>
