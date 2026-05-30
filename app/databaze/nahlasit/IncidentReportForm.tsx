@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   AlertCircle,
   Check,
@@ -276,6 +277,7 @@ function isStepValid(step: number, data: FormData): boolean {
 // ── Hlavní komponenta ────────────────────────────────
 
 export function IncidentReportForm() {
+  const searchParams = useSearchParams()
   const [currentStep, setCurrentStep] = useState<number>(1)
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -286,6 +288,33 @@ export function IncidentReportForm() {
     message: string
   } | null>(null)
   const [shareCopied, setShareCopied] = useState(false)
+
+  // Prefill identifier z ?prefill=… — uživatel přišel z /databaze/hledat
+  // s "žádným záznamem" a klikl na "Nahlásit incident". Auto-detekce typu
+  // běží stejně jako při manuálním zadání v Step 2.
+  useEffect(() => {
+    const prefill = searchParams.get('prefill')?.trim()
+    if (!prefill) return
+    const detected = detectIdentifierType(prefill)
+    setFormData((prev) => {
+      // Nepřepisuj, pokud uživatel už něco napsal.
+      const [first, ...rest] = prev.identifiers
+      if (!first || first.value.trim() !== '') return prev
+      return {
+        ...prev,
+        identifiers: [
+          {
+            ...first,
+            value: prefill,
+            type: detected ?? 'other',
+            autoDetected: detected !== null,
+          },
+          ...rest,
+        ],
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleCopyShareLink() {
     try {

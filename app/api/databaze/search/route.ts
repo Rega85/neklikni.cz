@@ -3,19 +3,19 @@
  *
  * Veřejné vyhledávání subjektu v databázi nahlášených incidentů.
  *
- * Auth: volitelný (přihlášení uživatelé mají vyšší rate limit).
- * Rate limit: 5/24h pro anonymní (per IP hash), 20/24h pro přihlášené.
+ * Auth: volitelný. Přihlášený uživatel má vyšší rate limit, anonymní
+ * uživatel jen 1 dotaz / 24h (cookie token + IP hash jako fallback).
  *
  * Workflow:
  *  1. Validace `query` z body
- *  2. Auth check (volitelný, jen pro rate limit)
- *  3. In-memory rate limit
+ *  2. Auth check (volitelný)
+ *  3. Rate limit (anon: cookie + IP, auth: per user-id)
  *  4. Detekce typu identifikátoru + normalizace + SHA-256 hash
  *  5. Lookup `subject_identifiers` přes value_hash
  *  6. Pokud match → fetch subjekt, agregace incidentů, top kategorie,
  *     time range, všechny identifikátory subjektu, claim status
  *  7. Audit log (best-effort)
- *  8. Response
+ *  8. Response (na anon volání nastavuje cookie token)
  */
 
 import { NextResponse } from 'next/server'
@@ -47,8 +47,13 @@ export const dynamic = 'force-dynamic'
 // ── Rate limit (in-memory, MVP) ───────────────────────
 
 const WINDOW_MS = 24 * 60 * 60 * 1000
-const ANON_LIMIT = 5
+const WINDOW_SECONDS = 24 * 60 * 60
+// Anonymní uživatel má 1 dotaz / 24h — po překročení limitu vyzva
+// k registraci (jednoduchá konverze pro „rychle ověřit účet" use case).
+const ANON_LIMIT = 1
 const AUTH_LIMIT = 20
+
+const ANON_COOKIE = 'nk_anon_search'
 
 const rateLimitMap = new Map<string, number[]>()
 
@@ -63,6 +68,13 @@ function checkAndRecordRateLimit(key: string, limit: number): boolean {
   stamps.push(now)
   rateLimitMap.set(key, stamps)
   return true
+}
+
+function peekRateLimit(key: string, limit: number): boolean {
+  const now = Date.now()
+  const cutoff = now - WINDOW_MS
+  const stamps = (rateLimitMap.get(key) ?? []).filter((t) => t > cutoff)
+  return stamps.length < limit
 }
 
 
@@ -192,8 +204,8 @@ export async function POST(req: Request) {
 
   // 2. Auth check (volitelný)
   let userId: string | null = null
+  const cookieStore = await cookies()
   try {
-    const cookieStore = await cookies()
     const supabaseSsr = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -213,27 +225,69 @@ export async function POST(req: Request) {
   }
 
   // 3. Rate limit
-  let rateKey: string
-  let rateLimit: number
+  //    Anonymní uživatel: limit 1/24h ověřujeme primárně HTTP-only cookie
+  //    tokenem (přežije server restart) a sekundárně in-memory IP hashem
+  //    (zachytí vyčištění cookies). Přihlášený uživatel: 20/24h podle user.id.
+  let setAnonCookie = false
   if (userId) {
-    rateKey = `user:${userId}`
-    rateLimit = AUTH_LIMIT
+    const rateKey = `user:${userId}`
+    if (!checkAndRecordRateLimit(rateKey, AUTH_LIMIT)) {
+      return NextResponse.json(
+        {
+          error: `Limit ${AUTH_LIMIT} vyhledávání za 24 hodin vyčerpán. Zkuste to později.`,
+          limit_reached: true,
+        },
+        { status: 429 },
+      )
+    }
   } else {
+    if (cookieStore.get(ANON_COOKIE)) {
+      return NextResponse.json(
+        {
+          error:
+            'Pro další vyhledávání se prosím registruj — je to zdarma a získáš neomezené ověřování.',
+          limit_reached: true,
+          require_registration: true,
+        },
+        { status: 429 },
+      )
+    }
+
     const ip =
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       req.headers.get('x-real-ip') ||
       'unknown'
-    rateKey = `ip:${await hashIp(ip)}`
-    rateLimit = ANON_LIMIT
+    const ipKey = `ip:${await hashIp(ip)}`
+    if (!peekRateLimit(ipKey, ANON_LIMIT)) {
+      return NextResponse.json(
+        {
+          error:
+            'Pro další vyhledávání se prosím registruj — je to zdarma a získáš neomezené ověřování.',
+          limit_reached: true,
+          require_registration: true,
+        },
+        { status: 429 },
+      )
+    }
+    // Zapsat IP počítadlo a označit, že na response dáme cookie.
+    checkAndRecordRateLimit(ipKey, ANON_LIMIT)
+    setAnonCookie = true
   }
 
-  if (!checkAndRecordRateLimit(rateKey, rateLimit)) {
-    return NextResponse.json(
-      {
-        error: `Limit ${rateLimit} vyhledávání za 24 hodin vyčerpán. Zkuste to později.`,
-      },
-      { status: 429 },
-    )
+  // Helper: anon callům po rate-limit checku přilepí cookie token, aby
+  // další request ve 24h okně dostal 429 i po restartu serveru.
+  const respond = (body: unknown, init?: ResponseInit): NextResponse => {
+    const r = NextResponse.json(body, init)
+    if (setAnonCookie) {
+      r.cookies.set(ANON_COOKIE, '1', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/',
+        maxAge: WINDOW_SECONDS,
+      })
+    }
+    return r
   }
 
   // 4. Detekce typu + normalizace
@@ -245,7 +299,7 @@ export async function POST(req: Request) {
       message:
         'Formát nelze rozpoznat. Použijte telefon (+420...), e-mail, číslo účtu (12345/0100), Facebook profil nebo variabilní symbol.',
     }
-    return NextResponse.json(response)
+    return respond(response)
   }
 
   const normalized = normalizeByType(detected_type, query)
@@ -255,7 +309,7 @@ export async function POST(req: Request) {
       detected_type,
       message: `Neplatný formát pro ${TYPE_LABEL_GENITIV[detected_type]}.`,
     }
-    return NextResponse.json(response)
+    return respond(response)
   }
 
   const hash = await hashIdentifier(normalized)
@@ -271,7 +325,7 @@ export async function POST(req: Request) {
 
     if (idErr) {
       console.error('Search identifier lookup failed:', idErr)
-      return NextResponse.json(
+      return respond(
         { error: 'Chyba při hledání v databázi.' },
         { status: 500 },
       )
@@ -283,9 +337,9 @@ export async function POST(req: Request) {
         detected_type,
         normalized_value: masked,
         message:
-          'V naší databázi není žádný záznam k tomuto identifikátoru. To NEZNAMENÁ, že je subjekt důvěryhodný — vždy ověřte i jinými způsoby (osobní setkání, escrow služba, ČSOB Pay Bezpečně).',
+          'Tento subjekt zatím nikdo nenahlásil. To NEZNAMENÁ, že je důvěryhodný — jen ho ještě nikdo nenahlásil.',
       }
-      return NextResponse.json(response)
+      return respond(response)
     }
 
     const subjectId = idRow.subject_id
@@ -299,7 +353,7 @@ export async function POST(req: Request) {
 
     if (sErr || !subjectRow) {
       console.error('Search subject fetch failed:', sErr)
-      return NextResponse.json(
+      return respond(
         { error: 'Chyba při čtení subjektu.' },
         { status: 500 },
       )
@@ -312,7 +366,7 @@ export async function POST(req: Request) {
         normalized_value: masked,
         message: 'Záznam byl odstraněn.',
       }
-      return NextResponse.json(response)
+      return respond(response)
     }
 
     // 7. Incidenty pro agregaci
@@ -324,7 +378,7 @@ export async function POST(req: Request) {
 
     if (iErr) {
       console.error('Search incidents fetch failed:', iErr)
-      return NextResponse.json(
+      return respond(
         { error: 'Chyba při čtení incidentů.' },
         { status: 500 },
       )
@@ -352,7 +406,7 @@ export async function POST(req: Request) {
 
     if (aiErr) {
       console.error('Search all identifiers fetch failed:', aiErr)
-      return NextResponse.json(
+      return respond(
         { error: 'Chyba při čtení identifikátorů subjektu.' },
         { status: 500 },
       )
@@ -403,9 +457,9 @@ export async function POST(req: Request) {
         })),
       },
     }
-    return NextResponse.json(response)
+    return respond(response)
   } catch (err) {
     console.error('Search route exception:', err)
-    return NextResponse.json({ error: 'Chyba serveru.' }, { status: 500 })
+    return respond({ error: 'Chyba serveru.' }, { status: 500 })
   }
 }

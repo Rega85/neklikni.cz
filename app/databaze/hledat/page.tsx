@@ -17,16 +17,20 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   AlertTriangle,
+  ArrowRight,
   Check,
   CreditCard,
   Facebook,
   Hash,
   HelpCircle,
   Loader2,
+  Lock,
   Mail,
+  Megaphone,
   Phone,
   Search as SearchIcon,
   ShieldCheck,
+  Sparkles,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -62,6 +66,12 @@ interface SearchResult {
   normalized_value?: string
   subject?: SearchResultSubject
   message?: string
+}
+
+interface LimitReachedState {
+  /** Server odpověděl 429 — anonymní uživatel vyčerpal 1 dotaz / 24h. */
+  message: string
+  requireRegistration: boolean
 }
 
 
@@ -166,95 +176,143 @@ function TrustGauge({ score }: { score: number }) {
 
 // ── Result panels ────────────────────────────────────
 
-function NotFoundPanel({ message }: { message: string }) {
+function NotFoundPanel({
+  message,
+  searchedQuery,
+}: {
+  message: string
+  /** Surová hodnota, kterou uživatel zadal — předáváme do /databaze/nahlasit?prefill=… */
+  searchedQuery: string
+}) {
+  const reportUrl = searchedQuery.trim()
+    ? `/databaze/nahlasit?prefill=${encodeURIComponent(searchedQuery.trim())}`
+    : '/databaze/nahlasit'
+
   return (
     <section className="surface-card-elevated rounded-2xl border border-cyan-500/30 bg-cyan-500/5 p-6 backdrop-blur-md sm:p-8">
       <div className="flex items-start gap-3">
         <ShieldCheck size={28} className="flex-shrink-0 text-cyan-300" aria-hidden="true" />
-        <div className="space-y-3">
-          <h2 className="text-xl font-bold text-slate-100">
-            Žádný záznam v naší databázi
-          </h2>
-          <p className="text-sm leading-relaxed text-slate-300">{message}</p>
-
-          <div className="rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-            <h3 className="mb-2 text-sm font-semibold text-slate-100">
-              Co dělat dál (i tak buďte opatrní):
-            </h3>
-            <ul className="space-y-2 text-sm text-slate-300">
-              <li className="flex items-start gap-2">
-                <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
-                <span>Trvejte na osobním vyzvednutí.</span>
-              </li>
-
-              <li>
-                <div className="flex items-start gap-2">
-                  <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
-                  <span>Použijte ověřenou platbu / escrow:</span>
-                </div>
-                <ul className="mt-1 ml-6 list-disc space-y-0.5 text-slate-400">
-                  <li>
-                    <a
-                      href="https://www.bazos.cz/bezpecne-platby/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-300 underline hover:text-cyan-200"
-                    >
-                      Bazoš Bezpečně
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://www.sbazar.cz/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-300 underline hover:text-cyan-200"
-                    >
-                      Sbazar Bezpečný nákup
-                    </a>
-                  </li>
-                  <li>Dobírka (platba při převzetí).</li>
-                </ul>
-              </li>
-
-              <li className="flex items-start gap-2">
-                <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
-                <span>Neposílejte peníze předem.</span>
-              </li>
-
-              <li>
-                <div className="flex items-start gap-2">
-                  <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
-                  <span>Ověřte identitu:</span>
-                </div>
-                <ul className="mt-1 ml-6 list-disc space-y-0.5 text-slate-400">
-                  <li>
-                    <a
-                      href="https://www.bankid.cz/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-cyan-300 underline hover:text-cyan-200"
-                    >
-                      Bank iD
-                    </a>
-                  </li>
-                  <li>Nebo si nechte ukázat občanský průkaz (osobně).</li>
-                </ul>
-              </li>
-
-              <li className="flex items-start gap-2">
-                <Check size={16} className="mt-0.5 flex-shrink-0 text-cyan-400" aria-hidden="true" />
-                <span>Hledejte hodnocení i jinde (Google, Heureka).</span>
-              </li>
-            </ul>
+        <div className="flex-1 space-y-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-100">
+              Tento subjekt zatím nikdo nenahlásil
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">{message}</p>
           </div>
 
-          <Link
-            href="/databaze/nahlasit"
-            className="brand-gradient mt-2 inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]"
-          >
-            Nahlásit nový incident
-          </Link>
+          {/* ── Konverzní pobídka: nahlas incident ───────────────── */}
+          <div className="rounded-xl border border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-pink-500/10 to-purple-500/5 p-5">
+            <div className="flex items-start gap-3">
+              <Megaphone size={22} className="mt-0.5 flex-shrink-0 text-pink-300" aria-hidden="true" />
+              <div className="space-y-3">
+                <div>
+                  <h3 className="text-base font-bold text-white">
+                    Podvedl tě? Pomoz ostatním a nahlas ho.
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-300">
+                    Tvoje zkušenost ochrání další lidi. Nahlášení projde AI
+                    předkontrolou a manuálním schválením, dotčená osoba má 14 dní
+                    na vyjádření.
+                  </p>
+                </div>
+
+                <Link
+                  href={reportUrl}
+                  className="brand-gradient inline-flex items-center gap-2 rounded-lg px-5 py-3 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]"
+                >
+                  Nahlásit incident
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+
+                {searchedQuery.trim() && (
+                  <p className="text-xs text-slate-400">
+                    Identifikátor{' '}
+                    <span className="font-mono text-slate-300">
+                      {searchedQuery.trim()}
+                    </span>{' '}
+                    se předvyplní do formuláře.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ── Sekundární akce ──────────────────────────────────── */}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Link
+              href="/databaze/hledat"
+              className="rounded-lg border border-slate-700 px-4 py-2 text-xs font-medium text-slate-300 transition hover:bg-slate-900"
+            >
+              Vyhledat jiný subjekt
+            </Link>
+            <Link
+              href="/"
+              className="rounded-lg border border-slate-800 px-4 py-2 text-xs font-medium text-slate-400 transition hover:bg-slate-900 hover:text-slate-200"
+            >
+              Vrátit se zpět
+            </Link>
+          </div>
+
+          <p className="text-xs leading-relaxed text-slate-500">
+            Žádný záznam <strong className="text-slate-300">neznamená</strong>,
+            že je subjekt důvěryhodný. Trvejte na osobním vyzvednutí, používejte
+            escrow služby (Bazoš Bezpečně, Sbazar Bezpečný nákup), nikdy
+            neposílejte peníze předem a ověřte identitu (Bank iD nebo OP).
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
+function LimitReachedPanel() {
+  return (
+    <section className="surface-card-elevated rounded-2xl border border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-pink-500/10 to-purple-500/5 p-6 backdrop-blur-md sm:p-8">
+      <div className="flex items-start gap-3">
+        <Sparkles size={28} className="flex-shrink-0 text-pink-300" aria-hidden="true" />
+        <div className="flex-1 space-y-4">
+          <div>
+            <h2 className="text-xl font-bold text-white">
+              Dnes jsi už jeden subjekt ověřil/a
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-300">
+              První ověření je <strong className="text-white">zdarma bez registrace</strong>.
+              Pro neomezené vyhledávání se zaregistruj — je to taky zdarma a
+              zabere to půl minuty.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/register"
+              className="brand-gradient inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]"
+            >
+              Registrovat se zdarma
+              <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+            <Link
+              href="/login?redirect=/databaze/hledat"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
+            >
+              Už mám účet — přihlásit
+            </Link>
+          </div>
+
+          <ul className="space-y-1.5 pt-2 text-xs text-slate-400">
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 flex-shrink-0 text-emerald-400" aria-hidden="true" />
+              <span>Neomezené vyhledávání v databázi</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 flex-shrink-0 text-emerald-400" aria-hidden="true" />
+              <span>Možnost nahlásit podvod</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <Check size={14} className="mt-0.5 flex-shrink-0 text-emerald-400" aria-hidden="true" />
+              <span>E-mailové upozornění při shodě s tvými ověřovanými subjekty</span>
+            </li>
+          </ul>
         </div>
       </div>
     </section>
@@ -465,36 +523,59 @@ export default function HledatPage() {
   const inputRef = useRef<HTMLInputElement | null>(null)
 
   const [query, setQuery] = useState('')
+  const [lastQuery, setLastQuery] = useState('')
   const [result, setResult] = useState<SearchResult | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tier, setTier] = useState<string | null>(null)
+  const [isAuthed, setIsAuthed] = useState<boolean | null>(null)
+  const [limitReached, setLimitReached] = useState<LimitReachedState | null>(null)
 
   useEffect(() => {
     fetch('/api/me', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (!r.ok) {
+          // 401 = anonymní uživatel, ne chyba.
+          setIsAuthed(false)
+          return null
+        }
+        return r.json()
+      })
       .then((d) => {
+        if (d?.user?.id) setIsAuthed(true)
         if (d?.profile?.tier) setTier(d.profile.tier as string)
       })
-      .catch(() => {})
+      .catch(() => setIsAuthed(false))
   }, [])
 
   const performSearch = useCallback(async (q: string) => {
     setIsLoading(true)
     setError(null)
     setResult(null)
+    setLimitReached(null)
+    setLastQuery(q)
     try {
       const res = await fetch('/api/databaze/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: q }),
       })
-      if (!res.ok) {
-        const errData = (await res.json().catch(() => ({}))) as { error?: string }
-        throw new Error(errData.error ?? 'Nepodařilo se prohledat databázi.')
+      const data = (await res.json().catch(() => ({}))) as Partial<SearchResult> & {
+        error?: string
+        limit_reached?: boolean
+        require_registration?: boolean
       }
-      const data = (await res.json()) as SearchResult
-      setResult(data)
+      if (res.status === 429 && data.limit_reached) {
+        setLimitReached({
+          message: data.error ?? 'Limit vyhledávání vyčerpán.',
+          requireRegistration: data.require_registration === true,
+        })
+        return
+      }
+      if (!res.ok) {
+        throw new Error(data.error ?? 'Nepodařilo se prohledat databázi.')
+      }
+      setResult(data as SearchResult)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Neznámá chyba.')
     } finally {
@@ -534,6 +615,21 @@ export default function HledatPage() {
             Vlož telefon, e-mail, číslo účtu nebo Facebook profil. Zjistíš,
             zda na něj bylo podáno nahlášení.
           </p>
+          {isAuthed === false && (
+            <p className="mx-auto mt-4 inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/5 px-4 py-1.5 text-xs text-purple-200">
+              <Lock size={12} aria-hidden="true" />
+              <span>
+                První ověření zdarma bez registrace. Pro neomezené vyhledávání{' '}
+                <Link
+                  href="/register"
+                  className="font-semibold text-purple-100 underline underline-offset-2 hover:text-white"
+                >
+                  se zaregistruj
+                </Link>
+                .
+              </span>
+            </p>
+          )}
         </header>
 
         <form onSubmit={handleSubmit} className="mb-8 flex flex-col gap-3 sm:flex-row">
@@ -568,7 +664,8 @@ export default function HledatPage() {
         <div className="space-y-4">
           {error && <ErrorPanel error={error} onDismiss={() => setError(null)} />}
           {isLoading && <LoadingPanel />}
-          {result && !isLoading && (
+          {!isLoading && limitReached && <LimitReachedPanel />}
+          {!isLoading && !limitReached && result && (
             result.found && result.subject ? (
               <FoundPanel
                 subject={result.subject}
@@ -576,7 +673,10 @@ export default function HledatPage() {
                 tier={tier}
               />
             ) : (
-              <NotFoundPanel message={result.message ?? 'Žádný výsledek.'} />
+              <NotFoundPanel
+                message={result.message ?? 'Žádný výsledek.'}
+                searchedQuery={lastQuery}
+              />
             )
           )}
         </div>
