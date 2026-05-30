@@ -198,7 +198,7 @@ function NotFoundPanel({
         <div className="flex-1 space-y-4">
           <div>
             <h2 className="text-xl font-bold text-slate-100">
-              Tento subjekt zatím nikdo nenahlásil
+              Tento subjekt zatím není v naší databázi
             </h2>
             <p className="mt-2 text-sm leading-relaxed text-slate-300">{message}</p>
           </div>
@@ -257,10 +257,9 @@ function NotFoundPanel({
           </div>
 
           <p className="text-xs leading-relaxed text-slate-500">
-            Žádný záznam <strong className="text-slate-300">neznamená</strong>,
-            že je subjekt důvěryhodný. Trvejte na osobním vyzvednutí, používejte
-            escrow služby (Bazoš Bezpečně, Sbazar Bezpečný nákup), nikdy
-            neposílejte peníze předem a ověřte identitu (Bank iD nebo OP).
+            Trvejte na osobním vyzvednutí, používejte escrow služby (Bazoš
+            Bezpečně, Sbazar Bezpečný nákup), nikdy neposílejte peníze předem
+            a ověřte identitu (Bank iD nebo OP).
           </p>
         </div>
       </div>

@@ -337,7 +337,7 @@ export async function POST(req: Request) {
         detected_type,
         normalized_value: masked,
         message:
-          'Tento subjekt zatím nikdo nenahlásil. To NEZNAMENÁ, že je důvěryhodný — jen ho ještě nikdo nenahlásil.',
+          'Tento subjekt zatím není v naší databázi. To ale neznamená, že je 100% bezpečný — buď opatrný a ověř ho i jinak (Bank iD, osobní vyzvednutí, escrow služby jako Bazoš Bezpečně).',
       }
       return respond(response)
     }
