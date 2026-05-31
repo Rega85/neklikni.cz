@@ -2,6 +2,7 @@
 import Link from "next/link";
 import CookieSettingsButton from "./CookieSettingsButton";
 import BrandLogo from "./BrandLogo";
+import SocialLinks from "./SocialLinks";
 
 export default function Footer() {
   return (
@@ -20,6 +21,10 @@ export default function Footer() {
             </span>
           </div>
           <p>© 2026 Všechna práva vyhrazena.</p>
+          <div className="pt-1">
+            <p className="text-slate-300 font-bold mb-2 uppercase text-[10px] tracking-widest">Sleduj nás</p>
+            <SocialLinks size={24} />
+          </div>
         </div>
         <div className="flex flex-col md:flex-row gap-8 md:gap-16">
           <div className="space-y-1 leading-relaxed">

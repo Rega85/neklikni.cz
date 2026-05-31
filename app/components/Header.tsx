@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database, Flag } from "lucide-react";
 import BrandLogo from "./BrandLogo";
+import SocialLinks from "./SocialLinks";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   free:  { label: "FREE",  color: "text-slate-400",  bg: "bg-slate-500/10"  },
@@ -226,6 +227,10 @@ export default function Header() {
                     </Link>
                   </div>
                 )}
+
+                <div className="px-3 py-3 border-t border-white/5 flex items-center justify-center">
+                  <SocialLinks size={22} />
+                </div>
               </div>
             )}
           </div>
