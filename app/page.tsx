@@ -409,8 +409,9 @@ export default function Home() {
               </h1>
 
               <p className="text-slate-300 text-base sm:text-lg lg:text-xl leading-relaxed max-w-xl">
-                Vlož podezřelou SMS, e-mail nebo screenshot. AI v češtině odhalí
-                phishing, falešné banky a podvody dřív, než stihnou ublížit.
+                Vlož podezřelou SMS, e-mail nebo screenshot — nebo ověř telefon,
+                číslo účtu či profil prodejce v databázi nahlášených podvodů.
+                Česky a do 10 sekund.
               </p>
 
               <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300">
@@ -466,6 +467,12 @@ export default function Home() {
                     >
                       <MessageSquare size={15} />
                       <span>SMS / E-mail</span>
+                      {activeTab !== "zprava" && (
+                        <span className="relative flex h-2 w-2" aria-hidden="true">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75 animate-ping" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-fuchsia-400" />
+                        </span>
+                      )}
                       {activeTab === "zprava" && (
                         <span className="absolute inset-x-3 -bottom-px h-[2px] bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 rounded-full" />
                       )}
@@ -482,6 +489,12 @@ export default function Home() {
                     >
                       <UserSearch size={15} />
                       <span>Ověřit subjekt</span>
+                      {activeTab !== "subjekt" && (
+                        <span className="relative flex h-2 w-2" aria-hidden="true">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75 animate-ping" />
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-fuchsia-400" />
+                        </span>
+                      )}
                       {activeTab === "subjekt" && (
                         <span className="absolute inset-x-3 -bottom-px h-[2px] bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 rounded-full" />
                       )}
