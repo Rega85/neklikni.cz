@@ -201,10 +201,13 @@ const ACCENT_STYLES: Record<"slate" | "blue" | "purple" | "amber", {
   },
 };
 
+const VALID_PLANS: Plan[] = ["oneshot", "basic", "pro"];
+
 export default function PricingPage() {
   const [loading, setLoading] = useState<Plan | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [autoRedirecting, setAutoRedirecting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -223,7 +226,13 @@ export default function PricingPage() {
         body: JSON.stringify({ plan }),
       });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 401) { router.push("/login"); return; }
+      // Not logged in → bounce through auth and come straight back to this plan
+      // so we don't lose the checkout intent. The login flow auto-resumes via ?plan=.
+      if (res.status === 401) {
+        const next = `/pricing?plan=${plan}`;
+        router.push(`/login?next=${encodeURIComponent(next)}`);
+        return;
+      }
       if (!res.ok) { setToast("Chyba: " + (data?.error ?? `HTTP ${res.status}`)); return; }
       if (data?.url) { window.location.href = data.url; return; }
       setToast("Chyba: server nevrátil checkout URL.");
@@ -231,10 +240,31 @@ export default function PricingPage() {
       setToast("Něco se pokazilo. Zkus to prosím znovu.");
     } finally {
       setLoading(null);
+      setAutoRedirecting(false);
     }
   };
 
+  // When the user returns from auth (or follows a direct /pricing?plan=X link),
+  // resume the checkout they originally intended — straight to Stripe if logged in.
+  useEffect(() => {
+    const plan = new URLSearchParams(window.location.search).get("plan") as Plan | null;
+    if (plan && VALID_PLANS.includes(plan)) {
+      setAutoRedirecting(true);
+      handleCheckout(plan);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const disabled = loading !== null;
+
+  if (autoRedirecting) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center text-white gap-4">
+        <div className="w-10 h-10 border-2 border-purple-500/30 border-t-purple-400 rounded-full animate-spin" />
+        <p className="text-slate-400 text-sm font-medium">Přesměrováváme tě na platbu…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen text-white">

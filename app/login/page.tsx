@@ -26,15 +26,17 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>("password");
 
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirect');
+  // Accept both ?next= (preferred) and legacy ?redirect=.
+  const redirectTo = searchParams.get('next') ?? searchParams.get('redirect');
   const initialError = translateAuthError(searchParams.get('error'));
   const [error, setError] = useState(initialError);
 
-  // Validate redirect: must be a relative path starting with single "/"
-  // (protects against open-redirect attacks via "//evil.com" or "https://...").
+  // Validate redirect: must be a relative path whose second char is not "/" or
+  // "\" (protects against open-redirect attacks via "//evil.com", "/\evil.com"
+  // or "https://..."). Query strings like "/pricing?plan=basic" are allowed.
   const safeRedirect = (() => {
     if (!redirectTo) return '/';
-    if (!redirectTo.startsWith('/') || redirectTo.startsWith('//')) return '/';
+    if (!/^\/[^/\\]/.test(redirectTo)) return '/';
     return redirectTo;
   })();
 
@@ -193,7 +195,10 @@ export default function LoginPage() {
         {/* Registrace */}
         <p className="text-slate-500 text-sm mt-6">
           Nemáš účet?{" "}
-          <a href="/register" className="text-purple-400 hover:text-purple-300 font-bold transition-colors">
+          <a
+            href={safeRedirect !== '/' ? `/register?next=${encodeURIComponent(safeRedirect)}` : "/register"}
+            className="text-purple-400 hover:text-purple-300 font-bold transition-colors"
+          >
             Zaregistruj se
           </a>
         </p>

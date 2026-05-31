@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 function translateError(msg: string): string {
   if (/already registered|already in use|already exists/i.test(msg))
@@ -25,6 +25,13 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const supabase = createClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Validate next: relative path whose second char isn't "/" or "\" (blocks
+  // open redirects like "//evil.com"). Query strings ("/pricing?plan=basic") ok.
+  const redirectTo = searchParams.get('next') ?? searchParams.get('redirect');
+  const safeRedirect = redirectTo && /^\/[^/\\]/.test(redirectTo) ? redirectTo : '/';
+  const loginHref = safeRedirect !== '/' ? `/login?next=${encodeURIComponent(safeRedirect)}` : '/login';
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +50,7 @@ export default function RegisterPage() {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}` },
     });
 
     if (error) {
@@ -65,7 +72,7 @@ export default function RegisterPage() {
       <p className="text-slate-500 text-sm mt-4 max-w-md">
         Nedorazil? Zkontroluj složku <span className="text-slate-300">Spam / Hromadné</span>.
       </p>
-      <button onClick={() => router.push('/login')} className="mt-8 text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">
+      <button onClick={() => router.push(loginHref)} className="mt-8 text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">
         Zpět na přihlášení
       </button>
     </div>
@@ -127,7 +134,7 @@ export default function RegisterPage() {
 
         <p className="text-slate-500 text-sm mt-6 text-center">
           Už máš účet?{" "}
-          <a href="/login" className="text-purple-400 hover:text-purple-300 font-bold transition-colors">
+          <a href={loginHref} className="text-purple-400 hover:text-purple-300 font-bold transition-colors">
             Přihlásit se
           </a>
         </p>
