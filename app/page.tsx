@@ -411,7 +411,6 @@ export default function Home() {
               <p className="text-slate-300 text-base sm:text-lg lg:text-xl leading-relaxed max-w-xl">
                 Vlož podezřelou SMS, e-mail nebo screenshot — nebo ověř telefon,
                 číslo účtu či profil prodejce v databázi nahlášených podvodů.
-                Česky a do 10 sekund.
               </p>
 
               <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300">
@@ -459,18 +458,18 @@ export default function Home() {
                       role="tab"
                       aria-selected={activeTab === "zprava"}
                       onClick={() => setActiveTab("zprava")}
-                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors ${
+                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-all ${
                         activeTab === "zprava"
                           ? "text-white"
-                          : "text-slate-400 hover:text-slate-200"
+                          : "text-slate-300 hover:text-white bg-fuchsia-500/[0.07] hover:bg-fuchsia-500/[0.12]"
                       }`}
                     >
                       <MessageSquare size={15} />
                       <span>SMS / E-mail</span>
                       {activeTab !== "zprava" && (
-                        <span className="relative flex h-2 w-2" aria-hidden="true">
-                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75 animate-ping" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-fuchsia-400" />
+                        <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-70 animate-ping" />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-fuchsia-400" />
                         </span>
                       )}
                       {activeTab === "zprava" && (
@@ -481,18 +480,18 @@ export default function Home() {
                       role="tab"
                       aria-selected={activeTab === "subjekt"}
                       onClick={() => setActiveTab("subjekt")}
-                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-colors ${
+                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-all ${
                         activeTab === "subjekt"
                           ? "text-white"
-                          : "text-slate-400 hover:text-slate-200"
+                          : "text-slate-300 hover:text-white bg-fuchsia-500/[0.07] hover:bg-fuchsia-500/[0.12]"
                       }`}
                     >
                       <UserSearch size={15} />
-                      <span>Ověřit subjekt</span>
+                      <span>Ověřit prodejce/účet</span>
                       {activeTab !== "subjekt" && (
-                        <span className="relative flex h-2 w-2" aria-hidden="true">
-                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-75 animate-ping" />
-                          <span className="relative inline-flex h-2 w-2 rounded-full bg-fuchsia-400" />
+                        <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-70 animate-ping" />
+                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-fuchsia-400" />
                         </span>
                       )}
                       {activeTab === "subjekt" && (
