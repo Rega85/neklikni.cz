@@ -278,7 +278,7 @@ export default function Home() {
           setUpsellReason("anon_daily");
           trackEvent("analyze_limit_reached", { tier: profile?.tier ?? "anon" });
         } else if (res.status === 402) {
-          setError(data.message || "Nedostatek kreditů.");
+          setError(data.message || "Nedostatek analýz.");
           setUpsellReason("no_credits");
           trackEvent("analyze_limit_reached", { tier: profile?.tier ?? "anon", reason: "no_credits" });
         } else {

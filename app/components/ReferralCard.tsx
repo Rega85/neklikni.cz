@@ -49,22 +49,22 @@ export default function ReferralCard({ isLoggedIn }: Props) {
           {isLoggedIn ? (
             <>
               <h3 className="text-lg font-black text-white">
-                Pozvi přátele a získej kredity
+                Pozvi přátele a získej analýzy navíc
               </h3>
               <p className="text-sm text-slate-300">
                 Za každého, kdo se zaregistruje přes tvůj odkaz, dostaneš{' '}
-                <strong className="text-white">5 kreditů zdarma</strong>.
+                <strong className="text-white">5 analýz zdarma</strong>.
               </p>
             </>
           ) : (
             <>
               <h3 className="text-lg font-black text-white">
-                Zaregistruj se a získej kredity za přátele
+                Zaregistruj se a získej analýzy za přátele
               </h3>
               <p className="text-sm text-slate-300">
                 Po registraci dostaneš vlastní referral odkaz. Za každého přítele,
                 kdo se přes něj přihlásí, dostaneš{' '}
-                <strong className="text-white">5 kreditů zdarma</strong>.
+                <strong className="text-white">5 analýz zdarma</strong>.
               </p>
             </>
           )}

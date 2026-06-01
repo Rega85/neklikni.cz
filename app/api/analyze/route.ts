@@ -230,10 +230,10 @@ export async function POST(req: Request) {
     if (newCredits === null || newCredits === undefined) {
       return NextResponse.json(
         {
-          error: "Nedostatek kreditů",
+          error: "Nedostatek analýz",
           message: tier === "free"
-            ? "Nemáte žádné kredity. Kupte si balíček."
-            : "Vyčerpali jste všechny kredity. Kupte si nový balíček.",
+            ? "Nemáte žádné analýzy. Kupte si balíček."
+            : "Vyčerpali jste všechny analýzy. Kupte si nový balíček.",
           credits: 0,
           tier,
           upgradeRequired: true,

@@ -83,10 +83,10 @@ export default function ProfilePage() {
           <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-4">
             <div className="flex items-center gap-2">
               <Gift size={20} className="text-purple-400" />
-              <p className="text-white font-black uppercase tracking-widest text-sm">Získej kredity zdarma</p>
+              <p className="text-white font-black uppercase tracking-widest text-sm">Získej analýzy zdarma</p>
             </div>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Sdílej svůj unikátní odkaz. Každý, kdo se přes něj zaregistruje, dostane <span className="text-white font-bold">+5 kreditů</span> — a ty také.
+              Sdílej svůj unikátní odkaz. Každý, kdo se přes něj zaregistruje, dostane <span className="text-white font-bold">+5 analýz</span> — a ty také.
             </p>
             <div>
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-2">Tvůj referral odkaz</p>

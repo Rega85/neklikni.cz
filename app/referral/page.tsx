@@ -56,11 +56,11 @@ export default function ReferralPage() {
           <h1 className="text-4xl sm:text-5xl font-black tracking-tighter">
             Pozvi přátele,{" "}
             <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-              dostaň kredity
+              dostaň analýzy
             </span>
           </h1>
           <p className="text-slate-400 max-w-xl mx-auto leading-relaxed">
-            Za každou registraci přes tvůj odkaz dostaneš <span className="text-emerald-400 font-bold">+5 kreditů</span>.
+            Za každou registraci přes tvůj odkaz dostaneš <span className="text-emerald-400 font-bold">+5 analýz</span>.
             A nový uživatel taky. Win-win.
           </p>
         </div>
@@ -82,7 +82,7 @@ export default function ReferralPage() {
               {loading ? "—" : `+${data?.bonusCreditsEarned ?? 0}`}
             </div>
             <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mt-1">
-              získaných kreditů
+              získaných analýz
             </div>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function ReferralPage() {
           {link && (
             <div className="flex flex-wrap gap-2.5 mt-4">
               <a
-                href={`https://wa.me/?text=${encodeURIComponent(`Tohle se ti bude hodit — Neklikni.cz prověří podezřelé SMS a e-maily během 3 sekund. Zaregistruj se přes můj odkaz a oba dostaneme +5 kreditů: ${link}`)}`}
+                href={`https://wa.me/?text=${encodeURIComponent(`Tohle se ti bude hodit — Neklikni.cz prověří podezřelé SMS a e-maily během 3 sekund. Zaregistruj se přes můj odkaz a oba dostaneme +5 analýz: ${link}`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => trackEvent("cta_share_clicked", { method: "whatsapp", from: "referral" })}
@@ -141,7 +141,7 @@ export default function ReferralPage() {
             {[
               { n: 1, t: "Pošli odkaz", d: "Sdílej svůj osobní link s rodinou nebo přáteli." },
               { n: 2, t: "Oni se zaregistrují", d: "Klikem na odkaz a dokončením registrace zdarma." },
-              { n: 3, t: "Oba získáte +5 kreditů", d: "Připíšou se automaticky po jejich přihlášení. Žádné limity." },
+              { n: 3, t: "Oba získáte +5 analýz", d: "Připíšou se automaticky po jejich přihlášení. Žádné limity." },
             ].map((s) => (
               <li key={s.n} className="flex gap-4">
                 <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center font-black text-white text-sm shrink-0 shadow-lg shadow-purple-500/30">

@@ -306,7 +306,7 @@ export default function Header() {
                       <Receipt size={16} className="text-slate-500 shrink-0" /><span>Fakturace & předplatné</span>
                     </Link>
                     <Link href="/referral" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
-                      <Gift size={16} className="text-emerald-400 shrink-0" /><span>Pozvi přátele <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider ml-1">+5 kreditů</span></span>
+                      <Gift size={16} className="text-emerald-400 shrink-0" /><span>Pozvi přátele <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider ml-1">+5 analýz</span></span>
                     </Link>
                     {isAdmin && (
                       <>

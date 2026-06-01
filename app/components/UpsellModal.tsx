@@ -19,8 +19,8 @@ const COPY: Record<Exclude<Reason, null>, { title: string; sub: string }> = {
     sub: "Zaregistruj se zdarma pro dalších 5 — nebo si pořiď tarif a měj jistotu vždy.",
   },
   no_credits: {
-    title: "Vyčerpal jsi všechny kredity",
-    sub: "Doplň si kredity nebo upgraduj na vyšší tarif. Kredity z BASIC/PRO se obnoví automaticky.",
+    title: "Vyčerpal jsi všechny analýzy",
+    sub: "Doplň si analýzy nebo upgraduj na vyšší tarif. Analýzy z BASIC/PRO se obnoví automaticky.",
   },
 };
 
@@ -71,7 +71,7 @@ export default function UpsellModal({ reason, onClose, tier }: Props) {
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-white font-bold text-sm">Účet zdarma</div>
-                <div className="text-slate-400 text-xs">+5 analýz hned, kredity bez expirace</div>
+                <div className="text-slate-400 text-xs">+5 analýz hned, bez expirace</div>
               </div>
               <ArrowRight size={16} className="text-slate-500 group-hover:translate-x-0.5 group-hover:text-white transition-all shrink-0" />
             </Link>
