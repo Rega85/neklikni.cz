@@ -15,6 +15,7 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { createClient } from '@supabase/supabase-js'
 import { AlertTriangle, FileText, Flag, Paperclip } from 'lucide-react'
+import Link from 'next/link'
 import {
   CATEGORY_LABELS,
   PLATFORM_LABELS,
@@ -223,8 +224,16 @@ export default async function ModeracePage() {
     <main className="min-h-screen bg-slate-950 text-slate-100">
       <div className="mx-auto max-w-5xl px-4 py-10 sm:py-14">
         <header className="mb-8">
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
-            <Flag size={12} /> Admin
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
+              <Flag size={12} /> Admin
+            </div>
+            <Link
+              href="/admin/uzivatele"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-purple-500/30 hover:text-purple-200 transition-colors"
+            >
+              → Uživatelé
+            </Link>
           </div>
           <h1 className="mt-3 text-3xl font-black tracking-tight">Moderační fronta</h1>
           <p className="mt-2 text-sm text-slate-400">
