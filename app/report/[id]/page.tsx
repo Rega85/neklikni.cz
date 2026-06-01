@@ -1,14 +1,21 @@
 import { Metadata } from "next";
-import { createClient } from "@/utils/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Shield, AlertTriangle, CheckCircle, ArrowLeft, Share2 } from "lucide-react";
+
+function getDb() {
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 // ✅ 1. METADATA PRO FACEBOOK
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const resolvedParams = await params;
   const url = `https://www.neklikni.cz/report/${resolvedParams.id}`;
-  const supabase = await createClient();
+  const supabase = getDb();
 
   const { data: report } = await supabase
     .from("shared_results")
@@ -47,7 +54,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 // ✅ 2. SAMOTNÁ STRÁNKA REPORTU
 export default async function ReportPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
-  const supabase = await createClient();
+  const supabase = getDb();
 
   const { data: report } = await supabase
     .from("shared_results")
