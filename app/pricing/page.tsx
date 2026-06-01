@@ -34,7 +34,7 @@ const PLANS: PlanCard[] = [
     cta: "Koupit 1 analýzu",
     features: [
       "1 prémiová analýza",
-      "Nejlepší AI model Claude Opus",
+      "Nejpokročilejší AI model",
       "Hloubkový rozbor – taktiky útočníka",
       "Žádné předplatné",
     ],
@@ -68,7 +68,7 @@ const PLANS: PlanCard[] = [
     cta: "Získat PRO",
     features: [
       "150 analýz měsíčně",
-      "Nejpokročilejší AI model Claude Opus",
+      "Nejpokročilejší AI model",
       "Hloubkový rozbor – taktiky útočníka",
       "Konkrétní kroky co dělat dál",
       "Až 12 000 znaků na zprávu",
@@ -98,7 +98,7 @@ const PLANS: PlanCard[] = [
 const COMPARE: { label: string; free: string; oneshot: string; basic: string; pro: string; highlight?: boolean }[] = [
   { label: "Cena",                            free: "0 Kč",        oneshot: "49 Kč",       basic: "99 Kč / měs",   pro: "199 Kč / měs", highlight: true },
   { label: "Počet analýz",                    free: "2 / den",     oneshot: "1",           basic: "50 / měs",      pro: "150 / měs", highlight: true },
-  { label: "AI model",                        free: "Claude Haiku",oneshot: "Claude Opus", basic: "Claude Sonnet", pro: "Claude Opus" },
+  { label: "AI model",                        free: "Základní",    oneshot: "Nejpokročilejší", basic: "Pokročilý", pro: "Nejpokročilejší" },
   { label: "Maximální délka textu",           free: "5 000 znaků", oneshot: "12 000 znaků",basic: "8 000 znaků",   pro: "12 000 znaků" },
   { label: "Analýza obrázků / screenshotů",   free: "—",            oneshot: "—",           basic: "✓",             pro: "✓" },
   { label: "Hloubkový rozbor + taktiky",      free: "—",            oneshot: "✓",           basic: "—",             pro: "✓" },
@@ -120,7 +120,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Liší se výsledky mezi tarify?",
-    a: "Ano, ale jen v hloubce. FREE používá rychlý model Haiku — kratší verdikt. BASIC nasazuje Sonnet — plný popis s vysvětlením. Jednorázový nákup a tarif PRO běží na modelu Opus — nejvyšší přesnost, taktiky útočníka, doporučení co dělat dál.",
+    a: "Ano, ale jen v hloubce. FREE používá rychlý základní model — kratší verdikt. BASIC nasazuje pokročilý model — plný popis s vysvětlením. Jednorázový nákup a tarif PRO běží na nejpokročilejším modelu — nejvyšší přesnost, taktiky útočníka, doporučení co dělat dál.",
   },
   {
     q: "Ukládáte moje zprávy?",
@@ -128,7 +128,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Mohu Neklikni používat na firemní data?",
-    a: "Pro technické zprávy a SMS klidně. Pro citlivá firemní data doporučujeme nejprve anonymizovat (jména, čísla účtů). Anthropic API neuchovává tvé prompty pro trénink modelů.",
+    a: "Pro technické zprávy a SMS klidně. Pro citlivá firemní data doporučujeme nejprve anonymizovat (jména, čísla účtů). Náš AI provider neuchovává tvé prompty pro trénink modelů.",
   },
   {
     q: "Co když AI udělá chybu?",

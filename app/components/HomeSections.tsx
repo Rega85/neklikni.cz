@@ -17,7 +17,7 @@ const STEPS = [
   {
     icon: Brain,
     title: "AI analyzuje",
-    text: "Claude AI rozebere odesílatele, jazyk, taktiky útočníka a porovná s tisíci podvodů.",
+    text: "Naše pokročilá AI rozebere odesílatele, jazyk a taktiky útočníka a vyhodnotí riziko.",
   },
   {
     icon: ShieldCheck,
@@ -40,7 +40,7 @@ const BENEFITS = [
   {
     icon: Lock,
     title: "Ochrana soukromí",
-    text: "Anonymní použití, zprávy se neukládají. Data nikdy neopustí Anthropic API.",
+    text: "Anonymní použití, zprávy se neukládají. Data nikdy neopustí naše zabezpečené API.",
   },
   {
     icon: Heart,
