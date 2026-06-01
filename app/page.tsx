@@ -287,6 +287,8 @@ export default function Home() {
       setResult(data);
       trackEvent("analyze_completed", { risk: data.risk, tier: data.tier ?? "free" });
       window.dispatchEvent(new CustomEvent("creditsUpdated"));
+      // Po analýze nabídnout sdílení — popup si sám ověří auth + cooldown
+      setTimeout(() => window.dispatchEvent(new CustomEvent("referralPromptTrigger")), 2500);
     } catch (err: any) {
       setError(err.message || "Nepodařilo se připojit k serveru.");
     } finally {

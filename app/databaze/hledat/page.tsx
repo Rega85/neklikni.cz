@@ -646,6 +646,8 @@ export default function HledatPage() {
         throw new Error(data.error ?? 'Nepodařilo se prohledat databázi.')
       }
       setResult(data as SearchResult)
+      // Po vyhledání nabídnout sdílení — popup si sám ověří auth + cooldown
+      setTimeout(() => window.dispatchEvent(new CustomEvent('referralPromptTrigger')), 2500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Neznámá chyba.')
     } finally {
