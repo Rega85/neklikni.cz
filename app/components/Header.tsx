@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database, Flag } from "lucide-react";
+import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database, Flag, Users } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import SocialLinks from "./SocialLinks";
 
@@ -94,6 +94,8 @@ export default function Header() {
   const isBlogActive = pathname === "/blog" || pathname.startsWith("/blog/");
   const isNahlasitActive = pathname.startsWith("/databaze/nahlasit");
   const isDatabazeActive = pathname === "/databaze" || (pathname.startsWith("/databaze") && !isNahlasitActive);
+  const isAdminModerace = pathname.startsWith("/admin/moderace");
+  const isAdminUzivatele = pathname.startsWith("/admin/uzivatele");
 
   const navBase = "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest transition-colors";
   const navInactive = "text-slate-400 hover:text-white";
@@ -192,15 +194,27 @@ export default function Header() {
                     </Link>
                   )}
                   {isAdmin && (
-                    <Link
-                      href="/admin/moderace"
-                      onClick={closeMobile}
-                      className="flex items-center gap-3 px-3 py-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white ring-1 ring-purple-500/30 transition-colors text-sm font-semibold"
-                    >
-                      <Flag size={16} className="text-purple-300 shrink-0" />
-                      <span>Moderace</span>
-                      <span className="ml-auto text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-100 px-1.5 py-0.5 rounded">ADMIN</span>
-                    </Link>
+                    <>
+                      <Link
+                        href="/admin/moderace"
+                        onClick={closeMobile}
+                        aria-current={isAdminModerace ? "page" : undefined}
+                        className={`flex items-center gap-3 px-3 py-3 rounded-xl ring-1 ring-purple-500/30 transition-colors text-sm font-semibold ${isAdminModerace ? "bg-purple-500/20 text-white" : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white"}`}
+                      >
+                        <Flag size={16} className="text-purple-300 shrink-0" />
+                        <span>Moderace</span>
+                        <span className="ml-auto text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-100 px-1.5 py-0.5 rounded">ADMIN</span>
+                      </Link>
+                      <Link
+                        href="/admin/uzivatele"
+                        onClick={closeMobile}
+                        aria-current={isAdminUzivatele ? "page" : undefined}
+                        className={`flex items-center gap-3 px-3 py-3 rounded-xl ring-1 ring-purple-500/30 transition-colors text-sm font-semibold ${isAdminUzivatele ? "bg-purple-500/20 text-white" : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white"}`}
+                      >
+                        <Users size={16} className="text-purple-300 shrink-0" />
+                        <span>Uživatelé</span>
+                      </Link>
+                    </>
                   )}
                 </div>
 
@@ -295,15 +309,27 @@ export default function Header() {
                       <Gift size={16} className="text-emerald-400 shrink-0" /><span>Pozvi přátele <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider ml-1">+5 kreditů</span></span>
                     </Link>
                     {isAdmin && (
-                      <Link
-                        href="/admin/moderace"
-                        onClick={() => setMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white ring-1 ring-purple-500/30 transition-colors text-sm"
-                      >
-                        <Flag size={16} className="text-purple-300 shrink-0" />
-                        <span>Moderace</span>
-                        <span className="ml-auto text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-100 px-1.5 py-0.5 rounded">ADMIN</span>
-                      </Link>
+                      <>
+                        <Link
+                          href="/admin/moderace"
+                          onClick={() => setMenuOpen(false)}
+                          aria-current={isAdminModerace ? "page" : undefined}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ring-1 ring-purple-500/30 transition-colors text-sm ${isAdminModerace ? "bg-purple-500/20 text-white" : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white"}`}
+                        >
+                          <Flag size={16} className="text-purple-300 shrink-0" />
+                          <span>Moderace</span>
+                          <span className="ml-auto text-[9px] font-black uppercase tracking-wider bg-purple-500/30 text-purple-100 px-1.5 py-0.5 rounded">ADMIN</span>
+                        </Link>
+                        <Link
+                          href="/admin/uzivatele"
+                          onClick={() => setMenuOpen(false)}
+                          aria-current={isAdminUzivatele ? "page" : undefined}
+                          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ring-1 ring-purple-500/30 transition-colors text-sm ${isAdminUzivatele ? "bg-purple-500/20 text-white" : "bg-purple-500/10 hover:bg-purple-500/20 text-purple-200 hover:text-white"}`}
+                        >
+                          <Users size={16} className="text-purple-300 shrink-0" />
+                          <span>Uživatelé</span>
+                        </Link>
+                      </>
                     )}
                     <Link href="/update-password" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-slate-300 hover:text-white transition-colors text-sm">
                       <KeyRound size={16} className="text-slate-500 shrink-0" /><span>Změna hesla</span>
