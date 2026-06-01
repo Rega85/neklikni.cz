@@ -11,10 +11,12 @@ export const metadata: Metadata = {
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
-  "Phishing":          "text-purple-300 bg-purple-500/10 border-purple-400/20",
-  "Bankovní podvody":  "text-blue-300 bg-blue-500/10 border-blue-400/20",
-  "SMS podvody":       "text-amber-300 bg-amber-500/10 border-amber-400/20",
-  "Tipy":              "text-emerald-300 bg-emerald-500/10 border-emerald-400/20",
+  "Phishing":             "text-purple-300 bg-purple-500/10 border-purple-400/20",
+  "Bankovní podvody":     "text-blue-300 bg-blue-500/10 border-blue-400/20",
+  "SMS podvody":          "text-amber-300 bg-amber-500/10 border-amber-400/20",
+  "Tipy":                 "text-emerald-300 bg-emerald-500/10 border-emerald-400/20",
+  "Marketplace podvody":  "text-orange-300 bg-orange-500/10 border-orange-400/20",
+  "Investiční podvody":   "text-red-300 bg-red-500/10 border-red-400/20",
 };
 
 export default function BlogIndex() {
