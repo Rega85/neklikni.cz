@@ -12,6 +12,7 @@ import RiskGauge from "./components/RiskGauge";
 import UpsellModal from "./components/UpsellModal";
 import HeroParticles from "./components/HeroParticles";
 import AnalysisScanner from "./components/AnalysisScanner";
+import ReferralCard from "./components/ReferralCard";
 
 type DatabaseMatch = {
   type: "phone" | "account" | "email" | "facebook_url" | "var_symbol" | "other";
@@ -83,6 +84,7 @@ export default function Home() {
   const [ctaCopied, setCtaCopied] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileChecked, setProfileChecked] = useState(false);
   const [upsellReason, setUpsellReason] = useState<"anon_daily" | "no_credits" | null>(null);
   const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -150,7 +152,8 @@ export default function Home() {
     fetch('/api/me', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : null)
       .then((d) => { if (d?.profile) setProfile(d.profile); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setProfileChecked(true));
 
     fetch('/api/stats', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : null)
@@ -287,8 +290,6 @@ export default function Home() {
       setResult(data);
       trackEvent("analyze_completed", { risk: data.risk, tier: data.tier ?? "free" });
       window.dispatchEvent(new CustomEvent("creditsUpdated"));
-      // Po analýze nabídnout sdílení — popup si sám ověří auth + cooldown
-      setTimeout(() => window.dispatchEvent(new CustomEvent("referralPromptTrigger")), 2500);
     } catch (err: any) {
       setError(err.message || "Nepodařilo se připojit k serveru.");
     } finally {
@@ -901,6 +902,10 @@ export default function Home() {
               </div>
             );
           })()}
+
+          {result && (
+            <ReferralCard isLoggedIn={profileChecked ? profile !== null : null} />
+          )}
         </div>
         </section>
 

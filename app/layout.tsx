@@ -6,7 +6,6 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 import GaScript from "./components/GaScript";
-import ReferralPopup from "./components/ReferralPopup";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"] });
 
@@ -71,7 +70,6 @@ export default function RootLayout({
         {children}
         <Footer />
         <CookieConsent />
-        <ReferralPopup />
       </body>
     </html>
   );

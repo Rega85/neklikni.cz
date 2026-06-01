@@ -43,6 +43,7 @@ import {
   type SubjectVisibility,
 } from '@/types/databaze'
 import { identifierLabel } from '@/utils/databaze/identifiers'
+import ReferralCard from '@/app/components/ReferralCard'
 
 
 // ── API response shapes ──────────────────────────────
@@ -646,8 +647,6 @@ export default function HledatPage() {
         throw new Error(data.error ?? 'Nepodařilo se prohledat databázi.')
       }
       setResult(data as SearchResult)
-      // Po vyhledání nabídnout sdílení — popup si sám ověří auth + cooldown
-      setTimeout(() => window.dispatchEvent(new CustomEvent('referralPromptTrigger')), 2500)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Neznámá chyba.')
     } finally {
@@ -758,18 +757,21 @@ export default function HledatPage() {
           {isLoading && <LoadingPanel />}
           {!isLoading && limitReached && <LimitReachedPanel />}
           {!isLoading && !limitReached && result && (
-            result.found && result.subject ? (
-              <FoundPanel
-                subject={result.subject}
-                normalizedValue={result.normalized_value}
-                tier={tier}
-              />
-            ) : (
-              <NotFoundPanel
-                message={result.message ?? 'Žádný výsledek.'}
-                searchedQuery={lastQuery}
-              />
-            )
+            <>
+              {result.found && result.subject ? (
+                <FoundPanel
+                  subject={result.subject}
+                  normalizedValue={result.normalized_value}
+                  tier={tier}
+                />
+              ) : (
+                <NotFoundPanel
+                  message={result.message ?? 'Žádný výsledek.'}
+                  searchedQuery={lastQuery}
+                />
+              )}
+              <ReferralCard isLoggedIn={isAuthed} />
+            </>
           )}
           {/* Empty-state tip pro přihlášené před prvním dotazem — zaplňuje
               prázdno užitečným kontextem, nezavádí žádné konverzní CTA. */}
