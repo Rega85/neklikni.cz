@@ -216,10 +216,10 @@ export default async function UserDetailPage({
                         </td>
                         <td className="px-4 py-3">
                           <Link
-                            href="/admin/moderace"
+                            href={`/admin/incident/${inc.id}`}
                             className="text-xs text-purple-400 hover:text-purple-300 transition-colors whitespace-nowrap"
                           >
-                            → Moderace
+                            → Detail
                           </Link>
                         </td>
                       </tr>
