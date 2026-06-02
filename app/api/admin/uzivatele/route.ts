@@ -12,11 +12,12 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAdminIdentity } from '../_lib/auth'
 import type { DatabazeDatabase } from '../../databaze/_lib/database'
+import { sendPasswordResetEmail } from '../../databaze/_lib/email'
 
 export const dynamic = 'force-dynamic'
 
-const ACTIONS = ['ban', 'unban'] as const
-type BanAction = (typeof ACTIONS)[number]
+const ACTIONS = ['ban', 'unban', 'reset_password'] as const
+type AdminAction = (typeof ACTIONS)[number]
 
 export async function POST(req: Request) {
   const admin = await getAdminIdentity()
@@ -43,10 +44,10 @@ export async function POST(req: Request) {
   if (typeof action !== 'string' || !(ACTIONS as readonly string[]).includes(action)) {
     return NextResponse.json({ error: 'Neplatná akce.' }, { status: 400 })
   }
-  const act = action as BanAction
+  const act = action as AdminAction
 
   // Blokujeme self-ban — admin nemůže zablokovat sám sebe
-  if (userId === admin.userId) {
+  if (act !== 'reset_password' && userId === admin.userId) {
     return NextResponse.json({ error: 'Nelze zablokovat vlastní účet.' }, { status: 400 })
   }
 
@@ -58,6 +59,48 @@ export async function POST(req: Request) {
 
   const sb = createClient<DatabazeDatabase>(url, key)
 
+  // ── Reset hesla ─────────────────────────────────────────────────────────
+  if (act === 'reset_password') {
+    const { data: userData, error: getUserErr } = await sb.auth.admin.getUserById(userId)
+    if (getUserErr || !userData.user?.email) {
+      return NextResponse.json({ error: 'Uživatel nenalezen nebo nemá e-mail.' }, { status: 404 })
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://www.neklikni.cz'
+    const { data: linkData, error: linkErr } = await sb.auth.admin.generateLink({
+      type: 'recovery',
+      email: userData.user.email,
+      options: { redirectTo: `${appUrl}/auth/callback?next=/update-password` },
+    })
+    if (linkErr || !linkData?.properties?.action_link) {
+      console.error('admin/uzivatele: generateLink failed', linkErr)
+      return NextResponse.json({ error: 'Generování odkazu selhalo.' }, { status: 500 })
+    }
+
+    const sent = await sendPasswordResetEmail(userData.user.email, linkData.properties.action_link)
+    if (!sent) {
+      return NextResponse.json({ error: 'E-mail se nepodařilo odeslat.' }, { status: 500 })
+    }
+
+    try {
+      await sb.from('audit_log').insert({
+        actor_type: 'admin',
+        actor_id: admin.userId,
+        action: 'admin_reset_password',
+        target_type: 'reporter',
+        target_id: userId,
+        ip_address: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
+        user_agent: req.headers.get('user-agent') || null,
+        metadata: { admin_email: admin.email, user_email: userData.user.email },
+      })
+    } catch (err) {
+      console.error('admin/uzivatele: audit_log (reset) failed', err)
+    }
+
+    return NextResponse.json({ ok: true, action: 'reset_password' })
+  }
+
+  // ── Ban / Unban ──────────────────────────────────────────────────────────
   // Auth-level ban přes Supabase Admin API
   // ban_duration '876000h' ≈ 100 let = efektivně permanentní ban
   // ban_duration 'none' = okamžité odblokování

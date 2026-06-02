@@ -129,8 +129,13 @@ export default async function UzivatelePage() {
                     key={user.id}
                     className={`transition-colors hover:bg-slate-900/80 ${banned ? 'bg-red-950/20' : ''}`}
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-slate-200">
-                      {user.email ?? '—'}
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <Link
+                        href={`/admin/uzivatele/${user.id}`}
+                        className="text-slate-200 hover:text-purple-300 transition-colors"
+                      >
+                        {user.email ?? '—'}
+                      </Link>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-400">
                       {formatDate(user.created_at)}

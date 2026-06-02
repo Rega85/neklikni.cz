@@ -196,6 +196,40 @@ export async function sendReporterIncidentNeedsInfo(
 }
 
 
+function buildPasswordResetHtml(resetUrl: string): string {
+  const safeUrl = escapeHtml(resetUrl)
+  return `<!doctype html>
+<html lang="cs">
+  <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; line-height: 1.55; max-width: 560px; margin: 0 auto; padding: 24px;">
+    <p>Ahoj,</p>
+    <p>administrátor webu Neklikni.cz ti zaslal odkaz pro <strong>obnovení hesla</strong>.</p>
+    <p>Klikni na tlačítko níže a nastav si nové heslo. Odkaz je platný po omezenou dobu.</p>
+    <p style="margin: 24px 0;">
+      <a href="${safeUrl}" style="display:inline-block; background:#7c3aed; color:#fff; text-decoration:none; padding:12px 20px; border-radius:8px; font-weight:600;">Obnovit heslo</a>
+    </p>
+    <p style="font-size: 13px; color:#6b7280;">Pokud tlačítko nefunguje, zkopíruj tuto adresu do prohlížeče:<br/><a href="${safeUrl}" style="color:#7c3aed; word-break:break-all;">${safeUrl}</a></p>
+    <p style="font-size: 13px; color:#6b7280;">Pokud jsi o obnovení hesla nepožádal/a, tento e-mail ignoruj — tvůj účet je v pořádku.</p>
+    <p>Tým Neklikni.cz</p>
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+    <p style="font-size: 12px; color: #6b7280;">(Tento e-mail byl odeslán administrátorem webu neklikni.cz.)</p>
+  </body>
+</html>`
+}
+
+export async function sendPasswordResetEmail(
+  to: string,
+  resetUrl: string,
+): Promise<boolean> {
+  return dispatch({
+    label: 'admin-password-reset',
+    to,
+    subject: 'Obnovení hesla na Neklikni.cz',
+    html: buildPasswordResetHtml(resetUrl),
+    context: {},
+  })
+}
+
+
 export async function sendAdminNewIncidentNotification(
   summary: AdminIncidentSummary,
 ): Promise<boolean> {
