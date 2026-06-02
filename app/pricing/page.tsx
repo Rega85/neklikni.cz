@@ -283,8 +283,7 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-slate-400 text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Méně než cena jedné kávy měsíčně za to, že nikdo ve tvojí rodině nepřijde o úspory.
-            Začni zdarma — kdykoli upgraduj nebo zruš.
+            Začni zdarma — 2 ověření denně bez registrace. Plať jen když potřebuješ víc.
           </p>
 
           {/* Trust badges */}
@@ -296,7 +295,45 @@ export default function PricingPage() {
         </section>
 
         {/* ─── Plan Cards ───────────────────────────────── */}
-        <section className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-16">
+
+          {/* FREE — vždy první, CTA vede na homepage */}
+          <div className="relative surface-card p-5 sm:p-6 xl:p-5 flex flex-col animate-fade-up border-emerald-500/30">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="bg-emerald-500/15 text-emerald-300 p-2.5 rounded-xl">
+                <ShieldCheck size={20} />
+              </div>
+              <h2 className="text-xl font-black tracking-tight">FREE</h2>
+            </div>
+
+            <div className="mb-1">
+              <span className="text-5xl font-black tracking-tight">0 Kč</span>
+            </div>
+            <p className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2">navždy zdarma</p>
+            <p className="text-slate-400 text-sm font-medium mb-6">Ověř si zprávu hned, bez registrace</p>
+
+            <ul className="space-y-3 mb-7 flex-1">
+              {[
+                "2 analýzy denně zdarma",
+                "Vyhledávání v databázi",
+                "Bez registrace",
+                "Sdílení a varování",
+              ].map((f) => (
+                <li key={f} className="flex gap-2.5 items-start text-sm text-slate-200">
+                  <Check className="text-emerald-400 shrink-0 mt-0.5" size={16} />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => { trackEvent("cta_pricing_clicked", { from: "pricing", action: "free" }); router.push("/"); }}
+              className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] bg-emerald-700 hover:bg-emerald-600 text-white"
+            >
+              Vyzkoušet zdarma
+            </button>
+          </div>
+
           {PLANS.map((p, idx) => {
             const styles = ACCENT_STYLES[p.accent];
             const Icon = p.icon;
@@ -304,8 +341,8 @@ export default function PricingPage() {
             return (
               <div
                 key={p.key}
-                className={`relative surface-card p-7 sm:p-8 flex flex-col animate-fade-up ${p.popular ? "md:-translate-y-3 surface-card-elevated " + styles.popularRing : ""} ${styles.border} ${styles.glow}`}
-                style={{ animationDelay: `${idx * 80}ms` }}
+                className={`relative surface-card p-6 sm:p-7 xl:p-5 flex flex-col animate-fade-up ${p.popular ? "md:-translate-y-3 surface-card-elevated " + styles.popularRing : ""} ${styles.border} ${styles.glow}`}
+                style={{ animationDelay: `${(idx + 1) * 80}ms` }}
               >
                 {p.popular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-500 to-purple-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-blue-500/30">
