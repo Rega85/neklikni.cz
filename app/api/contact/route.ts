@@ -1,14 +1,16 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { checkIpRateLimit, escapeHtml, getClientIp } from "../_lib/security";
+import { escapeHtml, getClientIp } from "../_lib/security";
+import { checkRateLimit, hashForRL } from "../_lib/ratelimit";
 
-const CONTACT_RATE_LIMIT = 3;
-const CONTACT_RATE_WINDOW_MS = 60 * 60 * 1000; // 1h
+const CONTACT_RATE_LIMIT = 3; // per 1h per IP (Redis-backed)
 
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!checkIpRateLimit(ip, "contact", CONTACT_RATE_LIMIT, CONTACT_RATE_WINDOW_MS)) {
+    const ipHash = await hashForRL(ip);
+    const rl = await checkRateLimit(ipHash, 'contact', CONTACT_RATE_LIMIT, '1 h');
+    if (!rl.allowed) {
       return NextResponse.json(
         { error: "Příliš mnoho požadavků. Zkuste to později." },
         { status: 429 }

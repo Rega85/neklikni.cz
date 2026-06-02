@@ -4,12 +4,13 @@
  * Veřejné vyhledávání subjektu v databázi nahlášených incidentů.
  *
  * Auth: volitelný. Přihlášený uživatel má vyšší rate limit, anonymní
- * uživatel jen 1 dotaz / 24h (cookie token + IP hash jako fallback).
+ * uživatel jen 1 dotaz / 24h (cookie token jako UX shortcut + Redis jako
+ * sdílený counter napříč Vercel instancemi).
  *
  * Workflow:
  *  1. Validace `query` z body
  *  2. Auth check (volitelný)
- *  3. Rate limit (anon: cookie + IP, auth: per user-id)
+ *  3. Rate limit (anon: cookie + Redis IP hash, auth: Redis per user-id)
  *  4. Detekce typu identifikátoru + normalizace + SHA-256 hash
  *  5. Lookup `subject_identifiers` přes value_hash
  *  6. Pokud match → fetch subjekt, agregace incidentů, top kategorie,
@@ -40,65 +41,24 @@ import {
   normalizeVarSymbol,
 } from '@/utils/databaze/identifiers'
 import type { DatabazeDatabase } from '../_lib/database'
+import { checkRateLimit, hashForRL } from '../../_lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
 
 
-// ── Rate limit (in-memory, MVP) ───────────────────────
+// ── Rate limit konfigurace ────────────────────────────
+// Anonymní: 1 dotaz / 24h (konverzní moment → výzva k registraci)
+// Auth: 20 dotazů / 24h
+// Redis (Upstash) zajišťuje sdílený counter napříč Vercel instancemi.
 
-const WINDOW_MS = 24 * 60 * 60 * 1000
 const WINDOW_SECONDS = 24 * 60 * 60
-// Anonymní uživatel má 1 dotaz / 24h — po překročení limitu vyzva
-// k registraci (jednoduchá konverze pro „rychle ověřit účet" use case).
 const ANON_LIMIT = 1
 const AUTH_LIMIT = 20
 
 const ANON_COOKIE = 'nk_anon_search'
 
-const rateLimitMap = new Map<string, number[]>()
-
-function checkAndRecordRateLimit(key: string, limit: number): boolean {
-  const now = Date.now()
-  const cutoff = now - WINDOW_MS
-  const stamps = (rateLimitMap.get(key) ?? []).filter((t) => t > cutoff)
-  if (stamps.length >= limit) {
-    rateLimitMap.set(key, stamps)
-    return false
-  }
-  stamps.push(now)
-  rateLimitMap.set(key, stamps)
-  return true
-}
-
-function peekRateLimit(key: string, limit: number): boolean {
-  const now = Date.now()
-  const cutoff = now - WINDOW_MS
-  const stamps = (rateLimitMap.get(key) ?? []).filter((t) => t > cutoff)
-  return stamps.length < limit
-}
-
 
 // ── Helpers ──────────────────────────────────────────
-
-async function hashIp(ip: string): Promise<string> {
-  const pepper = process.env.IP_PEPPER
-  if (!pepper) {
-    // Fail loudly rather than fall back to a known constant — a guessable
-    // pepper makes the SHA-256 IP hash deanonymisable via a rainbow table
-    // over the IPv4 space.
-    console.error('hashIp: IP_PEPPER env missing — refusing to hash')
-    throw new Error('IP_PEPPER not configured')
-  }
-  const data = new TextEncoder().encode(ip + pepper)
-  const digest = await crypto.subtle.digest('SHA-256', data)
-  const bytes = new Uint8Array(digest)
-  let hex = ''
-  for (let i = 0; i < bytes.length; i++) {
-    hex += bytes[i].toString(16).padStart(2, '0')
-  }
-  return hex
-}
-
 
 function normalizeByType(type: IdentifierType, raw: string): string | null {
   switch (type) {
@@ -211,9 +171,7 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
+          getAll() { return cookieStore.getAll() },
           setAll() {},
         },
       },
@@ -224,28 +182,29 @@ export async function POST(req: Request) {
     console.error('Search auth check failed:', err)
   }
 
-  // 3. Rate limit
-  //    Anonymní uživatel: limit 1/24h ověřujeme primárně HTTP-only cookie
-  //    tokenem (přežije server restart) a sekundárně in-memory IP hashem
-  //    (zachytí vyčištění cookies). Přihlášený uživatel: 20/24h podle user.id.
+  // 3. Rate limit (Redis-backed, fail-open — search je čtení, výpadek Redis
+  //    nesmí rozbít vyhledávání pro legitimní uživatele)
   let setAnonCookie = false
+
   if (userId) {
-    const rateKey = `user:${userId}`
-    if (!checkAndRecordRateLimit(rateKey, AUTH_LIMIT)) {
+    // Přihlášený uživatel: 20 dotazů / 24h per user_id
+    const rl = await checkRateLimit(userId, 'search:auth', AUTH_LIMIT, '24 h')
+    if (!rl.allowed) {
       return NextResponse.json(
         {
-          error: `Limit ${AUTH_LIMIT} vyhledávání za 24 hodin vyčerpán. Zkuste to později.`,
+          error: `Limit ${AUTH_LIMIT} vyhledávání za 24 hodin vyčerpán. Zkuste to później.`,
           limit_reached: true,
         },
         { status: 429 },
       )
     }
   } else {
+    // Anonymní uživatel: cookie je UX shortcut (rychlá odpověď bez Redis),
+    // Redis je autoritativní cross-instance counter.
     if (cookieStore.get(ANON_COOKIE)) {
       return NextResponse.json(
         {
-          error:
-            'Pro další vyhledávání se prosím registruj — je to zdarma a získáš neomezené ověřování.',
+          error: 'Pro další vyhledávání se prosím registruj — je to zdarma a získáš neomezené ověřování.',
           limit_reached: true,
           require_registration: true,
         },
@@ -257,25 +216,22 @@ export async function POST(req: Request) {
       req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
       req.headers.get('x-real-ip') ||
       'unknown'
-    const ipKey = `ip:${await hashIp(ip)}`
-    if (!peekRateLimit(ipKey, ANON_LIMIT)) {
+    const ipHash = await hashForRL(ip)
+    const rl = await checkRateLimit(ipHash, 'search:anon', ANON_LIMIT, '24 h')
+    if (!rl.allowed) {
       return NextResponse.json(
         {
-          error:
-            'Pro další vyhledávání se prosím registruj — je to zdarma a získáš neomezené ověřování.',
+          error: 'Pro další vyhledávání se prosím registruj — je to zdarma a získáš neomezené ověřování.',
           limit_reached: true,
           require_registration: true,
         },
         { status: 429 },
       )
     }
-    // Zapsat IP počítadlo a označit, že na response dáme cookie.
-    checkAndRecordRateLimit(ipKey, ANON_LIMIT)
     setAnonCookie = true
   }
 
-  // Helper: anon callům po rate-limit checku přilepí cookie token, aby
-  // další request ve 24h okně dostal 429 i po restartu serveru.
+  // Helper: anon callům přilepí cookie token jako UX shortcut pro příští request.
   const respond = (body: unknown, init?: ResponseInit): NextResponse => {
     const r = NextResponse.json(body, init)
     if (setAnonCookie) {

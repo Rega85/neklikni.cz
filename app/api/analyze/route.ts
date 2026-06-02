@@ -8,6 +8,7 @@ import {
   checkIdentifiersInDatabase,
   type DatabaseMatch,
 } from "../databaze/_lib/crossReference";
+import { checkRateLimit, hashForRL } from "../_lib/ratelimit";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -65,6 +66,21 @@ async function handleAnonymousAnalysis(req: Request, text: string) {
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     req.headers.get("x-real-ip") ||
     "unknown";
+
+  // Redis preliminary check — rychlý cross-instance guard před DB dotazem.
+  // fail-open: pokud Redis nedostupný, pokračuje na DB check níže.
+  const ipHash = await hashForRL(ip);
+  const rl = await checkRateLimit(ipHash, 'analyze:anon', 2, '24 h', true);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      {
+        error: "Denní limit",
+        message: "Denní limit 2 kontrol vyčerpán. Zaregistrujte se pro více analýz.",
+        limitReached: true,
+      },
+      { status: 429 }
+    );
+  }
 
   const today = new Date().toISOString().split("T")[0];
   const { data: ipRecord } = await supabaseAdmin()

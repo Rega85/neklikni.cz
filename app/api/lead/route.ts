@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
-import { checkIpRateLimit, escapeHtml, getClientIp } from "../_lib/security";
+import { escapeHtml, getClientIp } from "../_lib/security";
+import { checkRateLimit, hashForRL } from "../_lib/ratelimit";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://www.neklikni.cz";
 
-const LEAD_RATE_LIMIT = 5;
-const LEAD_RATE_WINDOW_MS = 60 * 60 * 1000; // 1h
+const LEAD_RATE_LIMIT = 5; // per 1h per IP (Redis-backed)
 
 // Whitelist přijatelných verzí znění souhlasu (LeadMagnet checkbox).
 // Klient pošle aktuální verzi (LEAD_CONSENT_VERSION v LeadMagnet.tsx).
@@ -58,7 +58,9 @@ function magnetEmailHtml(email: string, unsubscribeToken: string) {
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    if (!checkIpRateLimit(ip, "lead", LEAD_RATE_LIMIT, LEAD_RATE_WINDOW_MS)) {
+    const ipHash = await hashForRL(ip);
+    const rl = await checkRateLimit(ipHash, 'lead', LEAD_RATE_LIMIT, '1 h');
+    if (!rl.allowed) {
       return NextResponse.json(
         { error: "Příliš mnoho požadavků. Zkuste to později." },
         { status: 429 }
