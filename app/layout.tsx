@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://www.neklikni.cz'),
   manifest: "/manifest.json",
   openGraph: {
-    title: "NeKlikni.cz | AI bodyguard",
-    description: "Analýza podvodných zpráv v reálném čase. Chraňte své peníze i data.",
+    title: "NeKlikni.cz — ověř, než klikneš",
+    description: "Vlož podezřelou SMS, e-mail nebo prodejce a hned víš, jestli jde o podvod. Zdarma, anonymně, za 10 sekund.",
     siteName: 'NeKlikni.cz',
     locale: 'cs_CZ',
     type: 'website',
@@ -35,8 +35,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'NeKlikni.cz | AI bodyguard',
-    description: 'Prověřte si podezřelou zprávu dřív, než na ni kliknete.',
+    title: "NeKlikni.cz — ověř, než klikneš",
+    description: "Vlož podezřelou SMS, e-mail nebo prodejce a hned víš, jestli jde o podvod. Zdarma, anonymně, za 10 sekund.",
     images: ['/og-image.png'],
   },
   alternates: {
