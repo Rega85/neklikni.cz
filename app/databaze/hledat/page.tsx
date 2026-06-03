@@ -539,6 +539,23 @@ function AuthedEmptyTip({
 }
 
 
+function UnknownFormatPanel({ message }: { message: string }) {
+  return (
+    <section className="surface-card-elevated rounded-2xl border border-slate-700/50 bg-slate-900/40 p-6 backdrop-blur-md sm:p-8">
+      <div className="flex items-start gap-3">
+        <HelpCircle size={28} className="flex-shrink-0 text-slate-400" aria-hidden="true" />
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-slate-100">
+            Tento formát neumíme prohledat
+          </h2>
+          <p className="text-sm leading-relaxed text-slate-300">{message}</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
 function ErrorPanel({ error, onDismiss }: { error: string; onDismiss: () => void }) {
   return (
     <section
@@ -764,6 +781,9 @@ export default function HledatPage() {
                   normalizedValue={result.normalized_value}
                   tier={tier}
                 />
+              ) : result.detected_type === null ? (
+                // API nerozpoznalo formát — bez "Nahlásit incident" CTA
+                <UnknownFormatPanel message={result.message ?? ''} />
               ) : (
                 <NotFoundPanel
                   message={result.message ?? 'Žádný výsledek.'}

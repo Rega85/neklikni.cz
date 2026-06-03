@@ -3,7 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, MessageSquare, UserSearch, Plus, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { detectIdentifierType } from "@/utils/databaze/identifiers";
 import HomeSections from "./components/HomeSections";
 import { HomeSchema } from "./components/StructuredData";
 import { trackEvent } from "./lib/analytics";
@@ -92,6 +94,8 @@ export default function Home() {
   const [placeholderText, setPlaceholderText] = useState("");
   const [activeTab, setActiveTab] = useState<"zprava" | "subjekt">("zprava");
   const [subjectQuery, setSubjectQuery] = useState("");
+  const [subjectError, setSubjectError] = useState<string | null>(null);
+  const router = useRouter();
   const [dbStats, setDbStats] = useState<{ subjects: number | null; incidents: number | null }>({ subjects: null, incidents: null });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -298,6 +302,18 @@ export default function Home() {
   }, [input, images, loading, profile?.tier]);
 
   const handleClear = () => { setInput(""); setResult(null); setError(null); setImages([]); };
+
+  const handleSubjectSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const q = subjectQuery.trim();
+    if (!q) return;
+    if (!detectIdentifierType(q)) {
+      setSubjectError("Vlož telefon, e-mail nebo číslo účtu — tento formát neumíme prohledat.");
+      return;
+    }
+    setSubjectError(null);
+    router.push(`/databaze/hledat?q=${encodeURIComponent(q)}`);
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -668,8 +684,7 @@ export default function Home() {
                       </div>
 
                       <form
-                        action="/databaze/hledat"
-                        method="get"
+                        onSubmit={handleSubjectSearch}
                         className="space-y-2.5"
                       >
                         <label htmlFor="hero_db_q" className="sr-only">
@@ -681,10 +696,13 @@ export default function Home() {
                           type="search"
                           required
                           value={subjectQuery}
-                          onChange={(e) => setSubjectQuery(e.target.value)}
+                          onChange={(e) => { setSubjectQuery(e.target.value); setSubjectError(null); }}
                           placeholder="+420 ... | email@... | 12345/0100"
                           className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3.5 text-[15px] text-white placeholder:text-slate-600 focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                         />
+                        {subjectError && (
+                          <p className="text-amber-400 text-xs leading-relaxed">{subjectError}</p>
+                        )}
                         <button
                           type="submit"
                           className="group w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white py-3.5 font-bold text-sm sm:text-base shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 active:scale-[0.98] transition-all"
