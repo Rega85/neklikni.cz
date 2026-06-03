@@ -203,8 +203,13 @@ export async function runAiPrecheck(input: PrecheckInput): Promise<AiPrecheckRes
 
   // Dynamický prefix — Claude potřebuje znát aktuální datum, aby
   // nesahal po stale "future date" red flagy podle data tréninku.
-  const today = new Date().toISOString().split('T')[0]
-  const systemPromptPrefix = `Aktuální datum: ${today}.
+  const todayPrague = new Date().toLocaleDateString("cs-CZ", {
+    timeZone: "Europe/Prague",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const systemPromptPrefix = `Aktuální datum: ${todayPrague}.
 
 Při hodnocení časové konzistence ber v úvahu, že incident_date v rozsahu posledních 5 let je normální. Pouze pokud incident_date je v budoucnosti více než 7 dní, nebo více než 5 let v minulosti, označ to jako red_flag.
 

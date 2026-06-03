@@ -339,7 +339,19 @@ function extractJson(raw: string): any {
 
 async function runAnalysis(text: string | null, tier: string, images: string[] = []) {
   const model = TIER_MODELS[tier] || TIER_MODELS.free;
-  const systemPrompt = ["pro", "easy"].includes(tier) ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
+  const basePrompt = ["pro", "easy"].includes(tier) ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
+  // Dynamický prefix — model nezná aktuální datum, bez toho označuje
+  // včerejší/dnešní data jako "z budoucnosti". Europe/Prague = CET/CEST.
+  const todayPrague = new Date().toLocaleDateString("cs-CZ", {
+    timeZone: "Europe/Prague",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const systemPrompt =
+    `Dnešní datum je ${todayPrague}. Datum v minulosti ani dnešní datum NENÍ samo o sobě` +
+    ` indikátor podvodu — podezřelé je pouze datum jasně v budoucnosti vůči dnešku.\n\n` +
+    basePrompt;
   const maxTokens = ["pro", "easy"].includes(tier) ? 2000 : tier === "basic" ? 1500 : 800;
 
   let userContent: any;
