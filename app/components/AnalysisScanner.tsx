@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-const MESSAGES = [
+const DEFAULT_MESSAGES = [
   "Analyzuji obsah pomocí AI…",
   "Extrakce signálů…",
   "Generuji verdikt…",
@@ -10,7 +10,11 @@ const MESSAGES = [
 
 const MESSAGE_INTERVAL_MS = 1600;
 
-export default function AnalysisScanner() {
+interface Props {
+  messages?: string[];
+}
+
+export default function AnalysisScanner({ messages = DEFAULT_MESSAGES }: Props) {
   const [messageIndex, setMessageIndex] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
 
@@ -21,10 +25,10 @@ export default function AnalysisScanner() {
       return;
     }
     const id = setInterval(() => {
-      setMessageIndex((i) => (i + 1) % MESSAGES.length);
+      setMessageIndex((i) => (i + 1) % messages.length);
     }, MESSAGE_INTERVAL_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [messages.length]);
 
   return (
     <div
@@ -56,7 +60,7 @@ export default function AnalysisScanner() {
           key={messageIndex}
           className="text-sm font-medium text-slate-200 tracking-wide animate-[fade-up_400ms_ease-out]"
         >
-          {MESSAGES[messageIndex]}
+          {messages[messageIndex % messages.length]}
         </p>
       </div>
     </div>

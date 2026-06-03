@@ -42,8 +42,9 @@ import {
   type IncidentCategory,
   type SubjectVisibility,
 } from '@/types/databaze'
-import { identifierLabel } from '@/utils/databaze/identifiers'
+import { detectIdentifierType, identifierLabel, looksLikeFullMessage } from '@/utils/databaze/identifiers'
 import ReferralCard from '@/app/components/ReferralCard'
+import AnalysisScanner from '@/app/components/AnalysisScanner'
 
 
 // ── API response shapes ──────────────────────────────
@@ -598,6 +599,7 @@ export default function HledatPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [stats, setStats] = useState<{ subjects: number | null; incidents: number | null } | null>(null)
   const [limitReached, setLimitReached] = useState<LimitReachedState | null>(null)
+  const [fullMessageWarning, setFullMessageWarning] = useState(false)
 
   useEffect(() => {
     fetch('/api/me', { cache: 'no-store' })
@@ -687,6 +689,17 @@ export default function HledatPage() {
     e.preventDefault()
     const q = query.trim()
     if (!q || isLoading) return
+
+    const detectedType = detectIdentifierType(q)
+    const UNAMBIGUOUS = ['phone', 'email', 'account', 'facebook_url']
+    const isUnambiguous = detectedType !== null && UNAMBIGUOUS.includes(detectedType)
+
+    if (!isUnambiguous && looksLikeFullMessage(q)) {
+      setFullMessageWarning(true)
+      return
+    }
+
+    setFullMessageWarning(false)
     const url = `/databaze/hledat?q=${encodeURIComponent(q)}`
     router.push(url, { scroll: false })
     void performSearch(q)
@@ -769,9 +782,39 @@ export default function HledatPage() {
           </button>
         </form>
 
+        {fullMessageWarning && (
+          <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+            <p className="text-sm text-amber-200 leading-relaxed">
+              Tohle vypadá jako celá zpráva, ne jako identifikátor prodejce.
+              Chceš ji prověřit jako podezřelou zprávu?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <a
+                href={`/?q=${encodeURIComponent(query)}`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white transition-colors"
+              >
+                Prověřit zprávu jako podvod →
+              </a>
+              <button
+                type="button"
+                onClick={() => { setFullMessageWarning(false); void performSearch(query) }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 hover:border-slate-500 px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
+              >
+                Přesto hledat v databázi
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           {error && <ErrorPanel error={error} onDismiss={() => setError(null)} />}
-          {isLoading && <LoadingPanel />}
+          {isLoading && (
+            <AnalysisScanner messages={[
+              'Hledáme v databázi…',
+              'Porovnáváme identifikátory…',
+              'Zpracováváme výsledky…',
+            ]} />
+          )}
           {!isLoading && limitReached && <LimitReachedPanel />}
           {!isLoading && !limitReached && result && (
             <>

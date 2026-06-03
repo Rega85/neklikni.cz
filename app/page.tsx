@@ -5,7 +5,7 @@ import { Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Down
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { detectIdentifierType } from "@/utils/databaze/identifiers";
+import { detectIdentifierType, looksLikeFullMessage } from "@/utils/databaze/identifiers";
 import HomeSections from "./components/HomeSections";
 import { HomeSchema } from "./components/StructuredData";
 import { trackEvent } from "./lib/analytics";
@@ -95,6 +95,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<"zprava" | "subjekt">("zprava");
   const [subjectQuery, setSubjectQuery] = useState("");
   const [subjectError, setSubjectError] = useState<string | null>(null);
+  const [subjectHint, setSubjectHint] = useState<"full_message" | null>(null);
   const router = useRouter();
   const [dbStats, setDbStats] = useState<{ subjects: number | null; incidents: number | null }>({ subjects: null, incidents: null });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -150,6 +151,7 @@ export default function Home() {
     const query = params.get("q");
     if (query) {
       setInput(query);
+      setActiveTab("zprava"); // explicitně — ať i SPA navigace přepne na SMS tab
       window.history.replaceState({}, '', '/');
     }
 
@@ -307,11 +309,28 @@ export default function Home() {
     e.preventDefault();
     const q = subjectQuery.trim();
     if (!q) return;
-    if (!detectIdentifierType(q)) {
-      setSubjectError("Vlož telefon, e-mail nebo číslo účtu — tento formát neumíme prohledat.");
+
+    const detectedType = detectIdentifierType(q);
+    // Heuristiku "vypadá jako zpráva" spustíme jen u null / var_symbol —
+    // u phone/email/account/facebook_url je identifikátor jednoznačný,
+    // i kdyby byl dlouhý (FB URL, IBAN s mezerami).
+    const UNAMBIGUOUS = ["phone", "email", "account", "facebook_url"] as const;
+    const isUnambiguous = detectedType !== null && (UNAMBIGUOUS as readonly string[]).includes(detectedType);
+
+    if (!isUnambiguous && looksLikeFullMessage(q)) {
+      setSubjectHint("full_message");
+      setSubjectError(null);
       return;
     }
+
+    if (!detectedType) {
+      setSubjectError("Vlož telefon, e-mail nebo číslo účtu — tento formát neumíme prohledat.");
+      setSubjectHint(null);
+      return;
+    }
+
     setSubjectError(null);
+    setSubjectHint(null);
     router.push(`/databaze/hledat?q=${encodeURIComponent(q)}`);
   };
 
@@ -702,6 +721,38 @@ export default function Home() {
                         />
                         {subjectError && (
                           <p className="text-amber-400 text-xs leading-relaxed">{subjectError}</p>
+                        )}
+                        {subjectHint === "full_message" && (
+                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2.5">
+                            <p className="text-xs text-amber-200 leading-relaxed">
+                              Tohle vypadá jako celá zpráva, ne jako identifikátor prodejce.
+                              Chceš ji prověřit jako podezřelou zprávu?
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveTab("zprava");
+                                  setInput(subjectQuery);
+                                  setSubjectHint(null);
+                                  setSubjectQuery("");
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-[11px] font-bold text-white transition-colors"
+                              >
+                                Prověřit zprávu jako podvod
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSubjectHint(null);
+                                  router.push(`/databaze/hledat?q=${encodeURIComponent(subjectQuery)}`);
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 hover:border-slate-500 px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors"
+                              >
+                                Přesto hledat v databázi
+                              </button>
+                            </div>
+                          </div>
                         )}
                         <button
                           type="submit"

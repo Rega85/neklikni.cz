@@ -467,6 +467,21 @@ function maskFallback(value: string): string {
 
 
 /**
+ * Heuristika: vrátí true, pokud vstup vypadá jako celá zpráva/věta,
+ * ne jako identifikátor prodejce.
+ *
+ * Volat JEN pokud detectIdentifierType vrátil null nebo var_symbol —
+ * u jednoznačných identifikátorů (phone, email, account, facebook_url)
+ * heuristiku přeskočit (dlouhý FB URL nebo IBAN by jinak způsobil
+ * false-positive).
+ */
+export function looksLikeFullMessage(input: string): boolean {
+  const t = input.trim()
+  return t.length > 60 || t.split(/\s+/).length > 8
+}
+
+
+/**
  * Vygeneruje 32-znakový hex token pro token-based access k objekci námitky.
  *
  * Použití: `objections.access_token` — sdílíme dotčené osobě e-mailem
