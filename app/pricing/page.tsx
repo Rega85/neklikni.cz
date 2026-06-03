@@ -19,6 +19,8 @@ type PlanCard = {
   cta: string;
   popular?: boolean;
   comingSoon?: boolean;
+  badge?: string;
+  badgeClass?: string;
   features: string[];
 };
 
@@ -32,6 +34,8 @@ const PLANS: PlanCard[] = [
     icon: Zap,
     accent: "slate",
     cta: "Koupit 1 analýzu",
+    badge: "Bez závazku",
+    badgeClass: "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/30",
     features: [
       "1 kompletní rozbor zprávy",
       "Nejpokročilejší AI model",
@@ -352,6 +356,11 @@ export default function PricingPage() {
                 {p.comingSoon && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-900 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-amber-500/40">
                     Připravujeme
+                  </div>
+                )}
+                {p.badge && (
+                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap ${p.badgeClass}`}>
+                    {p.badge}
                   </div>
                 )}
 
