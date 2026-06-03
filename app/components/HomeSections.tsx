@@ -65,6 +65,11 @@ const USE_CASES = [
     title: "Když ti denně chodí 5+ podezřelých e-mailů",
     text: "Pro účetní a HR pracovníky chodí denně desítky e-mailů od „úřadů“, „bank“, „dodavatelů“. PRO tarif s detailním rozborem rychle odliší legitimní žádost od pokusu o podvodný převod. Šetří desítky minut denně.",
   },
+  {
+    label: "Pro nákupy z bazaru",
+    title: "Marketplace, Vinted a číslo účtu cizího člověka",
+    text: "Než pošleš peníze za zboží z inzerátu, prověříš si číslo účtu, telefon nebo profil prodejce v databázi nahlášených podvodů. Když už někoho oškubal, dozvíš se to dřív, než přijdeš o peníze.",
+  },
 ];
 
 const FAQ_HOME: { q: string; a: string }[] = [
@@ -79,6 +84,14 @@ const FAQ_HOME: { q: string; a: string }[] = [
   {
     q: "Co když AI udělá chybu?",
     a: "AI je pomocník, ne soudce. Hraniční případy (riziko 40-60 %) doporučujeme ověřit i jinou cestou — zavolat banku, ověřit odesílatele.",
+  },
+  {
+    q: "Jak funguje prověření prodejce?",
+    a: "Zadáš číslo účtu, telefonní číslo nebo odkaz na profil prodejce. Neklikni porovná údaj s databází nahlášených podvodů. Pokud už na daný účet nebo profil někdo podal nahlášení, hned to uvidíš.",
+  },
+  {
+    q: "Odkud máte data o podvodných prodejcích?",
+    a: "Z nahlášení od registrovaných uživatelů, která ručně kontrolujeme před zveřejněním. Každé nahlášení musí mít důkaz – screenshot a popis. Díky tomu je databáze relevantní a ne zaplevelená spamem.",
   },
 ];
 
@@ -221,7 +234,8 @@ export default function HomeSections() {
           <p className="text-slate-400 max-w-xl mx-auto text-sm">Reálné situace, ve kterých Neklikni pomáhá. Bez vymyšlených hvězdiček.</p>
         </header>
 
-        <div className="grid md:grid-cols-3 gap-5">
+        {/* 4 karty: 2×2 na tabletu, 4 v řadě na desktopu */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {USE_CASES.map((t, i) => (
             <figure key={t.title} className="surface-card p-6 flex flex-col animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
               <Quote size={20} className="text-purple-400/60 mb-3" />

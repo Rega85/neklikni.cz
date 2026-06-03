@@ -407,13 +407,14 @@ export default function Home() {
               <h1 className="font-sans font-black tracking-tight text-white text-5xl sm:text-6xl lg:text-7xl leading-[0.95]">
                 Prověř{" "}
                 <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
-                  než klikneš.
+                  {activeTab === "zprava" ? "než klikneš." : "než zaplatíš."}
                 </span>
               </h1>
 
               <p className="text-slate-300 text-base sm:text-lg lg:text-xl leading-relaxed max-w-xl">
-                Vlož podezřelou SMS, e-mail nebo screenshot — nebo ověř telefon,
-                číslo účtu či profil prodejce v databázi nahlášených podvodů.
+                {activeTab === "zprava"
+                  ? "Vlož podezřelou SMS, e-mail nebo screenshot. AI ti během 10 sekund řekne, jestli jde o podvod — a podle čeho to poznat."
+                  : "Kupuješ z bazaru nebo Marketplace? Zadej číslo účtu, telefon nebo profil prodejce a zjisti, jestli už někoho nepodvedl."}
               </p>
 
               <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300">

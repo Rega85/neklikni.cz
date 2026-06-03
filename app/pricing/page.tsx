@@ -33,7 +33,7 @@ const PLANS: PlanCard[] = [
     accent: "slate",
     cta: "Koupit 1 analýzu",
     features: [
-      "1 prémiová analýza",
+      "1 kompletní rozbor zprávy",
       "Nejpokročilejší AI model",
       "Hloubkový rozbor – taktiky útočníka",
       "Žádné předplatné",
