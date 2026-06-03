@@ -38,6 +38,7 @@ import {
   normalizeFacebookUrl,
   normalizeIban,
   normalizePhone,
+  normalizePhoneVariants,
   normalizeVarSymbol,
 } from '@/utils/databaze/identifiers'
 import type { DatabazeDatabase } from '../_lib/database'
@@ -258,17 +259,34 @@ export async function POST(req: Request) {
     return respond(response)
   }
 
-  const normalized = normalizeByType(detected_type, query)
-  if (!normalized) {
-    const response: SearchResponse = {
-      found: false,
-      detected_type,
-      message: `Neplatný formát pro ${TYPE_LABEL_GENITIV[detected_type]}.`,
+  // Pro telefon: použij normalizePhoneVariants — 9xx čísla bez předvolby
+  // jsou sdílená mezi CZ i SK, chceme najít shodu v DB pro obě varianty.
+  let normalized: string
+  let searchHashes: string[]
+  if (detected_type === 'phone') {
+    const variants = normalizePhoneVariants(query)
+    if (variants.length === 0) {
+      return respond({
+        found: false,
+        detected_type,
+        message: `Neplatný formát pro ${TYPE_LABEL_GENITIV[detected_type]}.`,
+      })
     }
-    return respond(response)
+    normalized = variants[0]
+    searchHashes = await Promise.all(variants.map(hashIdentifier))
+  } else {
+    const norm = normalizeByType(detected_type, query)
+    if (!norm) {
+      return respond({
+        found: false,
+        detected_type,
+        message: `Neplatný formát pro ${TYPE_LABEL_GENITIV[detected_type]}.`,
+      })
+    }
+    normalized = norm
+    searchHashes = [await hashIdentifier(norm)]
   }
 
-  const hash = await hashIdentifier(normalized)
   const masked = maskIdentifier(normalized, detected_type)
 
   // 5. Lookup subject_identifiers
@@ -276,7 +294,8 @@ export async function POST(req: Request) {
     const { data: idRow, error: idErr } = await supabaseAdmin()
       .from('subject_identifiers')
       .select('subject_id')
-      .eq('value_hash', hash)
+      .in('value_hash', searchHashes)
+      .limit(1)
       .maybeSingle()
 
     if (idErr) {

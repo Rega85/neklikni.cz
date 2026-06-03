@@ -21,42 +21,93 @@ export type IdentifierType =
 
 
 /**
- * Normalizuje české telefonní číslo do kanonického tvaru `+420XXXXXXXXX`.
+ * Normalizuje telefonní číslo do kanonického tvaru `+CCXXXXXXXXX`.
  *
- * Akceptuje: "777123456", "+420 777 123 456", "777 123 456",
- * "+420777123456", "00420777123456".
+ * Akceptuje: CZ/SK/mezinárodní čísla s předvolbou (+420, +421, +49…),
+ * 00-prefix, trunk nulu (0912345678 = SK styl) i 9místné bez předvolby.
  *
  * @example
- *   normalizePhone('777 123 456')      // '+420777123456'
- *   normalizePhone('+420 777 123 456') // '+420777123456'
- *   normalizePhone('00420777123456')   // '+420777123456'
- *   normalizePhone('123')              // null
+ *   normalizePhone('777 123 456')        // '+420777123456'  (CZ lokální)
+ *   normalizePhone('+420 777 123 456')   // '+420777123456'
+ *   normalizePhone('+421 912 345 678')   // '+421912345678'  (SK)
+ *   normalizePhone('0912 345 678')       // '+420912345678'  (SK trunk, CZ default)
+ *   normalizePhone('+49 30 12345678')    // '+4930123456789' (DE)
+ *   normalizePhone('123')               // null
  */
 export function normalizePhone(raw: string): string | null {
   if (typeof raw !== 'string') return null
 
-  // Strip all whitespace, dashes, parens, dots
   const cleaned = raw.replace(/[\s\-().]/g, '')
 
-  // Strip country code prefix
-  let digits: string
-  if (cleaned.startsWith('+420')) {
-    digits = cleaned.slice(4)
-  } else if (cleaned.startsWith('00420')) {
-    digits = cleaned.slice(5)
-  } else if (cleaned.startsWith('420') && cleaned.length === 12) {
-    digits = cleaned.slice(3)
-  } else if (cleaned.startsWith('+')) {
-    // Cizí číslo — pro MVP nepodporujeme
-    return null
-  } else {
-    digits = cleaned
+  if (cleaned.startsWith('+')) {
+    // Mezinárodní formát s explicitní předvolbou (+420, +421, +49, …).
+    // E.164: 7–15 cifer za +.
+    const rest = cleaned.slice(1)
+    if (!/^\d{7,15}$/.test(rest)) return null
+    return '+' + rest
   }
 
-  // Musí být přesně 9 cifer, jen číslice
-  if (!/^\d{9}$/.test(digits)) return null
+  if (cleaned.startsWith('00')) {
+    // 00-prefix ekvivalent + (00420…, 0049…)
+    const rest = cleaned.slice(2)
+    if (!/^\d{7,15}$/.test(rest)) return null
+    return '+' + rest
+  }
 
-  return `+420${digits}`
+  // Trunk prefix 0 (SK/EU styl: 0912 345 678 → strip 0 → 9místné lokální)
+  if (/^0\d{9}$/.test(cleaned)) return normalizePhone(cleaned.slice(1))
+
+  // 9místné lokální číslo bez předvolby → +420 default (CZ)
+  if (/^\d{9}$/.test(cleaned)) return `+420${cleaned}`
+
+  // 12 cifer začínající 420/421 bez + nebo 00
+  if (/^\d{12}$/.test(cleaned) && /^(420|421)/.test(cleaned)) return '+' + cleaned
+
+  return null
+}
+
+
+/**
+ * Vrátí všechny kandidátní normalizace pro vyhledávání v DB.
+ *
+ * Čísla bez explicitní předvolby začínající číslicí 9 jsou sdílena
+ * mezi CZ (919…, 972…) i SK (9xx) → vrátí obě varianty +420 i +421,
+ * aby vyhledávání nenávratně nepřeskočilo záznam kvůli špatně uhádnuté
+ * předvolbě.
+ *
+ * @example
+ *   normalizePhoneVariants('912345678')  // ['+420912345678', '+421912345678']
+ *   normalizePhoneVariants('777123456')  // ['+420777123456']  (CZ-only rozsah)
+ *   normalizePhoneVariants('0912345678') // ['+420912345678', '+421912345678']
+ *   normalizePhoneVariants('+421912345678') // ['+421912345678']  (explicitní)
+ */
+export function normalizePhoneVariants(raw: string): string[] {
+  if (typeof raw !== 'string') return []
+  const cleaned = raw.replace(/[\s\-().]/g, '')
+
+  // Explicitní předvolba (+, 00) → jednoznačné, vracíme jen tuto
+  if (cleaned.startsWith('+') || cleaned.startsWith('00')) {
+    const norm = normalizePhone(raw)
+    return norm ? [norm] : []
+  }
+
+  // Trunk nula (0XXXXXXXXX) → strip
+  const digits = /^0\d{9}$/.test(cleaned) ? cleaned.slice(1) : cleaned
+
+  if (/^\d{9}$/.test(digits)) {
+    if (/^9/.test(digits)) {
+      // 9xx: sdílený CZ/SK mobilní rozsah → obě předvolby
+      return [`+420${digits}`, `+421${digits}`]
+    }
+    // 6xx, 7xx: CZ-exkluzivní mobilní; 2–5: CZ pevné linky
+    return [`+420${digits}`]
+  }
+
+  if (/^\d{12}$/.test(cleaned) && /^(420|421)/.test(cleaned)) {
+    return ['+' + cleaned]
+  }
+
+  return []
 }
 
 
