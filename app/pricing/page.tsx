@@ -300,10 +300,10 @@ export default function PricingPage() {
           {/* FREE — vždy první, CTA vede na homepage */}
           <div className="relative surface-card p-5 sm:p-6 xl:p-5 flex flex-col animate-fade-up border-emerald-500/30">
             <div className="flex items-center gap-3 mb-5">
-              <div className="bg-emerald-500/15 text-emerald-300 p-2.5 rounded-xl">
+              <div className="bg-emerald-500/15 text-emerald-300 p-2.5 rounded-xl shrink-0">
                 <ShieldCheck size={20} />
               </div>
-              <h2 className="text-xl font-black tracking-tight">FREE</h2>
+              <h2 className="text-xl xl:text-base font-black tracking-tight min-w-0">FREE</h2>
             </div>
 
             <div className="mb-1">
@@ -355,11 +355,11 @@ export default function PricingPage() {
                   </div>
                 )}
 
-                <div className="flex items-center gap-3 mb-5">
-                  <div className={`${styles.iconBg} ${styles.iconColor} p-2.5 rounded-xl`}>
+                <div className="flex items-center gap-3 mb-5 min-w-0">
+                  <div className={`${styles.iconBg} ${styles.iconColor} p-2.5 rounded-xl shrink-0`}>
                     <Icon size={20} />
                   </div>
-                  <h2 className="text-xl font-black tracking-tight">{p.name}</h2>
+                  <h2 className="text-xl xl:text-base font-black tracking-tight min-w-0">{p.name}</h2>
                 </div>
 
                 <div className="mb-1">
