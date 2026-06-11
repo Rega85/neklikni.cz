@@ -100,8 +100,8 @@ function useTotalAnalyses() {
   useEffect(() => {
     fetch("/api/stats", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setTotal(typeof d?.total === "number" ? d.total : 0))
-      .catch(() => setTotal(0));
+      .then((d) => setTotal(typeof d?.total === "number" ? d.total : null))
+      .catch(() => setTotal(null));
   }, []);
   return total;
 }
@@ -133,34 +133,36 @@ export default function HomeSections() {
     <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 mt-16 sm:mt-24 space-y-20 sm:space-y-28 pb-16">
 
       {/* ─── Live Stats ─────────────────────────────────── */}
-      <section className="animate-fade-up">
-        <div className="flex justify-center mb-5">
-          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 px-3 py-1.5 rounded-full">
-            <span className="relative flex w-2 h-2">
-              <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-70 animate-ping" />
-              <span className="relative rounded-full w-2 h-2 bg-emerald-400" />
+      {total !== null && (
+        <section className="animate-fade-up">
+          <div className="flex justify-center mb-5">
+            <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-300 bg-emerald-500/10 border border-emerald-400/20 px-3 py-1.5 rounded-full">
+              <span className="relative flex w-2 h-2">
+                <span className="absolute inset-0 rounded-full bg-emerald-400 opacity-70 animate-ping" />
+                <span className="relative rounded-full w-2 h-2 bg-emerald-400" />
+              </span>
+              Živé čísla z provozu
             </span>
-            Živé čísla z provozu
-          </span>
-        </div>
+          </div>
 
-        <div className="grid grid-cols-3 gap-3 sm:gap-6">
-          {[
-            {
-              value: total === null ? "—" : counted.toLocaleString("cs-CZ"),
-              label: "provedených analýz",
-              color: "text-purple-300",
-            },
-            { value: "<10s", label: "průměrný čas analýzy", color: "text-blue-300" },
-            { value: "100%", label: "anonymních dotazů",     color: "text-emerald-300" },
-          ].map((s) => (
-            <div key={s.label} className="surface-card p-4 sm:p-6 text-center">
-              <div className={`text-3xl sm:text-5xl font-black tracking-tighter ${s.color} tabular-nums`}>{s.value}</div>
-              <div className="text-[10px] sm:text-xs uppercase tracking-widest text-slate-400 font-bold mt-1 sm:mt-2">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
+          <div className="grid grid-cols-3 gap-3 sm:gap-6">
+            {[
+              {
+                value: counted.toLocaleString("cs-CZ"),
+                label: "provedených analýz",
+                color: "text-purple-300",
+              },
+              { value: "<10s", label: "průměrný čas analýzy", color: "text-blue-300" },
+              { value: "100%", label: "anonymních dotazů",     color: "text-emerald-300" },
+            ].map((s) => (
+              <div key={s.label} className="surface-card p-4 sm:p-6 text-center">
+                <div className={`text-3xl sm:text-5xl font-black tracking-tighter ${s.color} tabular-nums`}>{s.value}</div>
+                <div className="text-[10px] sm:text-xs uppercase tracking-widest text-slate-400 font-bold mt-1 sm:mt-2">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ─── How It Works ───────────────────────────────── */}
       <section>

@@ -10,20 +10,20 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Try the fast atomic RPC counter first
-    const { data, error } = await supabaseAdmin.rpc("get_total_analyses");
-    if (!error && data != null && data > 0) {
-      return NextResponse.json({ total: data });
+    // Skutečný počet provedených AI analýz: registrovaní uživatelé
+    // (1 řádek = 1 analýza) + anonymní uživatelé (count = počet za den/IP).
+    const [usageLog, anonUsage] = await Promise.all([
+      supabaseAdmin.from("usage_log").select("*", { count: "exact", head: true }),
+      supabaseAdmin.from("anonymous_usage").select("count"),
+    ]);
+
+    if (usageLog.error || anonUsage.error) {
+      return NextResponse.json({ total: null });
     }
-    if (error && data == null) return NextResponse.json({ total: 0 });
 
-    // Fallback: count actual rows in shared_results
-    const { count } = await supabaseAdmin
-      .from("shared_results")
-      .select("*", { count: "exact", head: true });
-
-    return NextResponse.json({ total: count ?? 0 });
+    const anonTotal = (anonUsage.data ?? []).reduce((sum, row) => sum + (row.count ?? 0), 0);
+    return NextResponse.json({ total: (usageLog.count ?? 0) + anonTotal });
   } catch {
-    return NextResponse.json({ total: 0 });
+    return NextResponse.json({ total: null });
   }
 }

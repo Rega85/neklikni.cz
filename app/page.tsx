@@ -11,7 +11,6 @@ import { trackEvent } from "./lib/analytics";
 import ErrorBoundary from "./components/ErrorBoundary";
 import RiskGauge from "./components/RiskGauge";
 import UpsellModal from "./components/UpsellModal";
-import HeroParticles from "./components/HeroParticles";
 import AnalysisScanner from "./components/AnalysisScanner";
 import ReferralCard from "./components/ReferralCard";
 
@@ -469,11 +468,10 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-[#020617]">
       <HomeSchema />
-      <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
-        <HeroParticles />
+      <main className="flex-grow text-white pt-10 sm:pt-16 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
 
         {/* ── HERO: single action — ověřit subjekt v databázi ─── */}
-        <section className="max-w-2xl w-full mx-auto relative z-10 text-center space-y-6">
+        <section className="max-w-2xl w-full mx-auto relative z-10 text-center space-y-4 sm:space-y-5">
           {(dbStats.subjects !== null || dbStats.incidents !== null) && (
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
               <span className="relative flex h-2 w-2" aria-hidden="true">
@@ -492,14 +490,14 @@ export default function Home() {
             </div>
           )}
 
-          <h1 className="font-sans font-black tracking-tight text-white text-4xl sm:text-6xl lg:text-7xl leading-[1.05]">
-            Prověřte podvodníka{" "}
+          <h1 className="text-balance font-sans font-black tracking-tight text-white text-4xl sm:text-5xl lg:text-6xl leading-[1.1]">
+            Prověřte si podvodníka{" "}
             <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
               zdarma
             </span>
           </h1>
 
-          <p className="text-slate-300 text-base sm:text-lg lg:text-xl leading-relaxed max-w-xl mx-auto">
+          <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
             Zkontrolujeme číslo, účet i e-mail proti databázi nahlášených podvodů. Zdarma, bez registrace.
           </p>
 
@@ -515,14 +513,14 @@ export default function Home() {
               autoComplete="off"
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setSearchHint(null); }}
-              placeholder="+420 ... | email@... | 12345/0100 | facebook.com/..."
+              placeholder="Telefon, e-mail, číslo účtu…"
               disabled={searchLoading}
-              className="flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 sm:py-5 text-base sm:text-lg text-white placeholder:text-slate-500 focus:border-purple-400/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 disabled:opacity-60"
+              className="flex-1 min-h-[56px] rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 sm:py-5 text-base sm:text-lg text-white placeholder:text-slate-500 focus:border-purple-400/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 disabled:opacity-60"
             />
             <button
               type="submit"
               disabled={!searchQuery.trim() || searchLoading}
-              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 sm:py-5 text-base sm:text-lg font-bold text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+              className="group inline-flex items-center justify-center gap-2 min-h-[56px] rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 sm:py-5 text-base sm:text-lg font-bold text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
               {searchLoading ? (
                 <Loader2 size={20} className="animate-spin" aria-hidden="true" />
@@ -550,7 +548,7 @@ export default function Home() {
         </section>
 
         {/* ── Výsledek vyhledávání v databázi ──────────────── */}
-        <section className="w-full flex justify-center relative z-10 mt-8">
+        <section className="w-full flex justify-center relative z-10 mt-6">
           <div ref={searchResultRef} className="w-full max-w-3xl px-4 space-y-4 scroll-mt-24">
 
             {searchHint === "full_message" && (
@@ -749,26 +747,21 @@ export default function Home() {
 
         {/* ── Krátká teaser sekce: AI analýza zpráv ────────── */}
         {!aiOpen && (
-          <section className="w-full flex justify-center relative z-10 mt-6">
-            <div className="w-full max-w-3xl px-4">
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-                <div>
-                  <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 justify-center sm:justify-start">
-                    <Sparkles size={16} className="text-purple-400" aria-hidden="true" />
-                    Podezřelá SMS nebo e-mail?
-                  </h2>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Vlož text zprávy nebo screenshot a naše AI ho během pár vteřin prověří zdarma.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setAiOpen(true)}
-                  className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 active:scale-[0.98] transition-all"
-                >
-                  Prověřit zprávu <ArrowRight size={15} aria-hidden="true" />
-                </button>
-              </div>
+          <section className="w-full flex justify-center relative z-10 mt-4">
+            <div className="w-full max-w-xl px-4">
+              <button
+                type="button"
+                onClick={() => setAiOpen(true)}
+                className="w-full rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] px-4 py-3 flex items-center justify-between gap-3 text-left transition-colors"
+              >
+                <span className="flex items-center gap-2 text-sm text-slate-300">
+                  <Sparkles size={14} className="text-purple-400 shrink-0" aria-hidden="true" />
+                  Podezřelá SMS nebo e-mail? AI ji prověří zdarma.
+                </span>
+                <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-purple-300">
+                  Prověřit <ArrowRight size={13} aria-hidden="true" />
+                </span>
+              </button>
             </div>
           </section>
         )}
