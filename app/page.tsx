@@ -1,11 +1,10 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, MessageSquare, UserSearch, Plus, ArrowRight } from "lucide-react";
+import { Info, Shield, AlertTriangle, Share2, Check, X, Copy, Camera, Lock, Download, Sparkles, Search as SearchIcon, ArrowRight, ShieldCheck, HelpCircle, Tag, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/utils/supabase/client";
-import { detectIdentifierType, looksLikeFullMessage } from "@/utils/databaze/identifiers";
+import { detectIdentifierType, identifierLabel, looksLikeFullMessage } from "@/utils/databaze/identifiers";
+import { CATEGORY_LABELS, type IdentifierType, type IncidentCategory, type SubjectVisibility } from "@/types/databaze";
 import HomeSections from "./components/HomeSections";
 import { HomeSchema } from "./components/StructuredData";
 import { trackEvent } from "./lib/analytics";
@@ -55,6 +54,52 @@ function dbMatchLabel(type: DatabaseMatch["type"], valueMasked: string): string 
   }
 }
 
+// ── Database search (hero) types ─────────────────────
+type SearchSubject = {
+  id: string;
+  display_name_masked: string;
+  trust_score: number;
+  visibility_status: SubjectVisibility;
+  incident_count: number;
+  top_categories: Array<{ category: IncidentCategory; count: number }>;
+  date_range: { from: string; to: string } | null;
+  is_claimed: boolean;
+  identifiers: Array<{ type: IdentifierType; value_masked: string; verified: boolean }>;
+};
+
+type SearchApiResult = {
+  found: boolean;
+  detected_type: IdentifierType | null;
+  normalized_value?: string;
+  subject?: SearchSubject;
+  message?: string;
+};
+
+type LimitReachedState = {
+  message: string;
+  requireRegistration: boolean;
+};
+
+const CATEGORY_EMOJI: Record<IncidentCategory, string> = {
+  non_delivery: '📦',
+  misrepresentation: '🎭',
+  fake_courier: '🚚',
+  disappeared_listing: '👻',
+  fake_profile: '🪪',
+  romance: '💔',
+  investment: '📈',
+  rental: '🏠',
+  tickets: '🎫',
+  employment: '💼',
+  other: '❓',
+};
+
+function formatCzechDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('cs-CZ', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 type UserProfile = { tier: string; credits_remaining?: number };
 
 const EXAMPLES = [
@@ -77,7 +122,7 @@ const EXAMPLES = [
 ];
 
 export default function Home() {
-  const [supabase] = useState(() => createClient());
+  // ── AI message analysis state ──────────────────────
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -85,74 +130,36 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [ctaCopied, setCtaCopied] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const aiSectionRef = useRef<HTMLDivElement>(null);
+
+  // ── Shared / profile state ──────────────────────────
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileChecked, setProfileChecked] = useState(false);
   const [upsellReason, setUpsellReason] = useState<"anon_daily" | "no_credits" | null>(null);
-  const [totalAnalyses, setTotalAnalyses] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [placeholderText, setPlaceholderText] = useState("");
-  const [activeTab, setActiveTab] = useState<"zprava" | "subjekt">("zprava");
-  const [subjectQuery, setSubjectQuery] = useState("");
-  const [subjectError, setSubjectError] = useState<string | null>(null);
-  const [subjectHint, setSubjectHint] = useState<"full_message" | null>(null);
-  const router = useRouter();
   const [dbStats, setDbStats] = useState<{ subjects: number | null; incidents: number | null }>({ subjects: null, incidents: null });
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const resultRef = useRef<HTMLDivElement>(null);
 
-  const PLACEHOLDERS = [
-    "Vložte podezřelou zprávu, SMS nebo odkaz...",
-    "Váš balíček CZ83726 čeká na zaplacení cla 45 Kč...",
-    "Gratulujeme! Váš email byl vylosován, klikněte zde...",
-    "Česká spořitelna: Váš účet byl dočasně zablokován...",
-    "Ahoj mami, rozbil se mi telefon, napiš mi na toto číslo...",
-    "Máte nedoplatek na zdravotním pojištění, uhraďte zde...",
-  ];
-
-  useEffect(() => {
-    let cancelled = false;
-    let phraseIndex = 0;
-    let charIndex = 0;
-    let typing = true;
-    let timeoutId: ReturnType<typeof setTimeout>;
-
-    const tick = () => {
-      if (cancelled) return;
-      const phrase = PLACEHOLDERS[phraseIndex];
-      if (typing) {
-        charIndex++;
-        setPlaceholderText(phrase.slice(0, charIndex));
-        if (charIndex < phrase.length) {
-          timeoutId = setTimeout(tick, 50);
-        } else {
-          timeoutId = setTimeout(() => { typing = false; tick(); }, 2000);
-        }
-      } else {
-        charIndex--;
-        setPlaceholderText(phrase.slice(0, charIndex));
-        if (charIndex > 0) {
-          timeoutId = setTimeout(tick, 30);
-        } else {
-          phraseIndex = (phraseIndex + 1) % PLACEHOLDERS.length;
-          typing = true;
-          timeoutId = setTimeout(tick, 300);
-        }
-      }
-    };
-
-    timeoutId = setTimeout(tick, 800);
-    return () => { cancelled = true; clearTimeout(timeoutId); };
-  }, []);
+  // ── Hero database search state ──────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const [lastSearchedQuery, setLastSearchedQuery] = useState("");
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchResult, setSearchResult] = useState<SearchApiResult | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchHint, setSearchHint] = useState<"full_message" | null>(null);
+  const [limitReached, setLimitReached] = useState<LimitReachedState | null>(null);
+  const searchResultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Bookmarklet handler - přečte ?q= parametr z URL
+    // Bookmarklet handler - přečte ?q= parametr z URL a rovnou spustí hledání
     const params = new URLSearchParams(window.location.search);
     const query = params.get("q");
     if (query) {
-      setInput(query);
-      setActiveTab("zprava"); // explicitně — ať i SPA navigace přepne na SMS tab
+      setSearchQuery(query);
       window.history.replaceState({}, '', '/');
+      void performSearch(query);
     }
 
     fetch('/api/me', { cache: 'no-store' })
@@ -160,11 +167,6 @@ export default function Home() {
       .then((d) => { if (d?.profile) setProfile(d.profile); })
       .catch(() => {})
       .finally(() => setProfileChecked(true));
-
-    fetch('/api/stats', { cache: 'no-store' })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (typeof d?.total === 'number') setTotalAnalyses(d.total); })
-      .catch(() => {});
 
     fetch('/api/databaze/stats', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : null)
@@ -177,11 +179,18 @@ export default function Home() {
         }
       })
       .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Reset analysis state when user clicks logo/Home while already on "/"
+  // Reset state when user clicks logo/Home while already on "/"
   useEffect(() => {
     const reset = () => {
+      setSearchQuery("");
+      setSearchResult(null);
+      setSearchError(null);
+      setSearchHint(null);
+      setLimitReached(null);
+      setAiOpen(false);
       setInput("");
       setResult(null);
       setError(null);
@@ -193,8 +202,20 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (result && resultRef.current) {
-      resultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    if ((searchResult || searchHint || limitReached || searchError) && searchResultRef.current) {
+      searchResultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [searchResult, searchHint, limitReached, searchError]);
+
+  useEffect(() => {
+    if (aiOpen && aiSectionRef.current) {
+      aiSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [aiOpen]);
+
+  useEffect(() => {
+    if (result && aiSectionRef.current) {
+      aiSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }, [result]);
 
@@ -296,8 +317,8 @@ export default function Home() {
       setResult(data);
       trackEvent("analyze_completed", { risk: data.risk, tier: data.tier ?? "free" });
       window.dispatchEvent(new CustomEvent("creditsUpdated"));
-    } catch (err: any) {
-      setError(err.message || "Nepodařilo se připojit k serveru.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nepodařilo se připojit k serveru.");
     } finally {
       setLoading(false);
     }
@@ -305,10 +326,47 @@ export default function Home() {
 
   const handleClear = () => { setInput(""); setResult(null); setError(null); setImages([]); };
 
-  const handleSubjectSearch = (e: React.FormEvent) => {
+  // ── Hero database search ────────────────────────────
+  const performSearch = useCallback(async (q: string) => {
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchResult(null);
+    setLimitReached(null);
+    setSearchHint(null);
+    setLastSearchedQuery(q);
+    try {
+      const res = await fetch('/api/databaze/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: q }),
+      });
+      const data = (await res.json().catch(() => ({}))) as Partial<SearchApiResult> & {
+        error?: string;
+        limit_reached?: boolean;
+        require_registration?: boolean;
+      };
+      if (res.status === 429 && data.limit_reached) {
+        setLimitReached({
+          message: data.error ?? 'Limit vyhledávání vyčerpán.',
+          requireRegistration: data.require_registration === true,
+        });
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(data.error ?? 'Nepodařilo se prohledat databázi.');
+      }
+      setSearchResult(data as SearchApiResult);
+    } catch (err) {
+      setSearchError(err instanceof Error ? err.message : 'Neznámá chyba.');
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  const handleHeroSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    const q = subjectQuery.trim();
-    if (!q) return;
+    const q = searchQuery.trim();
+    if (!q || searchLoading) return;
 
     const detectedType = detectIdentifierType(q);
     // Heuristiku "vypadá jako zpráva" spustíme jen u null / var_symbol —
@@ -318,20 +376,16 @@ export default function Home() {
     const isUnambiguous = detectedType !== null && (UNAMBIGUOUS as readonly string[]).includes(detectedType);
 
     if (!isUnambiguous && looksLikeFullMessage(q)) {
-      setSubjectHint("full_message");
-      setSubjectError(null);
+      setSearchResult(null);
+      setSearchError(null);
+      setLimitReached(null);
+      setLastSearchedQuery(q);
+      setSearchHint("full_message");
       return;
     }
 
-    if (!detectedType) {
-      setSubjectError("Vlož telefon, e-mail nebo číslo účtu — tento formát neumíme prohledat.");
-      setSubjectHint(null);
-      return;
-    }
-
-    setSubjectError(null);
-    setSubjectHint(null);
-    router.push(`/databaze/hledat?q=${encodeURIComponent(q)}`);
+    setSearchHint(null);
+    void performSearch(q);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -418,391 +472,457 @@ export default function Home() {
       <main className="flex-grow text-white pt-20 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
         <HeroParticles />
 
-        {/* ── HERO: two-column editorial layout ────────────── */}
-        <section className="max-w-7xl w-full relative z-10">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-14 items-start">
-
-            {/* LEFT COLUMN — text */}
-            <div className="space-y-6 text-left lg:pt-6">
-              {totalAnalyses !== null && totalAnalyses > 0 && (
-                <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
-                  <span className="relative flex h-2 w-2" aria-hidden="true">
-                    <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
-                  </span>
-                  <span>
-                    <span className="font-semibold text-white">
-                      {totalAnalyses.toLocaleString("cs-CZ")}
-                    </span>{" "}
-                    zpráv prověřeno
-                  </span>
-                </div>
-              )}
-
-              <h1 className="font-sans font-black tracking-tight text-white text-5xl sm:text-6xl lg:text-7xl leading-[0.95]">
-                Prověř{" "}
-                <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
-                  {activeTab === "zprava" ? "než klikneš." : "než zaplatíš."}
-                </span>
-              </h1>
-
-              <p className="text-slate-300 text-base sm:text-lg lg:text-xl leading-relaxed max-w-xl">
-                {activeTab === "zprava"
-                  ? "Vlož podezřelou SMS, e-mail nebo screenshot. AI ti během 10 sekund řekne, jestli jde o podvod — a podle čeho to poznat."
-                  : "Kupuješ z bazaru nebo Marketplace? Zadej číslo účtu, telefon nebo profil prodejce a zjisti, jestli už někoho nepodvedl."}
-              </p>
-
-              <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-300">
-                <li className="inline-flex items-center gap-1.5">
-                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
-                  100% anonymní
-                </li>
-                <li className="inline-flex items-center gap-1.5">
-                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
-                  Bez registrace
-                </li>
-                <li className="inline-flex items-center gap-1.5">
-                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
-                  Česky, do 10 sekund
-                </li>
-              </ul>
+        {/* ── HERO: single action — ověřit subjekt v databázi ─── */}
+        <section className="max-w-2xl w-full mx-auto relative z-10 text-center space-y-6">
+          {(dbStats.subjects !== null || dbStats.incidents !== null) && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+              </span>
+              <span>
+                {dbStats.subjects !== null && dbStats.subjects > 0 && (
+                  <><span className="font-semibold text-white">{dbStats.subjects.toLocaleString("cs-CZ")}</span> subjektů</>
+                )}
+                {dbStats.subjects !== null && dbStats.subjects > 0 && dbStats.incidents !== null && dbStats.incidents > 0 && " · "}
+                {dbStats.incidents !== null && dbStats.incidents > 0 && (
+                  <><span className="font-semibold text-white">{dbStats.incidents.toLocaleString("cs-CZ")}</span> nahlášení podvodů</>
+                )}
+              </span>
             </div>
+          )}
 
-            {/* RIGHT COLUMN — product card with tabs */}
-            <div className="relative">
-              <div
-                className="relative rounded-2xl p-[1.5px] bg-gradient-to-br from-violet-500/50 via-fuchsia-500/30 to-cyan-500/40 shadow-[0_0_80px_-20px_rgba(168,85,247,0.5)]"
-                onDragOver={activeTab === "zprava" ? handleDragOver : undefined}
-                onDragLeave={activeTab === "zprava" ? handleDragLeave : undefined}
-                onDrop={activeTab === "zprava" ? handleDrop : undefined}
-              >
-                <div className="rounded-2xl bg-slate-950/90 backdrop-blur-2xl overflow-hidden">
+          <h1 className="font-sans font-black tracking-tight text-white text-4xl sm:text-6xl lg:text-7xl leading-[1.05]">
+            Prověřte podvodníka{" "}
+            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
+              zdarma
+            </span>
+          </h1>
 
-                  {/* Card chrome: macOS dots + mono path */}
-                  <div className="flex items-center gap-3 px-4 py-2.5 border-b border-white/5 bg-white/[0.02]">
-                    <div className="flex gap-1.5" aria-hidden="true">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-green-500/70" />
+          <p className="text-slate-300 text-base sm:text-lg lg:text-xl leading-relaxed max-w-xl mx-auto">
+            Zkontrolujeme číslo, účet i e-mail proti databázi nahlášených podvodů. Zdarma, bez registrace.
+          </p>
+
+          <form onSubmit={handleHeroSearch} className="flex flex-col gap-3 sm:flex-row max-w-xl mx-auto">
+            <label htmlFor="hero_search_q" className="sr-only">
+              Telefon, e-mail, číslo účtu nebo profil k ověření
+            </label>
+            <input
+              id="hero_search_q"
+              name="q"
+              type="search"
+              inputMode="text"
+              autoComplete="off"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setSearchHint(null); }}
+              placeholder="+420 ... | email@... | 12345/0100 | facebook.com/..."
+              disabled={searchLoading}
+              className="flex-1 rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 sm:py-5 text-base sm:text-lg text-white placeholder:text-slate-500 focus:border-purple-400/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={!searchQuery.trim() || searchLoading}
+              className="group inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 sm:py-5 text-base sm:text-lg font-bold text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              {searchLoading ? (
+                <Loader2 size={20} className="animate-spin" aria-hidden="true" />
+              ) : (
+                <SearchIcon size={20} aria-hidden="true" />
+              )}
+              Prověřit
+            </button>
+          </form>
+
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-slate-300">
+            <li className="inline-flex items-center gap-1.5">
+              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+              100% anonymní
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+              Bez registrace
+            </li>
+            <li className="inline-flex items-center gap-1.5">
+              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+              Výsledek hned
+            </li>
+          </ul>
+        </section>
+
+        {/* ── Výsledek vyhledávání v databázi ──────────────── */}
+        <section className="w-full flex justify-center relative z-10 mt-8">
+          <div ref={searchResultRef} className="w-full max-w-3xl px-4 space-y-4 scroll-mt-24">
+
+            {searchHint === "full_message" && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 sm:p-6 text-left space-y-3">
+                <p className="text-sm text-amber-200 leading-relaxed">
+                  Tohle vypadá jako celá zpráva, ne jako telefon, e-mail nebo číslo účtu.
+                  Chceš ji prověřit jako podezřelou zprávu pomocí AI?
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setInput(searchQuery);
+                      setSearchHint(null);
+                      setAiOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-colors"
+                  >
+                    <Sparkles size={13} /> Prověřit zprávu jako podvod
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSearchHint(null); void performSearch(searchQuery); }}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 hover:border-slate-500 px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
+                  >
+                    Přesto hledat v databázi
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {searchLoading && (
+              <AnalysisScanner messages={[
+                'Hledáme v databázi…',
+                'Porovnáváme identifikátory…',
+                'Zpracováváme výsledky…',
+              ]} />
+            )}
+
+            {searchError && (
+              <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-5 text-left text-sm text-red-300">
+                {searchError}
+              </div>
+            )}
+
+            {!searchLoading && limitReached && (
+              <div className="rounded-[32px] border-2 border-purple-500/40 bg-gradient-to-br from-purple-500/15 via-pink-500/10 to-purple-500/5 p-6 sm:p-8 text-left space-y-4">
+                <h2 className="text-xl sm:text-2xl font-black text-white">Dnes jsi už jeden subjekt ověřil/a</h2>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  První ověření je <strong className="text-white">zdarma bez registrace</strong>. Pro neomezené
+                  vyhledávání se zaregistruj — je to taky zdarma a zabere to půl minuty.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Link href="/register" className="brand-gradient inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]">
+                    Registrovat se zdarma
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                  <Link href="/login?redirect=/" className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-6 py-3 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800">
+                    Už mám účet — přihlásit
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {!searchLoading && !limitReached && !searchHint && searchResult && (
+              <>
+                {searchResult.found && searchResult.subject ? (
+                  <div className={`rounded-[32px] border-2 backdrop-blur-3xl shadow-2xl p-6 sm:p-8 text-left space-y-5 ${
+                    searchResult.subject.trust_score < 50 ? 'border-red-500/40 bg-red-950/30' : 'border-amber-500/40 bg-amber-950/20'
+                  }`}>
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle size={28} className={`flex-shrink-0 ${searchResult.subject.trust_score < 50 ? 'text-red-400' : 'text-amber-400'}`} aria-hidden="true" />
+                      <div className="space-y-1">
+                        <h2 className="text-xl sm:text-2xl font-black text-white">
+                          ⚠️ Subjekt evidován v databázi nahlášených podvodů
+                        </h2>
+                        {searchResult.normalized_value && (
+                          <p className="text-xs text-slate-400">
+                            Hledáno: <span className="font-mono text-slate-300">{searchResult.normalized_value}</span>
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <span className="flex-1 text-center font-mono text-[11px] text-slate-400 tracking-tight">
-                      neklikni://prover
-                    </span>
-                    <span className="font-mono text-[10px] text-slate-500">v2.1</span>
-                  </div>
 
-                  {/* Tabs */}
-                  <div className="flex border-b border-white/5" role="tablist">
-                    <button
-                      role="tab"
-                      aria-selected={activeTab === "zprava"}
-                      onClick={() => setActiveTab("zprava")}
-                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-all ${
-                        activeTab === "zprava"
-                          ? "text-white"
-                          : "text-slate-300 hover:text-white bg-fuchsia-500/[0.07] hover:bg-fuchsia-500/[0.12]"
-                      }`}
-                    >
-                      <MessageSquare size={15} />
-                      <span>SMS / E-mail</span>
-                      {activeTab !== "zprava" && (
-                        <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
-                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-70 animate-ping" />
-                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-fuchsia-400" />
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-200">
+                        {searchResult.subject.incident_count}{" "}
+                        {searchResult.subject.incident_count === 1 ? "nahlášení" : "nahlášení"}
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-200">
+                        Trust score: <strong>{searchResult.subject.trust_score}/100</strong>
+                      </span>
+                      {searchResult.subject.date_range && (
+                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-slate-200">
+                          {formatCzechDate(searchResult.subject.date_range.from)} – {formatCzechDate(searchResult.subject.date_range.to)}
                         </span>
                       )}
-                      {activeTab === "zprava" && (
-                        <span className="absolute inset-x-3 -bottom-px h-[2px] bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 rounded-full" />
-                      )}
-                    </button>
-                    <button
-                      role="tab"
-                      aria-selected={activeTab === "subjekt"}
-                      onClick={() => setActiveTab("subjekt")}
-                      className={`group relative flex-1 flex items-center justify-center gap-2 px-4 py-3.5 text-sm font-semibold transition-all ${
-                        activeTab === "subjekt"
-                          ? "text-white"
-                          : "text-slate-300 hover:text-white bg-fuchsia-500/[0.07] hover:bg-fuchsia-500/[0.12]"
-                      }`}
-                    >
-                      <UserSearch size={15} />
-                      <span>Ověřit prodejce/účet</span>
-                      {activeTab !== "subjekt" && (
-                        <span className="relative flex h-2.5 w-2.5" aria-hidden="true">
-                          <span className="absolute inline-flex h-full w-full rounded-full bg-fuchsia-400 opacity-70 animate-ping" />
-                          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-fuchsia-400" />
-                        </span>
-                      )}
-                      {activeTab === "subjekt" && (
-                        <span className="absolute inset-x-3 -bottom-px h-[2px] bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 rounded-full" />
-                      )}
-                    </button>
-                  </div>
+                    </div>
 
-                  {/* TAB 1 — Message analysis */}
-                  {activeTab === "zprava" && (
-                    <div className="relative">
-                      {isDragging && (
-                        <div className="absolute inset-0 bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
-                          <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
-                        </div>
-                      )}
-
-                      {/* Example chips */}
-                      <div className="flex flex-wrap gap-2 px-5 pt-4">
-                        {EXAMPLES.map((ex) => (
-                          <button
-                            key={ex.label}
-                            onClick={() => { setInput(ex.text); setResult(null); setError(null); }}
-                            className="px-3 py-1.5 rounded-full text-[12px] font-semibold text-slate-300 bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-500/15 hover:to-blue-500/15 hover:text-white hover:border-purple-400/40 active:scale-95 transition-all duration-200"
-                          >
-                            {ex.label}
-                          </button>
+                    {searchResult.subject.top_categories.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {searchResult.subject.top_categories.map((c) => (
+                          <span key={c.category} className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs text-slate-200">
+                            <span aria-hidden="true">{CATEGORY_EMOJI[c.category]}</span>
+                            {CATEGORY_LABELS[c.category]}
+                            <span className="text-slate-500">× {c.count}</span>
+                          </span>
                         ))}
                       </div>
+                    )}
 
-                      {/* Header row */}
-                      <div className="flex items-center justify-between px-5 pt-4 pb-1">
-                        <p className="flex items-center gap-2 text-slate-200 text-[13px] font-semibold">
-                          <Sparkles size={13} className="text-purple-400" />
-                          Vlož zprávu, AI odhalí podvod během chvilky
+                    {searchResult.subject.identifiers.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {searchResult.subject.identifiers.map((idf, idx) => (
+                          <span key={`${idf.type}_${idx}`} className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-900/60 px-3 py-1 text-xs">
+                            <Tag size={11} className="text-slate-400" aria-hidden="true" />
+                            <span className="text-slate-400">{identifierLabel(idf.type, idf.value_masked)}:</span>
+                            <span className="font-mono text-slate-200">{idf.value_masked}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      <Link
+                        href={`/databaze/nahlasit?prefill=${encodeURIComponent(lastSearchedQuery)}`}
+                        className="brand-gradient inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]"
+                      >
+                        Nahlaste i svůj případ — posílíte důkazy
+                        <ArrowRight size={16} aria-hidden="true" />
+                      </Link>
+                      <Link
+                        href={`/databaze/hledat?q=${encodeURIComponent(lastSearchedQuery)}`}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-5 py-3.5 text-sm font-medium text-slate-300 transition hover:bg-slate-900"
+                      >
+                        Zobrazit detail v databázi
+                      </Link>
+                    </div>
+                  </div>
+                ) : searchResult.detected_type === null ? (
+                  <div className="rounded-[32px] border-2 border-slate-700/50 bg-slate-900/40 backdrop-blur-md p-6 sm:p-8 text-left space-y-3">
+                    <div className="flex items-start gap-3">
+                      <HelpCircle size={28} className="flex-shrink-0 text-slate-400" aria-hidden="true" />
+                      <div className="space-y-2">
+                        <h2 className="text-xl font-bold text-slate-100">Tento formát neumíme prohledat</h2>
+                        <p className="text-sm leading-relaxed text-slate-300">{searchResult.message}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-[32px] border-2 border-cyan-500/30 bg-cyan-950/20 backdrop-blur-md p-6 sm:p-8 text-left space-y-5">
+                    <div className="flex items-start gap-3">
+                      <ShieldCheck size={28} className="flex-shrink-0 text-cyan-300" aria-hidden="true" />
+                      <div className="space-y-1">
+                        <h2 className="text-xl sm:text-2xl font-black text-white">Nenalezen v databázi</h2>
+                        <p className="text-sm text-slate-300 leading-relaxed">
+                          {searchResult.message ?? 'To ale neznamená, že je bezpečný — buď opatrný a ověř ho i jinak.'}
                         </p>
-                        {(input || images.length > 0 || result || error) && (
-                          <button
-                            onClick={handleClear}
-                            aria-label="Vymazat vstup"
-                            className="shrink-0 w-7 h-7 rounded-full text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
-                          >
-                            <X size={14} />
-                          </button>
-                        )}
                       </div>
+                    </div>
 
-                      {/* Textarea */}
-                      <div className={`relative mx-3 mb-3 rounded-xl transition-all ${
-                        isFocused
-                          ? "ring-2 ring-purple-500/40 shadow-[0_0_40px_-15px_rgba(168,85,247,0.45)]"
-                          : ""
-                      }`}>
-                        {!input && !isFocused && (
-                          <div className="absolute inset-0 px-4 pt-3 pb-4 pointer-events-none text-slate-600 text-[15px] leading-normal">
-                            {placeholderText}<span className="animate-pulse">|</span>
-                          </div>
-                        )}
-                        <textarea
-                          value={input}
-                          onChange={(e) => setInput(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                          onFocus={() => setIsFocused(true)}
-                          onBlur={() => setIsFocused(false)}
-                          rows={4}
-                          aria-label="Vstupní pole pro analýzu zprávy"
-                          className="w-full bg-black/30 rounded-xl px-4 pt-3 pb-4 focus:outline-none text-white text-[15px] resize-none placeholder:text-slate-600 border border-white/5"
-                        />
+                    {/* JEDINÝ vstup do AI analýzy z homepage */}
+                    {!aiOpen && (
+                      <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-4 sm:p-5 space-y-3">
+                        <p className="text-sm text-slate-200 leading-relaxed flex items-start gap-2">
+                          <Sparkles size={15} className="text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
+                          Poslal vám zprávu? Vložte ji a naše pokročilá AI ji okamžitě prověří zdarma.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setAiOpen(true)}
+                          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all"
+                        >
+                          <Sparkles size={15} /> Vložit zprávu k AI analýze
+                        </button>
                       </div>
+                    )}
 
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        accept="image/png, image/jpeg, image/webp"
-                        className="hidden"
-                        onChange={handleImageSelect}
-                      />
+                    <Link
+                      href={`/databaze/nahlasit?prefill=${encodeURIComponent(lastSearchedQuery)}`}
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-purple-300 hover:text-purple-200 transition-colors"
+                    >
+                      Podvedl vás tento subjekt? Nahlaste ho
+                      <ArrowRight size={14} aria-hidden="true" />
+                    </Link>
+                  </div>
+                )}
 
-                      <div className="px-3 pb-3 space-y-2.5">
-                        {loading ? (
-                          <AnalysisScanner />
-                        ) : (
-                          <>
-                            <button
-                              onClick={handleAnalysis}
-                              disabled={!input.trim() && images.length === 0}
-                              className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-                            >
-                              <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
-                              Prověřit zprávu
-                            </button>
+                {searchResult.found && (
+                  <ReferralCard isLoggedIn={profileChecked ? profile !== null : null} />
+                )}
+              </>
+            )}
+          </div>
+        </section>
 
-                            {images.length > 0 && (
-                              <div className="px-1 space-y-2">
-                                <div className="flex items-center justify-between text-xs">
-                                  <p className="text-slate-400">
-                                    Screenshoty připravené k analýze · {images.length}/{MAX_IMAGES}
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={() => setImages([])}
-                                    className="text-slate-500 hover:text-red-400 transition-colors"
-                                  >
-                                    Vymazat vše
-                                  </button>
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {images.map((src, idx) => (
-                                    <div key={idx} className="relative group/thumb">
-                                      <img
-                                        src={src}
-                                        alt={`Screenshot ${idx + 1}`}
-                                        className="w-14 h-14 object-cover rounded-lg border border-white/10"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => removeImageAt(idx)}
-                                        aria-label={`Odebrat screenshot ${idx + 1}`}
-                                        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 border border-white/20 text-slate-300 hover:text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors"
-                                      >
-                                        <X size={11} />
-                                      </button>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
+        {/* ── Krátká teaser sekce: AI analýza zpráv ────────── */}
+        {!aiOpen && (
+          <section className="w-full flex justify-center relative z-10 mt-6">
+            <div className="w-full max-w-3xl px-4">
+              <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 justify-center sm:justify-start">
+                    <Sparkles size={16} className="text-purple-400" aria-hidden="true" />
+                    Podezřelá SMS nebo e-mail?
+                  </h2>
+                  <p className="text-sm text-slate-400 mt-1">
+                    Vlož text zprávy nebo screenshot a naše AI ho během pár vteřin prověří zdarma.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiOpen(true)}
+                  className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/20 active:scale-[0.98] transition-all"
+                >
+                  Prověřit zprávu <ArrowRight size={15} aria-hidden="true" />
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
-                            {images.length < MAX_IMAGES && (
-                              canUploadImage ? (
-                                <button
-                                  type="button"
-                                  onClick={() => fileInputRef.current?.click()}
-                                  className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
-                                >
-                                  <Camera size={14} /> {images.length === 0 ? "Přidat screenshot" : "Přidat další"} <span className="text-purple-400/60 ml-1">(až {MAX_IMAGES})</span>
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => { window.location.href = "/pricing"; }}
-                                  className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
-                                >
-                                  <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
-                                </button>
-                              )
-                            )}
-
-                            <p className="text-slate-600 text-[10px] text-center hidden sm:block">
-                              Ctrl + Enter pro odeslání · Esc pro smazání
-                            </p>
-                          </>
-                        )}
-                      </div>
+        {/* ── AI analýza zprávy (sekundární, otevírá se na vyžádání) ─ */}
+        {aiOpen && (
+          <section className="w-full flex justify-center relative z-10 mt-6">
+            <div ref={aiSectionRef} className="w-full max-w-2xl px-4 space-y-4 scroll-mt-24">
+              <div className="relative rounded-2xl p-[1.5px] bg-gradient-to-br from-violet-500/50 via-fuchsia-500/30 to-cyan-500/40 shadow-[0_0_80px_-20px_rgba(168,85,247,0.5)]">
+                <div
+                  className="rounded-2xl bg-slate-950/90 backdrop-blur-2xl overflow-hidden"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  {isDragging && (
+                    <div className="absolute inset-0 bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
+                      <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
                     </div>
                   )}
 
-                  {/* TAB 2 — Subject lookup */}
-                  {activeTab === "subjekt" && (
-                    <div className="p-5 space-y-4">
-                      <div>
-                        <p className="flex items-center gap-2 text-slate-200 text-[13px] font-semibold mb-1">
-                          <UserSearch size={13} className="text-cyan-300" />
-                          Ověř protistranu v databázi nahlášených incidentů
-                        </p>
-                        <p className="text-xs text-slate-400 leading-relaxed">
-                          Vlož telefon, e-mail nebo číslo účtu. Najdeš záznam, nebo doporučení, jak ověřit jinak.
-                        </p>
-                      </div>
-
-                      <form
-                        onSubmit={handleSubjectSearch}
-                        className="space-y-2.5"
+                  {/* Example chips */}
+                  <div className="flex flex-wrap gap-2 px-5 pt-4">
+                    {EXAMPLES.map((ex) => (
+                      <button
+                        key={ex.label}
+                        onClick={() => { setInput(ex.text); setResult(null); setError(null); }}
+                        className="px-3 py-1.5 rounded-full text-[12px] font-semibold text-slate-300 bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-500/15 hover:to-blue-500/15 hover:text-white hover:border-purple-400/40 active:scale-95 transition-all duration-200"
                       >
-                        <label htmlFor="hero_db_q" className="sr-only">
-                          Identifikátor k vyhledání
-                        </label>
-                        <input
-                          id="hero_db_q"
-                          name="q"
-                          type="search"
-                          required
-                          value={subjectQuery}
-                          onChange={(e) => { setSubjectQuery(e.target.value); setSubjectError(null); }}
-                          placeholder="+420 ... | email@... | 12345/0100"
-                          className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3.5 text-[15px] text-white placeholder:text-slate-600 focus:border-cyan-400/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                        />
-                        {subjectError && (
-                          <p className="text-amber-400 text-xs leading-relaxed">{subjectError}</p>
-                        )}
-                        {subjectHint === "full_message" && (
-                          <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 space-y-2.5">
-                            <p className="text-xs text-amber-200 leading-relaxed">
-                              Tohle vypadá jako celá zpráva, ne jako identifikátor prodejce.
-                              Chceš ji prověřit jako podezřelou zprávu?
-                            </p>
+                        {ex.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Header row */}
+                  <div className="flex items-center justify-between px-5 pt-4 pb-1">
+                    <p className="flex items-center gap-2 text-slate-200 text-[13px] font-semibold">
+                      <Sparkles size={13} className="text-purple-400" />
+                      Vlož zprávu, AI odhalí podvod během chvilky
+                    </p>
+                    <button
+                      onClick={() => { handleClear(); setAiOpen(false); }}
+                      aria-label="Zavřít AI analýzu"
+                      className="shrink-0 w-7 h-7 rounded-full text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  {/* Textarea */}
+                  <div className={`relative mx-3 mb-3 rounded-xl transition-all ${
+                    isFocused
+                      ? "ring-2 ring-purple-500/40 shadow-[0_0_40px_-15px_rgba(168,85,247,0.45)]"
+                      : ""
+                  }`}>
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => setIsFocused(true)}
+                      onBlur={() => setIsFocused(false)}
+                      rows={4}
+                      placeholder="Vložte podezřelou SMS, e-mail nebo odkaz…"
+                      autoFocus
+                      aria-label="Vstupní pole pro analýzu zprávy"
+                      className="w-full bg-black/30 rounded-xl px-4 pt-3 pb-4 focus:outline-none text-white text-[15px] resize-none placeholder:text-slate-600 border border-white/5"
+                    />
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                    onChange={handleImageSelect}
+                  />
+
+                  <div className="px-3 pb-4 space-y-2.5">
+                    {loading ? (
+                      <AnalysisScanner />
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleAnalysis}
+                          disabled={!input.trim() && images.length === 0}
+                          className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                        >
+                          <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
+                          Prověřit zprávu
+                        </button>
+
+                        {images.length > 0 && (
+                          <div className="px-1 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <p className="text-slate-400">
+                                Screenshoty připravené k analýze · {images.length}/{MAX_IMAGES}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setImages([])}
+                                className="text-slate-500 hover:text-red-400 transition-colors"
+                              >
+                                Vymazat vše
+                              </button>
+                            </div>
                             <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setActiveTab("zprava");
-                                  setInput(subjectQuery);
-                                  setSubjectHint(null);
-                                  setSubjectQuery("");
-                                }}
-                                className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 px-3 py-1.5 text-[11px] font-bold text-white transition-colors"
-                              >
-                                Prověřit zprávu jako podvod
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSubjectHint(null);
-                                  router.push(`/databaze/hledat?q=${encodeURIComponent(subjectQuery)}`);
-                                }}
-                                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 hover:border-slate-500 px-3 py-1.5 text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors"
-                              >
-                                Přesto hledat v databázi
-                              </button>
+                              {images.map((src, idx) => (
+                                <div key={idx} className="relative group/thumb">
+                                  <img
+                                    src={src}
+                                    alt={`Screenshot ${idx + 1}`}
+                                    className="w-14 h-14 object-cover rounded-lg border border-white/10"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeImageAt(idx)}
+                                    aria-label={`Odebrat screenshot ${idx + 1}`}
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 border border-white/20 text-slate-300 hover:text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors"
+                                  >
+                                    <X size={11} />
+                                  </button>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         )}
-                        <button
-                          type="submit"
-                          className="group w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white py-3.5 font-bold text-sm sm:text-base shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 active:scale-[0.98] transition-all"
-                        >
-                          <SearchIcon size={16} />
-                          Ověřit v databázi
-                        </button>
-                      </form>
 
-                      {/* DB stats inline */}
-                      <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 pt-1">
-                        <span>
-                          <span className="font-semibold text-slate-200">
-                            {dbStats.subjects !== null && dbStats.subjects > 0
-                              ? dbStats.subjects.toLocaleString("cs-CZ")
-                              : "—"}
-                          </span>{" "}
-                          subjektů
-                        </span>
-                        <span className="text-slate-600">·</span>
-                        <span>
-                          <span className="font-semibold text-slate-200">
-                            {dbStats.incidents !== null && dbStats.incidents > 0
-                              ? dbStats.incidents.toLocaleString("cs-CZ")
-                              : "—"}
-                          </span>{" "}
-                          nahlášení
-                        </span>
-                      </div>
+                        {images.length < MAX_IMAGES && (
+                          canUploadImage ? (
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
+                            >
+                              <Camera size={14} /> {images.length === 0 ? "Přidat screenshot" : "Přidat další"} <span className="text-purple-400/60 ml-1">(až {MAX_IMAGES})</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => { window.location.href = "/pricing"; }}
+                              className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
+                            >
+                              <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
+                            </button>
+                          )
+                        )}
 
-                      {/* Secondary actions: contribute + learn more */}
-                      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3 border-t border-white/5">
-                        <Link
-                          href="/databaze/nahlasit"
-                          className="inline-flex items-center gap-2 rounded-lg border border-purple-500/40 bg-purple-500/5 px-4 py-2 text-xs font-bold uppercase tracking-wider text-purple-200 hover:border-purple-400 hover:bg-purple-500/10 transition-colors"
-                        >
-                          <Plus size={14} />
-                          Nahlásit incident
-                        </Link>
-                        <Link
-                          href="/databaze"
-                          className="inline-flex items-center gap-1 text-xs font-semibold text-slate-400 hover:text-purple-300 transition-colors"
-                        >
-                          Jak databáze funguje
-                          <ArrowRight size={12} />
-                        </Link>
-                      </div>
-                    </div>
-                  )}
+                        <p className="text-slate-600 text-[10px] text-center hidden sm:block">
+                          Ctrl + Enter pro odeslání · Esc pro smazání
+                        </p>
+                      </>
+                    )}
+                  </div>
 
                   {/* Footer */}
                   <div className="px-5 py-2.5 border-t border-white/5 bg-white/[0.02]">
@@ -812,172 +932,166 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
 
-        {/* ── Results / scanner / cross-reference / viral share ──── */}
-        <section className="w-full flex justify-center relative z-10 mt-10">
-        <div ref={resultRef} className="w-full max-w-3xl px-4 space-y-4 text-center scroll-mt-24">
+              {error && <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
 
-          {error && <div className="max-w-3xl mx-auto w-full bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
-
-          {result && (
-            <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left max-w-3xl mx-auto w-full`}>
-              <div className="flex flex-col items-center text-center mb-8 gap-4">
-                <RiskGauge value={result.risk} size={200} />
-                <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-white">{result.verdict}</h2>
-              </div>
-
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><Info size={14} /> Analýza</h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">{result.analysis}</p>
-                </div>
-
-                {result.threats && result.threats.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><AlertTriangle size={14} /> Identifikované hrozby</h4>
-                    <ul className="space-y-1">
-                      {result.threats.map((threat, i) => (
-                        <li key={i} className="flex items-start gap-2 text-slate-300 text-sm"><span className="text-red-400 mt-0.5 shrink-0">•</span> {threat}</li>
-                      ))}
-                    </ul>
+              {result && (
+                <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left`}>
+                  <div className="flex flex-col items-center text-center mb-8 gap-4">
+                    <RiskGauge value={result.risk} size={200} />
+                    <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tighter text-white">{result.verdict}</h2>
                   </div>
-                )}
 
-                {result.tactics && result.tactics.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><Shield size={14} /> Taktiky útočníka</h4>
-                    <ul className="space-y-1">
-                      {result.tactics.map((tactic, i) => (
-                        <li key={i} className="flex items-start gap-2 text-slate-300 text-sm"><span className="text-yellow-400 mt-0.5 shrink-0">▸</span> {tactic}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-                  <p className="italic text-slate-300 text-sm text-center">"{result.recommendation}"</p>
-                </div>
-
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-slate-600 text-xs">
-                    {!result.tier || result.tier === "free"
-                      ? result.remainingChecks !== undefined && (
-                          <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/2</span></span>
-                        )
-                      : result.credits !== undefined && (
-                          <span>Zbývá: <span className="text-slate-400 font-bold">{result.credits.toLocaleString("cs-CZ")} kreditů</span></span>
-                        )
-                    }
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={handleDownloadPDF} className="flex items-center gap-2 text-xs border border-purple-500 text-purple-400 px-4 py-2 rounded-lg hover:bg-purple-500/10 transition-colors">
-                      <Download size={14} /> Stáhnout report
-                    </button>
-                    <button onClick={handleShare} className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
-                      {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}
-                    </button>
-                  </div>
-                </div>
-
-                <p className="text-slate-400 text-sm text-center leading-relaxed pt-2 border-t border-white/5">
-                  ⚠️ {DISCLAIMER}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {result?.database_matches && result.database_matches.length > 0 && (
-            <div className="max-w-3xl mx-auto w-full rounded-[32px] border-2 border-red-500/40 bg-red-950/30 backdrop-blur-3xl shadow-2xl p-8 sm:p-10 text-left space-y-5">
-              <div className="space-y-1">
-                <h3 className="text-xl sm:text-2xl font-black text-red-200">
-                  🚨 Nález v databázi nahlášených incidentů
-                </h3>
-                <p className="text-sm text-red-200/80">
-                  V textu zprávy jsme našli identifikátory, které jsou evidovány v databázi nahlášených incidentů.
-                </p>
-              </div>
-              <ul className="space-y-3">
-                {result.database_matches.map((m, i) => (
-                  <li
-                    key={`${m.type}-${m.value_masked}-${i}`}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-2xl border border-red-500/30 bg-red-500/5 p-4"
-                  >
-                    <div className="text-sm text-slate-100">
-                      <span className="font-bold">{dbMatchLabel(m.type, m.value_masked)}</span>{" "}
-                      <span className="font-mono text-red-200">{m.value_masked}</span>
-                      <span className="text-slate-300"> — nahlášeno v {m.incident_count}{" "}
-                        {m.incident_count === 1
-                          ? "incidentu"
-                          : m.incident_count >= 2 && m.incident_count <= 4
-                          ? "incidentech"
-                          : "incidentech"}
-                      </span>
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><Info size={14} /> Analýza</h4>
+                      <p className="text-slate-300 text-sm leading-relaxed">{result.analysis}</p>
                     </div>
-                    <a
-                      href={`/databaze/hledat?q=${encodeURIComponent(m.query_value)}`}
-                      className="shrink-0 text-xs font-semibold text-red-200 hover:text-white underline underline-offset-2"
-                    >
-                      Zobrazit v databázi →
-                    </a>
-                  </li>
-                ))}
-              </ul>
+
+                    {result.threats && result.threats.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><AlertTriangle size={14} /> Identifikované hrozby</h4>
+                        <ul className="space-y-1">
+                          {result.threats.map((threat, i) => (
+                            <li key={i} className="flex items-start gap-2 text-slate-300 text-sm"><span className="text-red-400 mt-0.5 shrink-0">•</span> {threat}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {result.tactics && result.tactics.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-purple-400 font-black uppercase text-[10px] tracking-widest flex items-center gap-2"><Shield size={14} /> Taktiky útočníka</h4>
+                        <ul className="space-y-1">
+                          {result.tactics.map((tactic, i) => (
+                            <li key={i} className="flex items-start gap-2 text-slate-300 text-sm"><span className="text-yellow-400 mt-0.5 shrink-0">▸</span> {tactic}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                      <p className="italic text-slate-300 text-sm text-center">&quot;{result.recommendation}&quot;</p>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="text-slate-600 text-xs">
+                        {!result.tier || result.tier === "free"
+                          ? result.remainingChecks !== undefined && (
+                              <span>Zbývá dnes: <span className="text-slate-400 font-bold">{result.remainingChecks}/2</span></span>
+                            )
+                          : result.credits !== undefined && (
+                              <span>Zbývá: <span className="text-slate-400 font-bold">{result.credits.toLocaleString("cs-CZ")} kreditů</span></span>
+                            )
+                        }
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button onClick={handleDownloadPDF} className="flex items-center gap-2 text-xs border border-purple-500 text-purple-400 px-4 py-2 rounded-lg hover:bg-purple-500/10 transition-colors">
+                          <Download size={14} /> Stáhnout report
+                        </button>
+                        <button onClick={handleShare} className="flex items-center gap-2 text-xs text-slate-400 hover:text-white transition-colors bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl">
+                          {copied ? <><Check size={14} className="text-green-400" /> Zkopírováno!</> : <><Share2 size={14} /> Sdílet varování</>}
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-slate-400 text-sm text-center leading-relaxed pt-2 border-t border-white/5">
+                      ⚠️ {DISCLAIMER}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {result?.database_matches && result.database_matches.length > 0 && (
+                <div className="rounded-[32px] border-2 border-red-500/40 bg-red-950/30 backdrop-blur-3xl shadow-2xl p-8 sm:p-10 text-left space-y-5">
+                  <div className="space-y-1">
+                    <h3 className="text-xl sm:text-2xl font-black text-red-200">
+                      🚨 Nález v databázi nahlášených incidentů
+                    </h3>
+                    <p className="text-sm text-red-200/80">
+                      V textu zprávy jsme našli identifikátory, které jsou evidovány v databázi nahlášených incidentů.
+                    </p>
+                  </div>
+                  <ul className="space-y-3">
+                    {result.database_matches.map((m, i) => (
+                      <li
+                        key={`${m.type}-${m.value_masked}-${i}`}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 rounded-2xl border border-red-500/30 bg-red-500/5 p-4"
+                      >
+                        <div className="text-sm text-slate-100">
+                          <span className="font-bold">{dbMatchLabel(m.type, m.value_masked)}</span>{" "}
+                          <span className="font-mono text-red-200">{m.value_masked}</span>
+                          <span className="text-slate-300"> — nahlášeno v {m.incident_count}{" "}
+                            {m.incident_count === 1
+                              ? "incidentu"
+                              : m.incident_count >= 2 && m.incident_count <= 4
+                              ? "incidentech"
+                              : "incidentech"}
+                          </span>
+                        </div>
+                        <a
+                          href={`/databaze/hledat?q=${encodeURIComponent(m.query_value)}`}
+                          className="shrink-0 text-xs font-semibold text-red-200 hover:text-white underline underline-offset-2"
+                        >
+                          Zobrazit v databázi →
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {result?.shareId && (() => {
+                const shareUrl = `${typeof window !== "undefined" ? window.location.origin : "https://neklikni.cz"}/report/${result.shareId}`;
+                const waText = encodeURIComponent(`Pozor na tento podvod! Podívej se na analýzu: ${shareUrl}`);
+                return (
+                  <div className="bg-amber-900/20 border border-amber-700/30 rounded-[32px] p-8 space-y-5">
+                    <div className="text-center space-y-2">
+                      <h3 className="text-xl font-black text-white">⚠️ Varujte svou rodinu a přátele</h3>
+                      <p className="text-slate-300 text-sm leading-relaxed">Sdílejte tento výsledek, aby se vaši blízcí nenechali nachytat.</p>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-3">
+                      <a
+                        href={`https://wa.me/?text=${waText}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-bold text-sm transition-all active:scale-95"
+                      >
+                        💬 WhatsApp
+                      </a>
+                      <a
+                        href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all active:scale-95"
+                      >
+                        📘 Facebook
+                      </a>
+                      <button
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(shareUrl);
+                          setCtaCopied(true);
+                          setTimeout(() => setCtaCopied(false), 2000);
+                        }}
+                        className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm transition-all active:scale-95"
+                      >
+                        {ctaCopied ? <><Check size={16} className="text-green-400" /> Odkaz zkopírován!</> : <><Copy size={16} /> Kopírovat odkaz</>}
+                      </button>
+                      <button
+                        onClick={async () => { if (navigator.share) await navigator.share({ title: "NeKlikni.cz – Varování", text: "Pozor na tento podvod! Podívej se na analýzu:", url: shareUrl }); }}
+                        className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm transition-all active:scale-95 sm:hidden"
+                      >
+                        <Share2 size={16} /> Sdílet
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {result && (
+                <ReferralCard isLoggedIn={profileChecked ? profile !== null : null} />
+              )}
             </div>
-          )}
-
-          {result?.shareId && (() => {
-            const shareUrl = `${typeof window !== "undefined" ? window.location.origin : "https://neklikni.cz"}/report/${result.shareId}`;
-            const waText = encodeURIComponent(`Pozor na tento podvod! Podívej se na analýzu: ${shareUrl}`);
-            return (
-              <div className="max-w-3xl mx-auto w-full bg-amber-900/20 border border-amber-700/30 rounded-[32px] p-8 space-y-5">
-                <div className="text-center space-y-2">
-                  <h3 className="text-xl font-black text-white">⚠️ Varujte svou rodinu a přátele</h3>
-                  <p className="text-slate-300 text-sm leading-relaxed">Sdílejte tento výsledek, aby se vaši blízcí nenechali nachytat.</p>
-                </div>
-                <div className="flex flex-wrap justify-center gap-3">
-                  <a
-                    href={`https://wa.me/?text=${waText}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-green-600 hover:bg-green-500 text-white font-bold text-sm transition-all active:scale-95"
-                  >
-                    💬 WhatsApp
-                  </a>
-                  <a
-                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-                    target="_blank" rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-all active:scale-95"
-                  >
-                    📘 Facebook
-                  </a>
-                  <button
-                    onClick={async () => {
-                      await navigator.clipboard.writeText(shareUrl);
-                      setCtaCopied(true);
-                      setTimeout(() => setCtaCopied(false), 2000);
-                    }}
-                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm transition-all active:scale-95"
-                  >
-                    {ctaCopied ? <><Check size={16} className="text-green-400" /> Odkaz zkopírován!</> : <><Copy size={16} /> Kopírovat odkaz</>}
-                  </button>
-                  <button
-                    onClick={async () => { if (navigator.share) await navigator.share({ title: "NeKlikni.cz – Varování", text: "Pozor na tento podvod! Podívej se na analýzu:", url: shareUrl }); }}
-                    className="flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-sm transition-all active:scale-95 sm:hidden"
-                  >
-                    <Share2 size={16} /> Sdílet
-                  </button>
-                </div>
-              </div>
-            );
-          })()}
-
-          {result && (
-            <ReferralCard isLoggedIn={profileChecked ? profile !== null : null} />
-          )}
-        </div>
-        </section>
+          </section>
+        )}
 
         <ErrorBoundary>
           <HomeSections />

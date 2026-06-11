@@ -41,7 +41,7 @@ import {
   normalizePhoneVariants,
   normalizeVarSymbol,
 } from '@/utils/databaze/identifiers'
-import type { DatabazeDatabase } from '../_lib/database'
+import type { DatabazeDatabase, SearchLogQueryType } from '../_lib/database'
 import { checkRateLimit, hashForRL } from '../../_lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
@@ -88,6 +88,22 @@ const TYPE_LABEL_GENITIV: Record<IdentifierType, string> = {
   facebook_url: 'Facebook profil',
   var_symbol: 'variabilní symbol',
   other: 'identifikátor',
+}
+
+
+// search_log.query_type je užší enum než IdentifierType — facebook_url a
+// var_symbol mapujeme na 'url'/'other' pro jednodušší konverzní reporting.
+function toSearchLogType(type: IdentifierType | null): SearchLogQueryType {
+  switch (type) {
+    case 'phone':
+    case 'account':
+    case 'email':
+      return type
+    case 'facebook_url':
+      return 'url'
+    default:
+      return 'other'
+  }
 }
 
 
@@ -187,6 +203,12 @@ export async function POST(req: Request) {
   //    nesmí rozbít vyhledávání pro legitimní uživatele)
   let setAnonCookie = false
 
+  const ip =
+    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+    req.headers.get('x-real-ip') ||
+    'unknown'
+  const ipHash = await hashForRL(ip)
+
   if (userId) {
     // Přihlášený uživatel: 20 dotazů / 24h per user_id
     const rl = await checkRateLimit(userId, 'search:auth', AUTH_LIMIT, '24 h')
@@ -213,11 +235,6 @@ export async function POST(req: Request) {
       )
     }
 
-    const ip =
-      req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
-      req.headers.get('x-real-ip') ||
-      'unknown'
-    const ipHash = await hashForRL(ip)
     const rl = await checkRateLimit(ipHash, 'search:anon', ANON_LIMIT, '24 h')
     if (!rl.allowed) {
       return NextResponse.json(
@@ -232,8 +249,28 @@ export async function POST(req: Request) {
     setAnonCookie = true
   }
 
-  // Helper: anon callům přilepí cookie token jako UX shortcut pro příští request.
-  const respond = (body: unknown, init?: ResponseInit): NextResponse => {
+  // Best-effort log do search_log pro konverzní analýzu — nesmí shodit response.
+  const logSearch = async (queryType: SearchLogQueryType, found: boolean) => {
+    try {
+      await supabaseAdmin().from('search_log').insert({
+        query_type: queryType,
+        found,
+        ip_hash: ipHash,
+        user_id: userId,
+      })
+    } catch (err) {
+      console.error('search_log insert failed:', err)
+    }
+  }
+
+  // Helper: zaloguje vyhledávání a anon callům přilepí cookie token jako
+  // UX shortcut pro příští request.
+  const respond = async (
+    body: unknown,
+    init?: ResponseInit,
+    log?: { queryType: SearchLogQueryType; found: boolean },
+  ): Promise<NextResponse> => {
+    if (log) await logSearch(log.queryType, log.found)
     const r = NextResponse.json(body, init)
     if (setAnonCookie) {
       r.cookies.set(ANON_COOKIE, '1', {
@@ -256,7 +293,7 @@ export async function POST(req: Request) {
       message:
         'Formát nelze rozpoznat. Použijte telefon (+420...), e-mail, číslo účtu (12345/0100), Facebook profil nebo variabilní symbol.',
     }
-    return respond(response)
+    return respond(response, undefined, { queryType: 'other', found: false })
   }
 
   // Pro telefon: použij normalizePhoneVariants — 9xx čísla bez předvolby
@@ -270,7 +307,7 @@ export async function POST(req: Request) {
         found: false,
         detected_type,
         message: `Neplatný formát pro ${TYPE_LABEL_GENITIV[detected_type]}.`,
-      })
+      }, undefined, { queryType: toSearchLogType(detected_type), found: false })
     }
     normalized = variants[0]
     searchHashes = await Promise.all(variants.map(hashIdentifier))
@@ -281,7 +318,7 @@ export async function POST(req: Request) {
         found: false,
         detected_type,
         message: `Neplatný formát pro ${TYPE_LABEL_GENITIV[detected_type]}.`,
-      })
+      }, undefined, { queryType: toSearchLogType(detected_type), found: false })
     }
     normalized = norm
     searchHashes = [await hashIdentifier(norm)]
@@ -314,7 +351,7 @@ export async function POST(req: Request) {
         message:
           'Tento subjekt zatím není v naší databázi. To ale neznamená, že je 100% bezpečný — buď opatrný a ověř ho i jinak (Bank iD, osobní vyzvednutí, escrow služby jako Bazoš Bezpečně).',
       }
-      return respond(response)
+      return respond(response, undefined, { queryType: toSearchLogType(detected_type), found: false })
     }
 
     const subjectId = idRow.subject_id
@@ -341,7 +378,7 @@ export async function POST(req: Request) {
         normalized_value: masked,
         message: 'Záznam byl odstraněn.',
       }
-      return respond(response)
+      return respond(response, undefined, { queryType: toSearchLogType(detected_type), found: false })
     }
 
     // 7. Incidenty pro agregaci
@@ -432,7 +469,7 @@ export async function POST(req: Request) {
         })),
       },
     }
-    return respond(response)
+    return respond(response, undefined, { queryType: toSearchLogType(detected_type), found: true })
   } catch (err) {
     console.error('Search route exception:', err)
     return respond({ error: 'Chyba serveru.' }, { status: 500 })

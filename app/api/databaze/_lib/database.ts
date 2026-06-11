@@ -231,6 +231,31 @@ export type AuditLogInsert = {
 }
 
 
+// ── search_log ────────────────────────────────────────
+
+export type SearchLogQueryType = 'phone' | 'account' | 'email' | 'url' | 'other'
+
+export type SearchLogRow = {
+  id: string
+  created_at: string
+  query_type: SearchLogQueryType
+  found: boolean
+  ip_hash: string
+  user_id: string | null
+  converted_to_report: boolean
+}
+
+export type SearchLogInsert = {
+  id?: string
+  created_at?: string
+  query_type: SearchLogQueryType
+  found: boolean
+  ip_hash: string
+  user_id?: string | null
+  converted_to_report?: boolean
+}
+
+
 // ── Database wrapper ──────────────────────────────────
 
 export type DatabazeDatabase = {
@@ -270,6 +295,12 @@ export type DatabazeDatabase = {
         Row: AuditLogRow
         Insert: AuditLogInsert
         Update: Partial<AuditLogInsert>
+        Relationships: []
+      }
+      search_log: {
+        Row: SearchLogRow
+        Insert: SearchLogInsert
+        Update: Partial<SearchLogInsert>
         Relationships: []
       }
     }
