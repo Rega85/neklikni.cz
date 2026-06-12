@@ -511,15 +511,16 @@ export default function Home() {
 
         {/* ── HERO: dva rovnocenné vstupy — databáze i AI zpráva ── */}
         <section className="max-w-2xl w-full mx-auto relative z-10 text-center space-y-4 sm:space-y-5">
-          {stats.analyses !== null && stats.incidents !== null && stats.analyses >= 500 && stats.incidents >= 500 && (
+          {stats.analyses !== null && (
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
               <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+                <span className="motion-safe:animate-[ping_2s_ease-in-out_infinite] absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
               </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-300">online</span>
+              <span className="text-slate-600">·</span>
               <span>
-                <span className="font-semibold text-white">{stats.analyses.toLocaleString("cs-CZ")}</span> analýz ·{" "}
-                <span className="font-semibold text-white">{stats.incidents.toLocaleString("cs-CZ")}</span> nahlášených podvodů
+                <span className="font-semibold text-white">{stats.analyses.toLocaleString("cs-CZ")}</span> prověřených zpráv a kontaktů
               </span>
             </div>
           )}
