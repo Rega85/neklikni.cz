@@ -491,10 +491,7 @@ export default function Home() {
           )}
 
           <h1 className="text-balance font-sans font-black tracking-tight text-white text-4xl sm:text-5xl lg:text-6xl leading-[1.1]">
-            Prověřte si podvodníka{" "}
-            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
-              zdarma
-            </span>
+            Než pošlete peníze, ověřte si komu.
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
