@@ -139,6 +139,7 @@ export default function Home() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileChecked, setProfileChecked] = useState(false);
   const [upsellReason, setUpsellReason] = useState<"anon_daily" | "no_credits" | null>(null);
+  const [dbStats, setDbStats] = useState<{ subjects: number | null; incidents: number | null }>({ subjects: null, incidents: null });
 
   // ── Hero database search state ──────────────────────
   const [searchQuery, setSearchQuery] = useState("");
@@ -165,6 +166,18 @@ export default function Home() {
       .then((d) => { if (d?.profile) setProfile(d.profile); })
       .catch(() => {})
       .finally(() => setProfileChecked(true));
+
+    fetch('/api/databaze/stats', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => {
+        if (d && typeof d === 'object') {
+          setDbStats({
+            subjects: typeof d.subjects === 'number' ? d.subjects : null,
+            incidents: typeof d.incidents === 'number' ? d.incidents : null,
+          });
+        }
+      })
+      .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -455,68 +468,84 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-[#020617]">
       <HomeSchema />
+      <main className="flex-grow text-white pt-10 sm:pt-16 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
 
-      {/* ── HERO: světlé, důvěryhodné, jedna akce ──────────── */}
-      <section className="w-full bg-white border-b border-slate-200">
-        <div className="max-w-2xl w-full mx-auto px-4 sm:px-6 py-10 sm:py-14 text-center space-y-5">
-          <h1 className="text-balance font-sans font-extrabold tracking-tight text-slate-900 text-3xl sm:text-4xl lg:text-5xl leading-[1.25]">
-            Než pošlete peníze, ověřte si komu.
+        {/* ── HERO: single action — ověřit subjekt v databázi ─── */}
+        <section className="max-w-2xl w-full mx-auto relative z-10 text-center space-y-4 sm:space-y-5">
+          {(dbStats.subjects !== null || dbStats.incidents !== null) && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
+              <span className="relative flex h-2 w-2" aria-hidden="true">
+                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
+              </span>
+              <span>
+                {dbStats.subjects !== null && dbStats.subjects > 0 && (
+                  <><span className="font-semibold text-white">{dbStats.subjects.toLocaleString("cs-CZ")}</span> subjektů</>
+                )}
+                {dbStats.subjects !== null && dbStats.subjects > 0 && dbStats.incidents !== null && dbStats.incidents > 0 && " · "}
+                {dbStats.incidents !== null && dbStats.incidents > 0 && (
+                  <><span className="font-semibold text-white">{dbStats.incidents.toLocaleString("cs-CZ")}</span> nahlášení podvodů</>
+                )}
+              </span>
+            </div>
+          )}
+
+          <h1 className="text-balance font-sans font-black tracking-tight text-white text-4xl sm:text-5xl lg:text-6xl leading-[1.1]">
+            Prověřte si podvodníka{" "}
+            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
+              zdarma
+            </span>
           </h1>
 
-          <p className="text-slate-600 text-lg leading-[1.6] max-w-xl mx-auto">
-            Zadejte telefonní číslo, e-mail nebo číslo účtu. Porovnáme ho s databází nahlášených podvodů — zdarma, anonymně, během vteřiny.
+          <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
+            Zkontrolujeme číslo, účet i e-mail proti databázi nahlášených podvodů. Zdarma, bez registrace.
           </p>
 
-          <form onSubmit={handleHeroSearch} className="max-w-xl mx-auto text-left space-y-2">
-            <label htmlFor="hero_search_q" className="block text-sm font-semibold text-slate-700">
-              Co chcete prověřit?
+          <form onSubmit={handleHeroSearch} className="flex flex-col gap-3 sm:flex-row max-w-xl mx-auto">
+            <label htmlFor="hero_search_q" className="sr-only">
+              Telefon, e-mail, číslo účtu nebo profil k ověření
             </label>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <input
-                id="hero_search_q"
-                name="q"
-                type="search"
-                inputMode="text"
-                autoComplete="off"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setSearchHint(null); }}
-                placeholder="Telefon, e-mail, číslo účtu…"
-                disabled={searchLoading}
-                className="flex-1 min-h-[56px] rounded-xl border-2 border-slate-300 bg-white px-4 py-4 text-base sm:text-lg text-slate-900 placeholder:text-slate-400 focus:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700/20 disabled:opacity-60"
-              />
-              <button
-                type="submit"
-                disabled={!searchQuery.trim() || searchLoading}
-                className="inline-flex items-center justify-center gap-2 min-h-[56px] rounded-xl bg-blue-800 hover:bg-blue-900 px-6 py-4 text-base sm:text-lg font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {searchLoading ? (
-                  <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-                ) : (
-                  <SearchIcon size={20} aria-hidden="true" />
-                )}
-                Ověřit zdarma
-              </button>
-            </div>
+            <input
+              id="hero_search_q"
+              name="q"
+              type="search"
+              inputMode="text"
+              autoComplete="off"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); setSearchHint(null); }}
+              placeholder="Telefon, e-mail, číslo účtu…"
+              disabled={searchLoading}
+              className="flex-1 min-h-[56px] rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 sm:py-5 text-base sm:text-lg text-white placeholder:text-slate-500 focus:border-purple-400/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 disabled:opacity-60"
+            />
+            <button
+              type="submit"
+              disabled={!searchQuery.trim() || searchLoading}
+              className="group inline-flex items-center justify-center gap-2 min-h-[56px] rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 sm:py-5 text-base sm:text-lg font-bold text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+            >
+              {searchLoading ? (
+                <Loader2 size={20} className="animate-spin" aria-hidden="true" />
+              ) : (
+                <SearchIcon size={20} aria-hidden="true" />
+              )}
+              Prověřit
+            </button>
           </form>
 
-          <ul className="flex flex-col sm:flex-row flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-slate-600 pt-1">
-            <li className="inline-flex items-center justify-center gap-2">
-              <ShieldCheck size={16} className="text-blue-700 shrink-0" aria-hidden="true" />
-              Každé nahlášení ručně ověřujeme
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-slate-300">
+            <li className="inline-flex items-center gap-1.5">
+              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+              100% anonymní
             </li>
-            <li className="inline-flex items-center justify-center gap-2">
-              <Lock size={16} className="text-blue-700 shrink-0" aria-hidden="true" />
+            <li className="inline-flex items-center gap-1.5">
+              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
               Bez registrace
             </li>
-            <li className="inline-flex items-center justify-center gap-2">
-              <Check size={16} className="text-blue-700 shrink-0" aria-hidden="true" />
-              Provozuje česká firma
+            <li className="inline-flex items-center gap-1.5">
+              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+              Výsledek hned
             </li>
           </ul>
-        </div>
-      </section>
-
-      <main className="flex-grow text-white pt-6 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
+        </section>
 
         {/* ── Výsledek vyhledávání v databázi ──────────────── */}
         <section className="w-full flex justify-center relative z-10 mt-6">
