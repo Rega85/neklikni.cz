@@ -208,14 +208,12 @@ export default function Home() {
       .catch(() => {})
       .finally(() => setProfileChecked(true));
 
-    fetch('/api/stats', { cache: 'no-store' })
+    fetch('/api/stats')
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => setStats((s) => ({ ...s, analyses: typeof d?.total === 'number' ? d.total : null })))
-      .catch(() => {});
-
-    fetch('/api/databaze/stats', { cache: 'no-store' })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => setStats((s) => ({ ...s, incidents: typeof d?.incidents === 'number' ? d.incidents : null })))
+      .then((d) => setStats({
+        analyses: typeof d?.total === 'number' ? d.total : null,
+        incidents: typeof d?.incidents === 'number' ? d.incidents : null,
+      }))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
