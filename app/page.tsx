@@ -120,6 +120,41 @@ const EXAMPLES = [
   },
 ];
 
+// ── Hero: přepínač mezi databázovým vyhledáváním a AI analýzou ─
+function ModeSwitch({ mode, onMode }: { mode: "prodejce" | "zprava"; onMode: (m: "prodejce" | "zprava") => void }) {
+  const tabs: Array<{ key: "prodejce" | "zprava"; icon: typeof SearchIcon; label: string; sub: string }> = [
+    { key: "prodejce", icon: SearchIcon, label: "Prodejce, číslo, účet", sub: "databáze nahlášených podvodů" },
+    { key: "zprava", icon: Sparkles, label: "Podezřelá zpráva", sub: "SMS, e-mail nebo odkaz — AI verdikt" },
+  ];
+
+  return (
+    <div className="flex gap-2.5 max-w-xl mx-auto w-full">
+      {tabs.map(({ key, icon: Icon, label, sub }) => {
+        const active = mode === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => onMode(key)}
+            aria-pressed={active}
+            className={`flex-1 flex flex-col items-center gap-0.5 rounded-2xl border px-2 sm:px-3 py-3 transition-all ${
+              active
+                ? "border-purple-400/50 bg-gradient-to-br from-purple-500/25 to-blue-500/[0.18] shadow-[0_0_30px_-8px_rgba(168,85,247,0.5)]"
+                : "border-white/10 bg-white/[0.03] hover:bg-white/[0.05]"
+            }`}
+          >
+            <span className={`inline-flex items-center gap-1.5 sm:gap-2 text-[13px] sm:text-sm font-black tracking-tight ${active ? "text-white" : "text-slate-400"}`}>
+              <Icon size={16} className={active ? "text-purple-200" : "text-slate-500"} aria-hidden="true" />
+              {label}
+            </span>
+            <span className={`text-[10px] sm:text-[11px] ${active ? "text-slate-300" : "text-slate-500"}`}>{sub}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Home() {
   // ── AI message analysis state ──────────────────────
   const [input, setInput] = useState("");
@@ -131,15 +166,17 @@ export default function Home() {
   const [images, setImages] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
-  const [aiOpen, setAiOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const aiSectionRef = useRef<HTMLDivElement>(null);
 
   // ── Shared / profile state ──────────────────────────
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [profileChecked, setProfileChecked] = useState(false);
   const [upsellReason, setUpsellReason] = useState<"anon_daily" | "no_credits" | null>(null);
-  const [dbStats, setDbStats] = useState<{ subjects: number | null; incidents: number | null }>({ subjects: null, incidents: null });
+  const [stats, setStats] = useState<{ analyses: number | null; incidents: number | null }>({ analyses: null, incidents: null });
+
+  // ── Hero mode switch (zpráva vs. databázové vyhledávání) ─
+  const [mode, setMode] = useState<"prodejce" | "zprava">("prodejce");
+  const [modeHint, setModeHint] = useState<"switched" | "identifier" | null>(null);
 
   // ── Hero database search state ──────────────────────
   const [searchQuery, setSearchQuery] = useState("");
@@ -147,9 +184,13 @@ export default function Home() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchResult, setSearchResult] = useState<SearchApiResult | null>(null);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchHint, setSearchHint] = useState<"full_message" | null>(null);
   const [limitReached, setLimitReached] = useState<LimitReachedState | null>(null);
   const searchResultRef = useRef<HTMLDivElement>(null);
+
+  const switchMode = (m: "prodejce" | "zprava") => {
+    setMode(m);
+    setModeHint(null);
+  };
 
   useEffect(() => {
     // Bookmarklet handler - přečte ?q= parametr z URL a rovnou spustí hledání
@@ -167,16 +208,14 @@ export default function Home() {
       .catch(() => {})
       .finally(() => setProfileChecked(true));
 
+    fetch('/api/stats', { cache: 'no-store' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => setStats((s) => ({ ...s, analyses: typeof d?.total === 'number' ? d.total : null })))
+      .catch(() => {});
+
     fetch('/api/databaze/stats', { cache: 'no-store' })
       .then((r) => r.ok ? r.json() : null)
-      .then((d) => {
-        if (d && typeof d === 'object') {
-          setDbStats({
-            subjects: typeof d.subjects === 'number' ? d.subjects : null,
-            incidents: typeof d.incidents === 'number' ? d.incidents : null,
-          });
-        }
-      })
+      .then((d) => setStats((s) => ({ ...s, incidents: typeof d?.incidents === 'number' ? d.incidents : null })))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -184,12 +223,12 @@ export default function Home() {
   // Reset state when user clicks logo/Home while already on "/"
   useEffect(() => {
     const reset = () => {
+      setMode("prodejce");
+      setModeHint(null);
       setSearchQuery("");
       setSearchResult(null);
       setSearchError(null);
-      setSearchHint(null);
       setLimitReached(null);
-      setAiOpen(false);
       setInput("");
       setResult(null);
       setError(null);
@@ -201,22 +240,10 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if ((searchResult || searchHint || limitReached || searchError) && searchResultRef.current) {
+    if ((searchResult || limitReached || searchError || result) && searchResultRef.current) {
       searchResultRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  }, [searchResult, searchHint, limitReached, searchError]);
-
-  useEffect(() => {
-    if (aiOpen && aiSectionRef.current) {
-      aiSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [aiOpen]);
-
-  useEffect(() => {
-    if (result && aiSectionRef.current) {
-      aiSectionRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }, [result]);
+  }, [searchResult, limitReached, searchError, result]);
 
   const MAX_IMAGES = 4;
   const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
@@ -331,7 +358,6 @@ export default function Home() {
     setSearchError(null);
     setSearchResult(null);
     setLimitReached(null);
-    setSearchHint(null);
     setLastSearchedQuery(q);
     try {
       const res = await fetch('/api/databaze/search', {
@@ -366,25 +392,40 @@ export default function Home() {
     e.preventDefault();
     const q = searchQuery.trim();
     if (!q || searchLoading) return;
+    void performSearch(q);
+  };
 
-    const detectedType = detectIdentifierType(q);
-    // Heuristiku "vypadá jako zpráva" spustíme jen u null / var_symbol —
-    // u phone/email/account/facebook_url je identifikátor jednoznačný,
-    // i kdyby byl dlouhý (FB URL, IBAN s mezerami).
-    const UNAMBIGUOUS = ["phone", "email", "account", "facebook_url"] as const;
-    const isUnambiguous = detectedType !== null && (UNAMBIGUOUS as readonly string[]).includes(detectedType);
+  // Heuristiku "vypadá jako zpráva" spustíme jen u null / var_symbol —
+  // u phone/email/account/facebook_url je identifikátor jednoznačný,
+  // i kdyby byl dlouhý (FB URL, IBAN s mezerami).
+  const UNAMBIGUOUS_TYPES = ["phone", "email", "account", "facebook_url"] as const;
 
-    if (!isUnambiguous && looksLikeFullMessage(q)) {
-      setSearchResult(null);
-      setSearchError(null);
-      setLimitReached(null);
-      setLastSearchedQuery(q);
-      setSearchHint("full_message");
+  // Vstup do databázového vyhledávání: pokud text vypadá jako celá zpráva,
+  // automaticky přepneme na AI mód a text přeneseme tam (smart switching).
+  const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    const detectedType = detectIdentifierType(v);
+    const isUnambiguous = detectedType !== null && (UNAMBIGUOUS_TYPES as readonly string[]).includes(detectedType);
+
+    if (!isUnambiguous && looksLikeFullMessage(v)) {
+      setInput(v);
+      setResult(null);
+      setError(null);
+      setSearchQuery("");
+      setMode("zprava");
+      setModeHint("switched");
       return;
     }
+    setSearchQuery(v);
+    setModeHint(null);
+  };
 
-    setSearchHint(null);
-    void performSearch(q);
+  // Vstup do AI analýzy zprávy: pokud text vypadá jako identifikátor
+  // (telefon, e-mail, účet, profil), nabídneme přepnutí na databázi.
+  const handleAiTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const v = e.target.value;
+    setInput(v);
+    setModeHint(detectIdentifierType(v) !== null ? "identifier" : null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -470,113 +511,268 @@ export default function Home() {
       <HomeSchema />
       <main className="flex-grow text-white pt-10 sm:pt-16 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
 
-        {/* ── HERO: single action — ověřit subjekt v databázi ─── */}
+        {/* ── HERO: dva rovnocenné vstupy — databáze i AI zpráva ── */}
         <section className="max-w-2xl w-full mx-auto relative z-10 text-center space-y-4 sm:space-y-5">
-          {(dbStats.subjects !== null || dbStats.incidents !== null) && (
+          {stats.analyses !== null && stats.incidents !== null && stats.analyses >= 500 && stats.incidents >= 500 && (
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/10 text-xs sm:text-[13px] text-slate-300 backdrop-blur-sm">
               <span className="relative flex h-2 w-2" aria-hidden="true">
                 <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-purple-400" />
               </span>
               <span>
-                {dbStats.subjects !== null && dbStats.subjects > 0 && (
-                  <><span className="font-semibold text-white">{dbStats.subjects.toLocaleString("cs-CZ")}</span> subjektů</>
-                )}
-                {dbStats.subjects !== null && dbStats.subjects > 0 && dbStats.incidents !== null && dbStats.incidents > 0 && " · "}
-                {dbStats.incidents !== null && dbStats.incidents > 0 && (
-                  <><span className="font-semibold text-white">{dbStats.incidents.toLocaleString("cs-CZ")}</span> nahlášení podvodů</>
-                )}
+                <span className="font-semibold text-white">{stats.analyses.toLocaleString("cs-CZ")}</span> analýz ·{" "}
+                <span className="font-semibold text-white">{stats.incidents.toLocaleString("cs-CZ")}</span> nahlášených podvodů
               </span>
             </div>
           )}
 
           <h1 className="text-balance font-sans font-black tracking-tight text-white text-4xl sm:text-5xl lg:text-6xl leading-[1.1]">
-            Než pošlete peníze, ověřte si komu.
+            Neklikej.{" "}
+            <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-300 bg-clip-text text-transparent">
+              Nejdřív si to ověř.
+            </span>
           </h1>
 
           <p className="text-slate-300 text-base sm:text-lg leading-relaxed max-w-xl mx-auto">
-            Zkontrolujeme číslo, účet i e-mail proti databázi nahlášených podvodů. Zdarma, bez registrace.
+            Vlož zprávu, číslo, účet nebo e-mail. AI a databáze nahlášených podvodů ti do 10 sekund řeknou, čemu věřit.
           </p>
 
-          <form onSubmit={handleHeroSearch} className="flex flex-col gap-3 sm:flex-row max-w-xl mx-auto">
-            <label htmlFor="hero_search_q" className="sr-only">
-              Telefon, e-mail, číslo účtu nebo profil k ověření
-            </label>
-            <input
-              id="hero_search_q"
-              name="q"
-              type="search"
-              inputMode="text"
-              autoComplete="off"
-              value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setSearchHint(null); }}
-              placeholder="Telefon, e-mail, číslo účtu…"
-              disabled={searchLoading}
-              className="flex-1 min-h-[56px] rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 sm:py-5 text-base sm:text-lg text-white placeholder:text-slate-500 focus:border-purple-400/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={!searchQuery.trim() || searchLoading}
-              className="group inline-flex items-center justify-center gap-2 min-h-[56px] rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 sm:py-5 text-base sm:text-lg font-bold text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              {searchLoading ? (
-                <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-              ) : (
-                <SearchIcon size={20} aria-hidden="true" />
-              )}
-              Prověřit
-            </button>
-          </form>
+          <ModeSwitch mode={mode} onMode={switchMode} />
 
-          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-slate-300">
-            <li className="inline-flex items-center gap-1.5">
-              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
-              100% anonymní
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
-              Bez registrace
-            </li>
-            <li className="inline-flex items-center gap-1.5">
-              <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
-              Výsledek hned
-            </li>
-          </ul>
-        </section>
+          {mode === "prodejce" && (
+            <div className="max-w-xl mx-auto w-full space-y-3 text-left">
+              <form onSubmit={handleHeroSearch} className="flex flex-col gap-3 sm:flex-row">
+                <label htmlFor="hero_search_q" className="sr-only">
+                  Telefon, e-mail, číslo účtu nebo profil k ověření
+                </label>
+                <input
+                  id="hero_search_q"
+                  name="q"
+                  type="search"
+                  inputMode="text"
+                  autoComplete="off"
+                  value={searchQuery}
+                  onChange={handleQueryChange}
+                  placeholder="Telefon, e-mail, číslo účtu…"
+                  disabled={searchLoading}
+                  className="flex-1 min-h-[56px] rounded-2xl border border-white/10 bg-slate-950/70 px-5 py-4 sm:py-5 text-base sm:text-lg text-white placeholder:text-slate-500 focus:border-purple-400/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 disabled:opacity-60"
+                />
+                <button
+                  type="submit"
+                  disabled={!searchQuery.trim() || searchLoading}
+                  className="group inline-flex items-center justify-center gap-2 min-h-[56px] rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-6 py-4 sm:py-5 text-base sm:text-lg font-bold text-white shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                >
+                  {searchLoading ? (
+                    <Loader2 size={20} className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <SearchIcon size={20} aria-hidden="true" />
+                  )}
+                  Prověřit
+                </button>
+              </form>
 
-        {/* ── Výsledek vyhledávání v databázi ──────────────── */}
-        <section className="w-full flex justify-center relative z-10 mt-6">
-          <div ref={searchResultRef} className="w-full max-w-3xl px-4 space-y-4 scroll-mt-24">
-
-            {searchHint === "full_message" && (
-              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5 sm:p-6 text-left space-y-3">
-                <p className="text-sm text-amber-200 leading-relaxed">
-                  Tohle vypadá jako celá zpráva, ne jako telefon, e-mail nebo číslo účtu.
-                  Chceš ji prověřit jako podezřelou zprávu pomocí AI?
+              {modeHint === "switched" && (
+                <p className="flex items-center gap-1.5 text-xs text-amber-300">
+                  <Sparkles size={12} aria-hidden="true" />
+                  Vypadá to jako celá zpráva — přepnuli jsme tě na AI analýzu.
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setInput(searchQuery);
-                      setSearchHint(null);
-                      setAiOpen(true);
-                    }}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 px-4 py-2.5 text-xs font-bold text-white transition-colors"
-                  >
-                    <Sparkles size={13} /> Prověřit zprávu jako podvod
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setSearchHint(null); void performSearch(searchQuery); }}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-600 hover:border-slate-500 px-4 py-2.5 text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
-                  >
-                    Přesto hledat v databázi
-                  </button>
+              )}
+
+              <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-slate-300 pt-1">
+                <li className="inline-flex items-center gap-1.5">
+                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                  100% anonymní
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                  Bez registrace
+                </li>
+                <li className="inline-flex items-center gap-1.5">
+                  <Check size={14} className="text-emerald-400 shrink-0" aria-hidden="true" />
+                  Výsledek hned
+                </li>
+              </ul>
+            </div>
+          )}
+
+          {mode === "zprava" && (
+            <div className="max-w-xl mx-auto w-full text-left space-y-3">
+              <div className="relative rounded-2xl p-[1.5px] bg-gradient-to-br from-violet-500/50 via-fuchsia-500/30 to-cyan-500/40 shadow-[0_0_80px_-20px_rgba(168,85,247,0.5)]">
+                <div
+                  className="rounded-2xl bg-slate-950/90 backdrop-blur-2xl overflow-hidden"
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  {isDragging && (
+                    <div className="absolute inset-0 bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
+                      <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
+                    </div>
+                  )}
+
+                  {/* Example chips */}
+                  <div className="flex flex-wrap gap-2 px-5 pt-4">
+                    {EXAMPLES.map((ex) => (
+                      <button
+                        key={ex.label}
+                        onClick={() => { setInput(ex.text); setResult(null); setError(null); setModeHint(null); }}
+                        className="px-3 py-1.5 rounded-full text-[12px] font-semibold text-slate-300 bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-500/15 hover:to-blue-500/15 hover:text-white hover:border-purple-400/40 active:scale-95 transition-all duration-200"
+                      >
+                        {ex.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Header row */}
+                  <div className="flex items-center px-5 pt-4 pb-1">
+                    <p className="flex items-center gap-2 text-slate-200 text-[13px] font-semibold">
+                      <Sparkles size={13} className="text-purple-400" />
+                      Vlož zprávu, AI odhalí podvod během chvilky
+                    </p>
+                  </div>
+
+                  {/* Textarea */}
+                  <div className={`relative mx-3 mb-3 rounded-xl transition-all ${
+                    isFocused
+                      ? "ring-2 ring-purple-500/40 shadow-[0_0_40px_-15px_rgba(168,85,247,0.45)]"
+                      : ""
+                  }`}>
+                    <textarea
+                      value={input}
+                      onChange={handleAiTextChange}
+                      onKeyDown={handleKeyDown}
+                      onFocus={() => setIsFocused(true)}
+                      onBlur={() => setIsFocused(false)}
+                      rows={4}
+                      placeholder="Vložte podezřelou SMS, e-mail nebo odkaz…"
+                      aria-label="Vstupní pole pro analýzu zprávy"
+                      className="w-full bg-black/30 rounded-xl px-4 pt-3 pb-4 focus:outline-none text-white text-[15px] resize-none placeholder:text-slate-600 border border-white/5"
+                    />
+                  </div>
+
+                  {modeHint === "identifier" && (
+                    <p className="mx-3 mb-3 -mt-1 flex items-center gap-1.5 text-xs text-cyan-300">
+                      <Info size={12} aria-hidden="true" />
+                      Vypadá to jako identifikátor —{" "}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery(input.trim());
+                          setInput("");
+                          switchMode("prodejce");
+                        }}
+                        className="underline underline-offset-2 hover:text-cyan-200"
+                      >
+                        prověřit raději v databázi?
+                      </button>
+                    </p>
+                  )}
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept="image/png, image/jpeg, image/webp"
+                    className="hidden"
+                    onChange={handleImageSelect}
+                  />
+
+                  <div className="px-3 pb-4 space-y-2.5">
+                    {loading ? (
+                      <AnalysisScanner />
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleAnalysis}
+                          disabled={!input.trim() && images.length === 0}
+                          className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                        >
+                          <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
+                          Prověřit zprávu zdarma
+                        </button>
+
+                        {images.length > 0 && (
+                          <div className="px-1 space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <p className="text-slate-400">
+                                Screenshoty připravené k analýze · {images.length}/{MAX_IMAGES}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setImages([])}
+                                className="text-slate-500 hover:text-red-400 transition-colors"
+                              >
+                                Vymazat vše
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {images.map((src, idx) => (
+                                <div key={idx} className="relative group/thumb">
+                                  <img
+                                    src={src}
+                                    alt={`Screenshot ${idx + 1}`}
+                                    className="w-14 h-14 object-cover rounded-lg border border-white/10"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeImageAt(idx)}
+                                    aria-label={`Odebrat screenshot ${idx + 1}`}
+                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 border border-white/20 text-slate-300 hover:text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors"
+                                  >
+                                    <X size={11} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {images.length < MAX_IMAGES && (
+                          canUploadImage ? (
+                            <button
+                              type="button"
+                              onClick={() => fileInputRef.current?.click()}
+                              className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
+                            >
+                              <Camera size={14} /> {images.length === 0 ? "Přidat screenshot" : "Přidat další"} <span className="text-purple-400/60 ml-1">(až {MAX_IMAGES})</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => { window.location.href = "/pricing"; }}
+                              className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
+                            >
+                              <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
+                            </button>
+                          )
+                        )}
+
+                        <p className="text-slate-600 text-[10px] text-center hidden sm:block">
+                          Ctrl + Enter pro odeslání · Esc pro smazání
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-5 py-2.5 border-t border-white/5 bg-white/[0.02]">
+                    <p className="font-mono text-[10px] tracking-[0.18em] text-slate-500 text-center">
+                      ŠIFROVÁNO • ANONYMNÍ • OBSAH SE NEUKLÁDÁ
+                    </p>
+                  </div>
                 </div>
               </div>
-            )}
 
+              {error && <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
+            </div>
+          )}
+        </section>
+
+        {/* ── Výsledek vyhledávání v databázi / AI analýzy ─── */}
+        <section className="w-full flex justify-center relative z-10 mt-6">
+          <div ref={searchResultRef} className="w-full max-w-3xl px-4 space-y-4 scroll-mt-24">
+          {mode === "prodejce" && (
+            <>
             {searchLoading && (
               <AnalysisScanner messages={[
                 'Hledáme v databázi…',
@@ -610,7 +806,7 @@ export default function Home() {
               </div>
             )}
 
-            {!searchLoading && !limitReached && !searchHint && searchResult && (
+            {!searchLoading && !limitReached && searchResult && (
               <>
                 {searchResult.found && searchResult.subject ? (
                   <div className={`rounded-[32px] border-2 backdrop-blur-3xl shadow-2xl p-6 sm:p-8 text-left space-y-5 ${
@@ -708,21 +904,22 @@ export default function Home() {
                     </div>
 
                     {/* JEDINÝ vstup do AI analýzy z homepage */}
-                    {!aiOpen && (
-                      <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-4 sm:p-5 space-y-3">
-                        <p className="text-sm text-slate-200 leading-relaxed flex items-start gap-2">
-                          <Sparkles size={15} className="text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
-                          Poslal vám zprávu? Vložte ji a naše pokročilá AI ji okamžitě prověří zdarma.
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setAiOpen(true)}
-                          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all"
-                        >
-                          <Sparkles size={15} /> Vložit zprávu k AI analýze
-                        </button>
-                      </div>
-                    )}
+                    <div className="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-4 sm:p-5 space-y-3">
+                      <p className="text-sm text-slate-200 leading-relaxed flex items-start gap-2">
+                        <Sparkles size={15} className="text-purple-400 shrink-0 mt-0.5" aria-hidden="true" />
+                        Poslal vám zprávu? Vložte ji a naše pokročilá AI ji okamžitě prověří zdarma.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInput(searchQuery);
+                          switchMode("zprava");
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-purple-500/30 active:scale-[0.98] transition-all"
+                      >
+                        <Sparkles size={15} /> Vložit zprávu k AI analýze
+                      </button>
+                    </div>
 
                     <Link
                       href={`/databaze/nahlasit?prefill=${encodeURIComponent(lastSearchedQuery)}`}
@@ -739,192 +936,11 @@ export default function Home() {
                 )}
               </>
             )}
-          </div>
-        </section>
+            </>
+          )}
 
-        {/* ── Krátká teaser sekce: AI analýza zpráv ────────── */}
-        {!aiOpen && (
-          <section className="w-full flex justify-center relative z-10 mt-4">
-            <div className="w-full max-w-xl px-4">
-              <button
-                type="button"
-                onClick={() => setAiOpen(true)}
-                className="w-full rounded-xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] px-4 py-3 flex items-center justify-between gap-3 text-left transition-colors"
-              >
-                <span className="flex items-center gap-2 text-sm text-slate-300">
-                  <Sparkles size={14} className="text-purple-400 shrink-0" aria-hidden="true" />
-                  Podezřelá SMS nebo e-mail? AI ji prověří zdarma.
-                </span>
-                <span className="shrink-0 inline-flex items-center gap-1 text-xs font-bold text-purple-300">
-                  Prověřit <ArrowRight size={13} aria-hidden="true" />
-                </span>
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* ── AI analýza zprávy (sekundární, otevírá se na vyžádání) ─ */}
-        {aiOpen && (
-          <section className="w-full flex justify-center relative z-10 mt-6">
-            <div ref={aiSectionRef} className="w-full max-w-2xl px-4 space-y-4 scroll-mt-24">
-              <div className="relative rounded-2xl p-[1.5px] bg-gradient-to-br from-violet-500/50 via-fuchsia-500/30 to-cyan-500/40 shadow-[0_0_80px_-20px_rgba(168,85,247,0.5)]">
-                <div
-                  className="rounded-2xl bg-slate-950/90 backdrop-blur-2xl overflow-hidden"
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                >
-                  {isDragging && (
-                    <div className="absolute inset-0 bg-purple-500/10 border-2 border-purple-500 border-dashed z-10 flex items-center justify-center pointer-events-none">
-                      <p className="text-purple-300 font-bold text-lg">Přetáhněte obrázek sem</p>
-                    </div>
-                  )}
-
-                  {/* Example chips */}
-                  <div className="flex flex-wrap gap-2 px-5 pt-4">
-                    {EXAMPLES.map((ex) => (
-                      <button
-                        key={ex.label}
-                        onClick={() => { setInput(ex.text); setResult(null); setError(null); }}
-                        className="px-3 py-1.5 rounded-full text-[12px] font-semibold text-slate-300 bg-white/5 border border-white/10 hover:bg-gradient-to-r hover:from-purple-500/15 hover:to-blue-500/15 hover:text-white hover:border-purple-400/40 active:scale-95 transition-all duration-200"
-                      >
-                        {ex.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Header row */}
-                  <div className="flex items-center justify-between px-5 pt-4 pb-1">
-                    <p className="flex items-center gap-2 text-slate-200 text-[13px] font-semibold">
-                      <Sparkles size={13} className="text-purple-400" />
-                      Vlož zprávu, AI odhalí podvod během chvilky
-                    </p>
-                    <button
-                      onClick={() => { handleClear(); setAiOpen(false); }}
-                      aria-label="Zavřít AI analýzu"
-                      className="shrink-0 w-7 h-7 rounded-full text-slate-500 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-
-                  {/* Textarea */}
-                  <div className={`relative mx-3 mb-3 rounded-xl transition-all ${
-                    isFocused
-                      ? "ring-2 ring-purple-500/40 shadow-[0_0_40px_-15px_rgba(168,85,247,0.45)]"
-                      : ""
-                  }`}>
-                    <textarea
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      onFocus={() => setIsFocused(true)}
-                      onBlur={() => setIsFocused(false)}
-                      rows={4}
-                      placeholder="Vložte podezřelou SMS, e-mail nebo odkaz…"
-                      autoFocus
-                      aria-label="Vstupní pole pro analýzu zprávy"
-                      className="w-full bg-black/30 rounded-xl px-4 pt-3 pb-4 focus:outline-none text-white text-[15px] resize-none placeholder:text-slate-600 border border-white/5"
-                    />
-                  </div>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/png, image/jpeg, image/webp"
-                    className="hidden"
-                    onChange={handleImageSelect}
-                  />
-
-                  <div className="px-3 pb-4 space-y-2.5">
-                    {loading ? (
-                      <AnalysisScanner />
-                    ) : (
-                      <>
-                        <button
-                          onClick={handleAnalysis}
-                          disabled={!input.trim() && images.length === 0}
-                          className="group relative w-full overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white py-3.5 sm:py-4 rounded-xl font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-                        >
-                          <Sparkles size={16} className="group-hover:rotate-12 transition-transform" />
-                          Prověřit zprávu
-                        </button>
-
-                        {images.length > 0 && (
-                          <div className="px-1 space-y-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <p className="text-slate-400">
-                                Screenshoty připravené k analýze · {images.length}/{MAX_IMAGES}
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => setImages([])}
-                                className="text-slate-500 hover:text-red-400 transition-colors"
-                              >
-                                Vymazat vše
-                              </button>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {images.map((src, idx) => (
-                                <div key={idx} className="relative group/thumb">
-                                  <img
-                                    src={src}
-                                    alt={`Screenshot ${idx + 1}`}
-                                    className="w-14 h-14 object-cover rounded-lg border border-white/10"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => removeImageAt(idx)}
-                                    aria-label={`Odebrat screenshot ${idx + 1}`}
-                                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-slate-900 border border-white/20 text-slate-300 hover:text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-colors"
-                                  >
-                                    <X size={11} />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {images.length < MAX_IMAGES && (
-                          canUploadImage ? (
-                            <button
-                              type="button"
-                              onClick={() => fileInputRef.current?.click()}
-                              className="w-full flex items-center justify-center gap-2 border border-dashed border-purple-500/40 hover:border-purple-400/70 text-purple-300 hover:text-purple-200 hover:bg-purple-500/5 px-4 py-2.5 rounded-xl text-xs font-bold transition-all"
-                            >
-                              <Camera size={14} /> {images.length === 0 ? "Přidat screenshot" : "Přidat další"} <span className="text-purple-400/60 ml-1">(až {MAX_IMAGES})</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => { window.location.href = "/pricing"; }}
-                              className="w-full flex items-center justify-center gap-1.5 text-slate-500 hover:text-purple-300 text-xs transition-colors py-1.5"
-                            >
-                              <Lock size={12} /> Přidat screenshot <span className="text-purple-400/60 ml-1">(BASIC+)</span>
-                            </button>
-                          )
-                        )}
-
-                        <p className="text-slate-600 text-[10px] text-center hidden sm:block">
-                          Ctrl + Enter pro odeslání · Esc pro smazání
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Footer */}
-                  <div className="px-5 py-2.5 border-t border-white/5 bg-white/[0.02]">
-                    <p className="font-mono text-[10px] tracking-[0.18em] text-slate-500 text-center">
-                      ŠIFROVÁNO • ANONYMNÍ • OBSAH SE NEUKLÁDÁ
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {error && <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-5 text-red-300 text-sm">{error}</div>}
-
+          {mode === "zprava" && (
+            <>
               {result && (
                 <div className={`rounded-[40px] border-2 backdrop-blur-3xl shadow-2xl overflow-hidden bg-slate-950/40 ${riskBorderColor} p-8 sm:p-10 text-left`}>
                   <div className="flex flex-col items-center text-center mb-8 gap-4">
@@ -1079,9 +1095,10 @@ export default function Home() {
               {result && (
                 <ReferralCard isLoggedIn={profileChecked ? profile !== null : null} />
               )}
-            </div>
-          </section>
-        )}
+            </>
+          )}
+          </div>
+        </section>
 
         <ErrorBoundary>
           <HomeSections />
