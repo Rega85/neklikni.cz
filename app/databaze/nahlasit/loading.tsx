@@ -8,7 +8,7 @@ import { Loader2 } from 'lucide-react'
 export default function Loading() {
   return (
     <main
-      className="min-h-screen bg-[#020617] text-slate-100"
+      className="min-h-screen"
       aria-busy="true"
       aria-live="polite"
     >
@@ -16,10 +16,10 @@ export default function Loading() {
         <div className="flex flex-col items-center gap-3">
           <Loader2
             size={48}
-            className="animate-spin text-purple-400"
+            className="animate-spin text-primary"
             aria-hidden="true"
           />
-          <p className="text-sm text-slate-400">Načítám formulář…</p>
+          <p className="text-sm text-muted-foreground">Načítám formulář…</p>
         </div>
       </div>
     </main>

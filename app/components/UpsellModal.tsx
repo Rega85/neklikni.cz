@@ -45,76 +45,76 @@ export default function UpsellModal({ reason, onClose, tier }: Props) {
           type="button"
           onClick={onClose}
           aria-label="Zavřít"
-          className="absolute top-4 right-4 w-8 h-8 rounded-full text-slate-400 hover:text-white hover:bg-white/10 flex items-center justify-center transition-colors"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary flex items-center justify-center transition-colors"
         >
           <X size={16} />
         </button>
 
-        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-300 bg-purple-500/10 border border-purple-400/20 px-3 py-1.5 rounded-full w-fit mb-4">
+        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary bg-card border border-border px-3 py-1.5 rounded-full w-fit mb-4">
           <Sparkles size={12} /> Pokračuj v ochraně
         </div>
 
         <h2 id="upsell-title" className="text-2xl sm:text-3xl font-black tracking-tighter mb-2">
           {copy.title}
         </h2>
-        <p className="text-slate-400 text-sm sm:text-base leading-relaxed mb-6">{copy.sub}</p>
+        <p className="text-muted-foreground text-sm sm:text-base leading-relaxed mb-6">{copy.sub}</p>
 
         <div className="space-y-2.5">
           {isAnon && (
             <Link
               href="/register"
               onClick={() => trackEvent("cta_upgrade_clicked", { from: "upsell_modal", action: "register" })}
-              className="group flex items-center gap-3 surface-card hover:bg-white/[0.04] p-4 transition-all"
+              className="group flex items-center gap-3 surface-card hover:bg-secondary/40 p-4 transition-all"
             >
-              <div className="bg-emerald-500/15 text-emerald-300 p-2.5 rounded-xl shrink-0">
+              <div className="bg-success/15 text-success p-2.5 rounded-xl shrink-0">
                 <Zap size={18} />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-white font-bold text-sm">Účet zdarma</div>
-                <div className="text-slate-400 text-xs">+5 analýz hned, bez expirace</div>
+                <div className="text-foreground font-bold text-sm">Účet zdarma</div>
+                <div className="text-muted-foreground text-xs">+5 analýz hned, bez expirace</div>
               </div>
-              <ArrowRight size={16} className="text-slate-500 group-hover:translate-x-0.5 group-hover:text-white transition-all shrink-0" />
+              <ArrowRight size={16} className="text-muted-foreground group-hover:translate-x-0.5 group-hover:text-foreground transition-all shrink-0" />
             </Link>
           )}
 
           <Link
             href="/pricing"
             onClick={() => trackEvent("cta_upgrade_clicked", { from: "upsell_modal", action: "oneshot", tier })}
-            className="group flex items-center gap-3 surface-card hover:bg-white/[0.04] p-4 transition-all"
+            className="group flex items-center gap-3 surface-card hover:bg-secondary/40 p-4 transition-all"
           >
-            <div className="bg-blue-500/15 text-blue-300 p-2.5 rounded-xl shrink-0">
+            <div className="bg-primary/10 text-primary p-2.5 rounded-xl shrink-0">
               <Shield size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white font-bold text-sm">JEDNORÁZOVÁ — 49 Kč</div>
-              <div className="text-slate-400 text-xs">1 prémiová analýza modelem Opus</div>
+              <div className="text-foreground font-bold text-sm">JEDNORÁZOVÁ — 49 Kč</div>
+              <div className="text-muted-foreground text-xs">1 prémiová analýza modelem Opus</div>
             </div>
-            <ArrowRight size={16} className="text-slate-500 group-hover:translate-x-0.5 group-hover:text-white transition-all shrink-0" />
+            <ArrowRight size={16} className="text-muted-foreground group-hover:translate-x-0.5 group-hover:text-foreground transition-all shrink-0" />
           </Link>
 
           <Link
             href="/pricing"
             onClick={() => trackEvent("cta_upgrade_clicked", { from: "upsell_modal", action: "basic", tier })}
-            className="group relative flex items-center gap-3 bg-gradient-to-br from-purple-600 to-blue-600 p-4 rounded-2xl shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transition-all"
+            className="group relative flex items-center gap-3 bg-primary p-4 rounded-2xl shadow-lg shadow-primary/30 transition-all"
           >
-            <div className="absolute -top-2 right-4 bg-amber-400 text-slate-900 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
+            <div className="absolute -top-2 right-4 bg-warning text-warning-foreground text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
               Doporučeno
             </div>
-            <div className="bg-white/15 text-white p-2.5 rounded-xl shrink-0">
+            <div className="bg-primary-foreground/15 text-primary-foreground p-2.5 rounded-xl shrink-0">
               <Crown size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-white font-bold text-sm">BASIC — 99 Kč/měs</div>
-              <div className="text-white/80 text-xs">50 analýz / měsíc, screenshoty, plný verdikt</div>
+              <div className="text-foreground font-bold text-sm">BASIC — 99 Kč/měs</div>
+              <div className="text-primary-foreground/80 text-xs">50 analýz / měsíc, screenshoty, plný verdikt</div>
             </div>
-            <ArrowRight size={16} className="text-white group-hover:translate-x-0.5 transition-all shrink-0" />
+            <ArrowRight size={16} className="text-primary-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
           </Link>
         </div>
 
         <button
           type="button"
           onClick={onClose}
-          className="w-full mt-5 text-slate-500 hover:text-slate-300 text-xs transition-colors"
+          className="w-full mt-5 text-muted-foreground hover:text-foreground text-xs transition-colors"
         >
           Pokračuju zítra
         </button>

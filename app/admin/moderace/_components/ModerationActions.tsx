@@ -49,7 +49,7 @@ export function ModerationActions({ incidentId }: Props) {
         rows={2}
         maxLength={2000}
         placeholder="Důvod zamítnutí / co doplnit (povinné pro Zamítnout a Vrátit k doplnění)"
-        className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30"
+        className="w-full rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
       />
       {error && <p className="text-xs text-red-400">{error}</p>}
       <div className="flex flex-wrap gap-2">

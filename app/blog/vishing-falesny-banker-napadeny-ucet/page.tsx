@@ -78,14 +78,14 @@ export default function Page() {
       </p>
 
       {/* Mid-article CTA */}
-      <div className="not-prose my-8 rounded-2xl border border-purple-500/30 bg-purple-500/5 p-5 space-y-3">
-        <p className="font-bold text-white">Dostali jste podobný hovor nebo zprávu?</p>
-        <p className="text-sm text-slate-300">
+      <div className="not-prose my-8 rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-3">
+        <p className="font-bold text-foreground">Dostali jste podobný hovor nebo zprávu?</p>
+        <p className="text-sm text-muted-foreground">
           Zkopírujte, co vám řekli nebo napsali. AI prověří, jestli odpovídá známým vzorcům podvodů — do 10 sekund.
         </p>
         <Link
           href="/"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 bg-primary hover:brightness-110 text-primary-foreground px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
         >
           Prověřit zprávu zdarma →
         </Link>
@@ -167,15 +167,15 @@ export default function Page() {
       </ol>
 
       {/* End CTA */}
-      <div className="not-prose mt-10 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 space-y-3">
-        <p className="font-bold text-white">Stalo se vám to? Nahlasite to a pomožte ostatním.</p>
-        <p className="text-sm text-slate-300">
+      <div className="not-prose mt-10 rounded-2xl border border-success/30 bg-success/5 p-5 space-y-3">
+        <p className="font-bold text-foreground">Stalo se vám to? Nahlasite to a pomožte ostatním.</p>
+        <p className="text-sm text-muted-foreground">
           Nahlášení telefonního čísla nebo čísla účtu do databáze varuje další lidi,
           kteří by mohli dostat stejný hovor.
         </p>
         <Link
           href="/databaze/nahlasit"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 bg-success hover:brightness-110 text-success-foreground px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
         >
           Nahlásit incident →
         </Link>

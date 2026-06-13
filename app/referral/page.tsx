@@ -50,12 +50,12 @@ export default function ReferralPage() {
     <div className="min-h-screen text-white">
       <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-24 pb-20">
         <div className="text-center space-y-4 mb-10 animate-fade-up">
-          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-300 bg-purple-500/10 border border-purple-400/20 px-3 py-1.5 rounded-full">
+          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-300 bg-blue-500/10 border border-blue-400/20 px-3 py-1.5 rounded-full">
             <Sparkles size={12} /> Referrální program
           </span>
           <h1 className="text-4xl sm:text-5xl font-black tracking-tighter">
             Pozvi přátele,{" "}
-            <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-blue-400 to-blue-400 bg-clip-text text-transparent">
               dostaň analýzy
             </span>
           </h1>
@@ -68,7 +68,7 @@ export default function ReferralPage() {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 mb-10 animate-fade-up">
           <div className="surface-card p-5 sm:p-6 text-center">
-            <Users className="mx-auto text-purple-300 mb-2" size={22} />
+            <Users className="mx-auto text-blue-300 mb-2" size={22} />
             <div className="text-3xl sm:text-4xl font-black tabular-nums">
               {loading ? "—" : data?.referredCount ?? 0}
             </div>
@@ -94,13 +94,13 @@ export default function ReferralPage() {
             <input
               readOnly
               value={loading ? "Načítám…" : link || "Žádný kód"}
-              className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm select-all focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+              className="flex-1 bg-slate-950/50 border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm select-all focus:outline-none focus:ring-2 focus:ring-blue-500/40"
               onClick={(e) => (e.target as HTMLInputElement).select()}
             />
             <button
               onClick={handleCopy}
               disabled={!link}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-5 py-3 rounded-xl font-black text-sm shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 active:scale-[0.98] transition-all disabled:opacity-60"
+              className="flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-500 hover:to-blue-500 text-white px-5 py-3 rounded-xl font-black text-sm shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 active:scale-[0.98] transition-all disabled:opacity-60"
             >
               {copied ? (
                 <><Check size={16} /> Zkopírováno</>
@@ -144,7 +144,7 @@ export default function ReferralPage() {
               { n: 3, t: "Oba získáte +5 analýz", d: "Připíšou se automaticky po jejich přihlášení. Žádné limity." },
             ].map((s) => (
               <li key={s.n} className="flex gap-4">
-                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center font-black text-white text-sm shrink-0 shadow-lg shadow-purple-500/30">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center font-black text-white text-sm shrink-0 shadow-lg shadow-blue-500/30">
                   {s.n}
                 </div>
                 <div>
@@ -157,7 +157,7 @@ export default function ReferralPage() {
 
           <Link
             href="/pricing"
-            className="group inline-flex items-center gap-2 mt-6 text-purple-300 hover:text-purple-200 text-sm font-bold transition-colors"
+            className="group inline-flex items-center gap-2 mt-6 text-blue-300 hover:text-blue-200 text-sm font-bold transition-colors"
           >
             Nebo si rovnou pořiď tarif
             <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />

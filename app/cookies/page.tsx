@@ -11,7 +11,7 @@ export default function CookiesPage() {
         </div>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-purple-400">Co jsou cookies?</h2>
+          <h2 className="text-xl font-bold text-blue-400">Co jsou cookies?</h2>
           <p className="text-slate-300 leading-relaxed">
             Cookies jsou malé textové soubory ukládané do vašeho prohlížeče při návštěvě webových stránek. 
             Pomáhají nám zajistit správnou funkčnost služby a zlepšovat uživatelský zážitek.
@@ -19,7 +19,7 @@ export default function CookiesPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-purple-400">Jaké cookies používáme?</h2>
+          <h2 className="text-xl font-bold text-blue-400">Jaké cookies používáme?</h2>
           
           <div className="space-y-4">
             <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
@@ -51,19 +51,19 @@ export default function CookiesPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-purple-400">Cookies třetích stran</h2>
+          <h2 className="text-xl font-bold text-blue-400">Cookies třetích stran</h2>
           <p className="text-slate-300 leading-relaxed">
             Služba využívá následující třetí strany, které mohou ukládat vlastní cookies:
           </p>
           <ul className="space-y-2 text-slate-400 text-sm">
-            <li className="flex gap-2"><span className="text-purple-400">→</span> <strong className="text-white">Supabase</strong> – autentizace a databáze uživatelů</li>
-            <li className="flex gap-2"><span className="text-purple-400">→</span> <strong className="text-white">Stripe</strong> – zpracování plateb</li>
-            <li className="flex gap-2"><span className="text-purple-400">→</span> <strong className="text-white">Vercel</strong> – hosting a analytika</li>
+            <li className="flex gap-2"><span className="text-blue-400">→</span> <strong className="text-white">Supabase</strong> – autentizace a databáze uživatelů</li>
+            <li className="flex gap-2"><span className="text-blue-400">→</span> <strong className="text-white">Stripe</strong> – zpracování plateb</li>
+            <li className="flex gap-2"><span className="text-blue-400">→</span> <strong className="text-white">Vercel</strong> – hosting a analytika</li>
           </ul>
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-purple-400">Přehled cookies a doba uchování</h2>
+          <h2 className="text-xl font-bold text-blue-400">Přehled cookies a doba uchování</h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-slate-400 border-collapse">
               <thead>
@@ -75,22 +75,22 @@ export default function CookiesPage() {
               </thead>
               <tbody className="divide-y divide-slate-800">
                 <tr>
-                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">cookie_consent</td>
+                  <td className="py-3 pr-6 font-mono text-xs text-blue-400">cookie_consent</td>
                   <td className="py-3 pr-6">localStorage</td>
                   <td className="py-3">Neexpiruje (do smazání)</td>
                 </tr>
                 <tr>
-                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">neklikni_ref</td>
+                  <td className="py-3 pr-6 font-mono text-xs text-blue-400">neklikni_ref</td>
                   <td className="py-3 pr-6">httpOnly cookie</td>
                   <td className="py-3">30 dní</td>
                 </tr>
                 <tr>
-                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">Supabase auth</td>
+                  <td className="py-3 pr-6 font-mono text-xs text-blue-400">Supabase auth</td>
                   <td className="py-3 pr-6">httpOnly cookie</td>
                   <td className="py-3">1 hodina (refresh automaticky)</td>
                 </tr>
                 <tr>
-                  <td className="py-3 pr-6 font-mono text-xs text-purple-400">_ga, _gid</td>
+                  <td className="py-3 pr-6 font-mono text-xs text-blue-400">_ga, _gid</td>
                   <td className="py-3 pr-6">cookie (GA4)</td>
                   <td className="py-3">2 roky / 24 hodin</td>
                 </tr>
@@ -100,16 +100,16 @@ export default function CookiesPage() {
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-purple-400">Jak spravovat cookies?</h2>
+          <h2 className="text-xl font-bold text-blue-400">Jak spravovat cookies?</h2>
           <p className="text-slate-300 leading-relaxed">
             Cookies můžete spravovat nebo zakázat v nastavení vašeho prohlížeče. Upozorňujeme,
             že zakázání nezbytných cookies může způsobit nefunkčnost přihlášení a dalších funkcí služby.
           </p>
-          <CookieSettingsButton className="inline-flex items-center gap-2 border border-purple-500 text-purple-400 px-4 py-2 rounded-lg hover:bg-purple-500/10 text-sm font-bold transition-colors" />
+          <CookieSettingsButton className="inline-flex items-center gap-2 border border-blue-500 text-blue-400 px-4 py-2 rounded-lg hover:bg-blue-500/10 text-sm font-bold transition-colors" />
         </section>
 
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-purple-400">Kontakt</h2>
+          <h2 className="text-xl font-bold text-blue-400">Kontakt</h2>
           <p className="text-slate-300 leading-relaxed">
             PK Virgine, s.r.o.<br />
             Korunní 2569/108, Vinohrady, 101 00 Praha<br />

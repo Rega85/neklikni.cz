@@ -42,7 +42,7 @@ export default function UpdatePasswordPage() {
 
   if (!sessionReady) return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-      <Loader2 className="animate-spin text-purple-500" size={32} />
+      <Loader2 className="animate-spin text-blue-500" size={32} />
     </div>
   );
 
@@ -60,14 +60,14 @@ export default function UpdatePasswordPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Nové heslo (min. 6 znaků)"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none"
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none"
             />
           </div>
           {error && <p className="text-red-400 text-sm">{error}</p>}
           <button
             type="submit"
             disabled={loading || password.length < 6}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold py-4 rounded-xl disabled:opacity-50 transition-all"
+            className="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-bold py-4 rounded-xl disabled:opacity-50 transition-all"
           >
             {loading ? "Ukládám..." : "Uložit heslo"}
           </button>

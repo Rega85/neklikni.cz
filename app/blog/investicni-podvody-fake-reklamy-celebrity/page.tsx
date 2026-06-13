@@ -111,14 +111,14 @@ export default function Page() {
       </ul>
 
       {/* Mid-article CTA */}
-      <div className="not-prose my-8 rounded-2xl border border-purple-500/30 bg-purple-500/5 p-5 space-y-3">
-        <p className="font-bold text-white">Dostali jste podezřelou nabídku nebo reklamu?</p>
-        <p className="text-sm text-slate-300">
+      <div className="not-prose my-8 rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-3">
+        <p className="font-bold text-foreground">Dostali jste podezřelou nabídku nebo reklamu?</p>
+        <p className="text-sm text-muted-foreground">
           Zkopírujte text e-mailu, zprávy nebo odkaz — AI prověří varovné signály investičního podvodu do 10 sekund.
         </p>
         <Link
           href="/"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 bg-primary hover:brightness-110 text-primary-foreground px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
         >
           Prověřit zprávu zdarma →
         </Link>
@@ -176,15 +176,15 @@ export default function Page() {
       </ul>
 
       {/* End CTA */}
-      <div className="not-prose mt-10 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 space-y-3">
-        <p className="font-bold text-white">Narazili jste na podvodnou platformu? Nahlasite ji.</p>
-        <p className="text-sm text-slate-300">
+      <div className="not-prose mt-10 rounded-2xl border border-success/30 bg-success/5 p-5 space-y-3">
+        <p className="font-bold text-foreground">Narazili jste na podvodnou platformu? Nahlasite ji.</p>
+        <p className="text-sm text-muted-foreground">
           Nahlášení pomáhá varovat ostatní před stejnou platformou nebo číselm účtu —
           a dává podklady pro policejní a regulatorní šetření.
         </p>
         <Link
           href="/databaze/nahlasit"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 bg-success hover:brightness-110 text-success-foreground px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
         >
           Nahlásit incident →
         </Link>

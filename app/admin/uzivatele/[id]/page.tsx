@@ -50,7 +50,7 @@ const STATUS_LABEL: Record<string, { text: string; cls: string }> = {
   published:            { text: 'Zveřejněno',       cls: 'bg-emerald-500/15 text-emerald-300' },
   objected:             { text: 'Napadeno',         cls: 'bg-orange-500/15 text-orange-300' },
   removed:              { text: 'Odstraněno',       cls: 'bg-red-500/15 text-red-300' },
-  needs_more_info:      { text: 'Doplnit',          cls: 'bg-purple-500/15 text-purple-300' },
+  needs_more_info:      { text: 'Doplnit',          cls: 'bg-blue-500/15 text-blue-300' },
 }
 
 function Field({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
@@ -120,18 +120,18 @@ export default async function UserDetailPage({
 
         {/* Navigace */}
         <div className="flex items-center gap-3 mb-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300">
             <Flag size={12} /> Admin
           </div>
           <Link
             href="/admin/uzivatele"
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-purple-500/30 hover:text-purple-200 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/30 hover:text-blue-200 transition-colors"
           >
             <ArrowLeft size={11} /> Zpět na seznam
           </Link>
           <Link
             href="/admin/moderace"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-purple-500/30 hover:text-purple-200 transition-colors"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/30 hover:text-blue-200 transition-colors"
           >
             ← Moderační fronta
           </Link>
@@ -217,7 +217,7 @@ export default async function UserDetailPage({
                         <td className="px-4 py-3">
                           <Link
                             href={`/admin/incident/${inc.id}`}
-                            className="text-xs text-purple-400 hover:text-purple-300 transition-colors whitespace-nowrap"
+                            className="text-xs text-blue-400 hover:text-blue-300 transition-colors whitespace-nowrap"
                           >
                             → Detail
                           </Link>

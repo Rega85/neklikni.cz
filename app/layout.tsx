@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ReactNode } from "react";
 import Header from "./components/Header";
@@ -7,10 +7,11 @@ import Footer from "./components/Footer";
 import CookieConsent from "./components/CookieConsent";
 import GaScript from "./components/GaScript";
 
-const inter = Inter({ subsets: ["latin", "latin-ext"] });
+const inter = Inter({ subsets: ["latin", "latin-ext"], variable: "--font-inter" });
+const spaceGrotesk = Space_Grotesk({ subsets: ["latin", "latin-ext"], variable: "--font-space-grotesk" });
 
 export const viewport: Viewport = {
-  themeColor: "#020617",
+  themeColor: "#1c2433",
 };
 
 export const metadata: Metadata = {
@@ -62,9 +63,8 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   return (
-    <html lang="cs" className="selection:bg-purple-500/30">
-      <body className={`${inter.className} bg-slate-950 text-white antialiased`}>
-        <div className="bg-blobs" aria-hidden="true" />
+    <html lang="cs" className={`${inter.variable} ${spaceGrotesk.variable} selection:bg-primary/30`}>
+      <body className="font-sans antialiased">
         <GaScript />
         <Header />
         {children}

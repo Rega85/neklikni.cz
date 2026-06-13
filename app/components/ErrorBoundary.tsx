@@ -23,10 +23,10 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         this.props.fallback ?? (
-          <div className="surface-card p-6 m-4 text-center text-slate-300">
-            <AlertTriangle className="mx-auto text-yellow-400 mb-2" size={28} />
-            <p className="font-semibold">Tahle sekce se nepodařilo načíst.</p>
-            <p className="text-sm text-slate-500 mt-1">Zkus stránku znovu načíst — zbytek funguje normálně.</p>
+          <div className="surface-card p-6 m-4 text-center text-muted-foreground">
+            <AlertTriangle className="mx-auto text-warning mb-2" size={28} />
+            <p className="font-semibold text-foreground">Tahle sekce se nepodařilo načíst.</p>
+            <p className="text-sm text-muted-foreground mt-1">Zkus stránku znovu načíst — zbytek funguje normálně.</p>
           </div>
         )
       );

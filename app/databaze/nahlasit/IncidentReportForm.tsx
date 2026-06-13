@@ -72,8 +72,8 @@ const SEVERITY_OPTIONS = Object.entries(SEVERITY_LABELS) as Array<[IncidentSever
 
 // Sdílené class strings pro inputy a selecty — drží konzistenci v brand stylu.
 const FIELD_BASE =
-  'w-full rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2.5 text-sm text-slate-100 placeholder:text-slate-500 transition focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500/30'
-const LABEL_BASE = 'mb-1.5 block text-sm font-medium text-slate-100'
+  'w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30'
+const LABEL_BASE = 'mb-1.5 block text-sm font-medium text-foreground'
 
 
 // ── Form data shape ──────────────────────────────────
@@ -175,32 +175,32 @@ const IDENTIFIER_TYPE_META: Record<IdentifierType, TypeMeta> = {
   phone: {
     icon: '📞',
     label: 'Telefon',
-    chipClass: 'border-blue-500/30 bg-blue-500/15 text-blue-200',
+    chipClass: 'border-primary/30 bg-primary/15 text-primary',
   },
   account: {
     icon: '🏦',
     label: 'Číslo účtu',
-    chipClass: 'border-green-500/30 bg-green-500/15 text-green-200',
+    chipClass: 'border-success/30 bg-success/15 text-success',
   },
   email: {
     icon: '✉️',
     label: 'E-mail',
-    chipClass: 'border-purple-500/30 bg-purple-500/15 text-purple-200',
+    chipClass: 'border-primary/30 bg-primary/15 text-primary',
   },
   facebook_url: {
     icon: '👤',
     label: 'Facebook profil',
-    chipClass: 'border-blue-600/30 bg-blue-600/15 text-blue-100',
+    chipClass: 'border-primary/30 bg-primary/15 text-primary',
   },
   var_symbol: {
     icon: '🔢',
     label: 'Variabilní symbol',
-    chipClass: 'border-amber-500/30 bg-amber-500/15 text-amber-200',
+    chipClass: 'border-warning/30 bg-warning/15 text-warning',
   },
   other: {
     icon: '❓',
     label: 'Jiné — upřesni typ',
-    chipClass: 'border-slate-600/40 bg-slate-700/30 text-slate-300',
+    chipClass: 'border-border bg-secondary text-muted-foreground',
   },
 }
 
@@ -404,39 +404,39 @@ export function IncidentReportForm() {
   // ── Success state — nahrazuje celý formulář ─────────
   if (submitSuccess) {
     return (
-      <div className="space-y-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 text-center">
+      <div className="space-y-4 rounded-2xl border border-success/30 bg-success/10 p-8 text-center">
         <div className="flex justify-center">
-          <CheckCircle2 size={64} className="text-emerald-400" aria-hidden="true" />
+          <CheckCircle2 size={64} className="text-success" aria-hidden="true" />
         </div>
-        <h2 className="text-2xl font-bold text-white">Nahlášení úspěšně odesláno</h2>
-        <p className="text-slate-300">{submitSuccess.message}</p>
+        <h2 className="text-2xl font-bold text-foreground">Nahlášení úspěšně odesláno</h2>
+        <p className="text-muted-foreground">{submitSuccess.message}</p>
 
-        <div className="inline-block rounded-lg bg-slate-900/50 p-3">
-          <p className="text-xs text-slate-400">ID nahlášení:</p>
-          <p className="font-mono text-sm text-purple-300">{submitSuccess.incidentId}</p>
+        <div className="inline-block rounded-lg bg-card p-3">
+          <p className="text-xs text-muted-foreground">ID nahlášení:</p>
+          <p className="font-mono text-sm text-primary">{submitSuccess.incidentId}</p>
         </div>
 
         <div className="flex flex-wrap justify-center gap-3 pt-4">
           <a
             href="/databaze"
-            className="rounded-lg bg-purple-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-purple-500"
+            className="rounded-lg bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition hover:brightness-110"
           >
             Otevřít databázi
           </a>
           <a
             href="/"
-            className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-900"
+            className="rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-secondary"
           >
             Zpět na hlavní
           </a>
         </div>
 
         {/* ── Viral loop — sdílej varování ─────────────── */}
-        <div className="mt-6 space-y-3 border-t border-emerald-500/20 pt-6">
-          <h3 className="text-lg font-bold text-white">
+        <div className="mt-6 space-y-3 border-t border-success/20 pt-6">
+          <h3 className="text-lg font-bold text-foreground">
             Díky. Tvoje varování může ušetřit někomu peníze i nervy.
           </h3>
-          <p className="mx-auto max-w-md text-sm text-slate-300">
+          <p className="mx-auto max-w-md text-sm text-muted-foreground">
             Čím víc lidí ví, tím méně dalších naletí. Sdílej, ať se to dostane
             k těm, koho by to mohlo potkat.
           </p>
@@ -446,7 +446,7 @@ export function IncidentReportForm() {
               href="https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fwww.neklikni.cz%2Fdatabaze"
               target="_blank"
               rel="noopener noreferrer"
-              className="brand-gradient inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)]"
+              className="bg-primary hover:brightness-110 text-primary-foreground inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold transition"
             >
               <Facebook size={16} aria-hidden="true" />
               Sdílet na Facebook
@@ -455,11 +455,11 @@ export function IncidentReportForm() {
               type="button"
               onClick={handleCopyShareLink}
               aria-live="polite"
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-900"
+              className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-2.5 text-sm font-medium text-foreground transition hover:border-muted-foreground hover:bg-secondary"
             >
               {shareCopied ? (
                 <>
-                  <Check size={16} className="text-emerald-400" aria-hidden="true" />
+                  <Check size={16} className="text-success" aria-hidden="true" />
                   Zkopírováno
                 </>
               ) : (
@@ -474,7 +474,7 @@ export function IncidentReportForm() {
           <div className="pt-2">
             <a
               href="/databaze/nahlasit"
-              className="text-sm text-purple-300 underline transition hover:text-purple-200"
+              className="text-sm text-primary underline transition hover:text-primary"
             >
               Nahlásit další incident
             </a>
@@ -485,7 +485,7 @@ export function IncidentReportForm() {
   }
 
   return (
-    <section className="surface-card-elevated animate-fade-up rounded-2xl border border-slate-800/80 bg-slate-950/60 p-6 backdrop-blur-md sm:p-8">
+    <section className="surface-card-elevated animate-fade-up rounded-2xl border border-border bg-card p-6 backdrop-blur-md sm:p-8">
       <Stepper currentStep={currentStep} totalSteps={TOTAL_STEPS} labels={STEP_LABELS} />
 
       <div className="min-h-[280px]">
@@ -499,21 +499,21 @@ export function IncidentReportForm() {
       {submitError && (
         <div
           role="alert"
-          className="mt-6 rounded-xl border border-red-500/30 bg-red-500/10 p-4"
+          className="mt-6 rounded-xl border border-destructive/30 bg-destructive/10 p-4"
         >
           <div className="flex items-start gap-3">
             <AlertCircle
               size={20}
-              className="flex-shrink-0 text-red-400"
+              className="flex-shrink-0 text-destructive"
               aria-hidden="true"
             />
             <div>
-              <p className="font-medium text-red-300">Nepodařilo se odeslat nahlášení</p>
-              <p className="mt-1 text-sm text-red-300/80">{submitError}</p>
+              <p className="font-medium text-destructive">Nepodařilo se odeslat nahlášení</p>
+              <p className="mt-1 text-sm text-destructive/80">{submitError}</p>
               <button
                 type="button"
                 onClick={() => setSubmitError(null)}
-                className="mt-2 text-sm text-red-300 underline hover:text-red-200"
+                className="mt-2 text-sm text-destructive underline hover:text-destructive/80"
               >
                 Skrýt chybu
               </button>
@@ -527,7 +527,7 @@ export function IncidentReportForm() {
           type="button"
           onClick={goBack}
           disabled={currentStep === 1 || isSubmitting}
-          className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-slate-500 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+          className="rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:border-muted-foreground hover:bg-secondary/80 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Zpět
         </button>
@@ -537,7 +537,7 @@ export function IncidentReportForm() {
             type="button"
             onClick={goNext}
             disabled={!canProceed || isSubmitting}
-            className="brand-gradient rounded-lg px-6 py-2 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            className="bg-primary hover:brightness-110 text-primary-foreground rounded-lg px-6 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             Další
           </button>
@@ -546,7 +546,7 @@ export function IncidentReportForm() {
             type="button"
             onClick={handleSubmit}
             disabled={!canProceed || isSubmitting}
-            className="brand-gradient inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold text-white shadow-[0_0_18px_-4px_rgba(168,85,247,0.6)] transition hover:shadow-[0_0_24px_-2px_rgba(236,72,153,0.7)] disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+            className="bg-primary hover:brightness-110 text-primary-foreground inline-flex items-center gap-2 rounded-lg px-6 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
           >
             {isSubmitting ? (
               <>
@@ -576,18 +576,18 @@ function Step1({ data, onChange }: Step1Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2 text-purple-300">
+      <div className="flex items-center gap-2 text-primary">
         <Shield size={18} aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-slate-100">Co se stalo?</h2>
+        <h2 className="text-lg font-semibold text-foreground">Co se stalo?</h2>
       </div>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-foreground">
         Vyber datum, kategorii, platformu a závažnost incidentu.
       </p>
 
       {/* Datum */}
       <div>
         <label htmlFor="incident_date" className={LABEL_BASE}>
-          Datum incidentu <span className="text-red-400">*</span>
+          Datum incidentu <span className="text-destructive">*</span>
         </label>
         <input
           id="incident_date"
@@ -603,7 +603,7 @@ function Step1({ data, onChange }: Step1Props) {
       {/* Kategorie */}
       <div>
         <label htmlFor="category" className={LABEL_BASE}>
-          Kategorie incidentu <span className="text-red-400">*</span>
+          Kategorie incidentu <span className="text-destructive">*</span>
         </label>
         <select
           id="category"
@@ -627,7 +627,7 @@ function Step1({ data, onChange }: Step1Props) {
       {data.category === 'other' && (
         <div>
           <label htmlFor="category_other" className={LABEL_BASE}>
-            Upřesni kategorii <span className="text-red-400">*</span>
+            Upřesni kategorii <span className="text-destructive">*</span>
           </label>
           <input
             id="category_other"
@@ -645,7 +645,7 @@ function Step1({ data, onChange }: Step1Props) {
       {/* Platforma */}
       <div>
         <label htmlFor="platform" className={LABEL_BASE}>
-          Platforma <span className="text-red-400">*</span>
+          Platforma <span className="text-destructive">*</span>
         </label>
         <select
           id="platform"
@@ -669,7 +669,7 @@ function Step1({ data, onChange }: Step1Props) {
       {data.platform === 'other' && (
         <div>
           <label htmlFor="platform_other" className={LABEL_BASE}>
-            Upřesni platformu <span className="text-red-400">*</span>
+            Upřesni platformu <span className="text-destructive">*</span>
           </label>
           <input
             id="platform_other"
@@ -687,7 +687,7 @@ function Step1({ data, onChange }: Step1Props) {
       {/* Závažnost */}
       <div>
         <label htmlFor="severity" className={LABEL_BASE}>
-          Závažnost <span className="text-red-400">*</span>
+          Závažnost <span className="text-destructive">*</span>
         </label>
         <select
           id="severity"
@@ -705,7 +705,7 @@ function Step1({ data, onChange }: Step1Props) {
             </option>
           ))}
         </select>
-        <p className="mt-1.5 text-xs text-slate-500">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           Pokus = bez ztráty; Drobný = do 1 000 Kč; Střední = 1–10 tis. Kč; Velký = 10–100 tis. Kč; Závažný = nad 100 tis. Kč.
         </p>
       </div>
@@ -773,11 +773,11 @@ function Step2({ data, onChange }: Step2Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2 text-pink-300">
+      <div className="flex items-center gap-2 text-primary">
         <AlertCircle size={18} aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-slate-100">O kom?</h2>
+        <h2 className="text-lg font-semibold text-foreground">O kom?</h2>
       </div>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-foreground">
         Zadej identifikátor subjektu nahlášení (telefon, číslo účtu, e-mail,
         Facebook profil nebo variabilní symbol). Hodnoty server automaticky
         normalizuje a hashuje.
@@ -802,7 +802,7 @@ function Step2({ data, onChange }: Step2Props) {
           type="button"
           onClick={addIdentifier}
           disabled={!canAdd}
-          className="group flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-700 bg-transparent px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-slate-900/50 hover:text-slate-100 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          className="group flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-border bg-transparent px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:bg-card hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
         >
           <Plus size={16} aria-hidden="true" />
           {canAdd
@@ -834,7 +834,7 @@ function IdentifierCard({
   const valid = trimmed === '' ? null : isIdentifierValid(item)
 
   return (
-    <div className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <div className="space-y-2 rounded-xl border border-border bg-card p-4">
       <div className="flex items-start gap-2">
         <input
           type="text"
@@ -848,7 +848,7 @@ function IdentifierCard({
             type="button"
             onClick={onRemove}
             aria-label="Smazat identifikátor"
-            className="rounded-lg p-2 text-red-400 transition hover:bg-red-500/10"
+            className="rounded-lg p-2 text-destructive transition hover:bg-destructive/10"
           >
             <Trash2 size={16} aria-hidden="true" />
           </button>
@@ -864,15 +864,15 @@ function IdentifierCard({
         </span>
 
         {item.autoDetected && (
-          <span className="text-xs text-slate-500">(auto)</span>
+          <span className="text-xs text-muted-foreground">(auto)</span>
         )}
 
-        <label className="ml-auto inline-flex items-center gap-1.5 text-xs text-slate-400">
+        <label className="ml-auto inline-flex items-center gap-1.5 text-xs text-muted-foreground">
           <span>Změnit typ:</span>
           <select
             value={item.type}
             onChange={(e) => onTypeChange(e.target.value as IdentifierType)}
-            className="rounded-md border border-slate-700 bg-slate-900/80 px-2 py-1 text-xs text-slate-200 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500/40"
+            className="rounded-md border border-border bg-card px-2 py-1 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
           >
             {IDENTIFIER_TYPE_KEYS.map((t) => (
               <option key={t} value={t}>
@@ -884,10 +884,10 @@ function IdentifierCard({
       </div>
 
       {valid === true && (
-        <p className="text-xs text-emerald-400">✓ Formát OK</p>
+        <p className="text-xs text-success">✓ Formát OK</p>
       )}
       {valid === false && (
-        <p className="text-xs text-red-400">Neplatný formát pro typ „{meta.label}".</p>
+        <p className="text-xs text-destructive">Neplatný formát pro typ „{meta.label}".</p>
       )}
     </div>
   )
@@ -911,18 +911,18 @@ function Step3({ data, onChange }: Step3Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2 text-purple-300">
+      <div className="flex items-center gap-2 text-primary">
         <AlertCircle size={18} aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-slate-100">Detaily</h2>
+        <h2 className="text-lg font-semibold text-foreground">Detaily</h2>
       </div>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-foreground">
         Uveď výši ztráty a stručný faktický popis incidentu.
       </p>
 
       {/* Částka */}
       <div>
         <label htmlFor="amount_czk" className={LABEL_BASE}>
-          Částka ztráty (Kč) <span className="text-red-400">*</span>
+          Částka ztráty (Kč) <span className="text-destructive">*</span>
         </label>
         <input
           id="amount_czk"
@@ -948,13 +948,13 @@ function Step3({ data, onChange }: Step3Props) {
           }}
           className={`${FIELD_BASE} text-lg font-semibold`}
         />
-        <p className="mt-1.5 text-xs text-slate-500">
+        <p className="mt-1.5 text-xs text-muted-foreground">
           Pokud nedošlo ke ztrátě, zadej 0.
         </p>
       </div>
 
       {/* Info box — faktický tón */}
-      <div className="rounded-md border-l-4 border-purple-500 bg-purple-500/10 p-3 text-sm text-slate-200">
+      <div className="rounded-md border-l-4 border-primary bg-primary/10 p-3 text-sm text-foreground">
         💡 Pište faktem, ne emocemi. Místo „okradl mě" uveďte
         „po platbě 2 500 Kč nedošlo k doručení zboží". AI vyhodnotí
         věcnost popisu.
@@ -963,10 +963,10 @@ function Step3({ data, onChange }: Step3Props) {
       {/* Popis */}
       <div>
         <div className="mb-1.5 flex items-baseline justify-between gap-2">
-          <label htmlFor="description" className="text-sm font-medium text-slate-100">
-            Popis incidentu <span className="text-red-400">*</span>
+          <label htmlFor="description" className="text-sm font-medium text-foreground">
+            Popis incidentu <span className="text-destructive">*</span>
           </label>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-muted-foreground">
             {len} / {DESCRIPTION_MAX} znaků
           </span>
         </div>
@@ -982,20 +982,20 @@ function Step3({ data, onChange }: Step3Props) {
         />
         <div className="mt-1.5 text-xs" aria-live="polite">
           {tooShort && (
-            <span className="text-red-400">
+            <span className="text-destructive">
               Minimálně {DESCRIPTION_MIN} znaků (zbývá {DESCRIPTION_MIN - len}).
             </span>
           )}
           {ok && (
-            <span className="text-emerald-400">✓ Dostatečně podrobné</span>
+            <span className="text-success">✓ Dostatečně podrobné</span>
           )}
           {nearLimit && (
-            <span className="text-amber-400">
+            <span className="text-warning">
               Blíží se limit ({DESCRIPTION_MAX - len} znaků).
             </span>
           )}
           {len === 0 && (
-            <span className="text-slate-500">
+            <span className="text-muted-foreground">
               Minimálně {DESCRIPTION_MIN} znaků, maximálně {DESCRIPTION_MAX}.
             </span>
           )}
@@ -1162,32 +1162,32 @@ function Step4({ data, onChange }: Step4Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2 text-cyan-300">
+      <div className="flex items-center gap-2 text-primary">
         <Upload size={18} aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-slate-100">Důkazy</h2>
+        <h2 className="text-lg font-semibold text-foreground">Důkazy</h2>
       </div>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-foreground">
         Nahraj 2–5 souborů jako důkaz incidentu. Podporujeme obrázky
         (PNG, JPG, WEBP) a PDF dokumenty. Velké obrázky se automaticky
         zoptimalizují, PDF musí být do {limitMB} MB.
       </p>
 
       {/* Info box — co se hodí jako důkaz */}
-      <div className="rounded-md border-l-4 border-purple-500 bg-purple-500/10 p-3 text-sm text-slate-200">
+      <div className="rounded-md border-l-4 border-primary bg-primary/10 p-3 text-sm text-foreground">
         💡 Co se hodí jako důkaz: screenshot inzerátu, screenshot komunikace,
         potvrzení o platbě, faktura, e-mailová korespondence.
       </div>
 
       {/* Varování — co NEnahrávat (GDPR / minimalizace dat) */}
-      <div className="rounded-md border-l-4 border-amber-500 bg-amber-500/10 p-3 text-sm text-amber-100">
+      <div className="rounded-md border-l-4 border-warning bg-warning/10 p-3 text-sm text-warning">
         <p className="font-semibold">⚠️ Nenahrávejte:</p>
-        <ul className="mt-1 ml-4 list-disc space-y-0.5 text-amber-100/90">
+        <ul className="mt-1 ml-4 list-disc space-y-0.5 text-warning/90">
           <li>doklady totožnosti (občanský průkaz, pas, řidičský průkaz)</li>
           <li>rodná čísla a čísla dokladů</li>
           <li>údaje o platebních kartách (PAN, CVV, expirace)</li>
           <li>intimní nebo nahý obsah</li>
         </ul>
-        <p className="mt-2 text-amber-100/80">
+        <p className="mt-2 text-warning/80">
           Nahrávejte pouze screenshoty komunikace a inzerátů potřebné k doložení incidentu.
         </p>
       </div>
@@ -1202,29 +1202,29 @@ function Step4({ data, onChange }: Step4Props) {
           aria-busy={isProcessing}
           className={`flex min-h-[200px] w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 transition-colors ${
             isProcessing
-              ? 'cursor-wait border-slate-700 bg-slate-900/40'
+              ? 'cursor-wait border-border bg-card'
               : isDragOver
-                ? 'cursor-pointer border-purple-500 bg-purple-500/10'
-                : 'cursor-pointer border-slate-700 bg-slate-900/40 hover:border-purple-500 hover:bg-purple-500/5'
+                ? 'cursor-pointer border-primary bg-primary/10'
+                : 'cursor-pointer border-border bg-card hover:border-primary hover:bg-primary/5'
           }`}
         >
           {isProcessing ? (
             <>
-              <Loader2 size={32} className="animate-spin text-purple-400" aria-hidden="true" />
-              <p className="text-sm font-medium text-slate-200">
+              <Loader2 size={32} className="animate-spin text-primary" aria-hidden="true" />
+              <p className="text-sm font-medium text-foreground">
                 Zpracovávám obrázky…
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Optimalizace pro rychlejší upload, počkej moment.
               </p>
             </>
           ) : (
             <>
-              <Upload size={32} className="text-slate-400" aria-hidden="true" />
-              <p className="text-sm font-medium text-slate-200">
+              <Upload size={32} className="text-muted-foreground" aria-hidden="true" />
+              <p className="text-sm font-medium text-foreground">
                 Přetáhni soubory sem nebo klikni pro výběr
               </p>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 Maximum {MAX_EVIDENCE_FILES} souborů. Velké obrázky se automaticky
                 zoptimalizují. PDF max {limitMB} MB.
               </p>
@@ -1245,7 +1245,7 @@ function Step4({ data, onChange }: Step4Props) {
 
       {/* Error messages */}
       {fileErrors.length > 0 && (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-300">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
           <ul className="space-y-1">
             {fileErrors.map((err, i) => (
               <li key={i}>• {err}</li>
@@ -1257,13 +1257,13 @@ function Step4({ data, onChange }: Step4Props) {
       {/* Compression feedback */}
       {compressionInfo.length > 0 && (
         <div
-          className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3 text-sm"
+          className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm"
           aria-live="polite"
         >
-          <p className="mb-1 font-medium text-cyan-300">
+          <p className="mb-1 font-medium text-primary">
             ✓ Obrázky optimalizovány pro rychlejší upload
           </p>
-          <ul className="space-y-0.5 text-xs text-cyan-200/80">
+          <ul className="space-y-0.5 text-xs text-primary/80">
             {compressionInfo.map((info, idx) => (
               <li key={idx}>
                 {info.name}: {formatFileSize(info.original)} → {formatFileSize(info.final)}
@@ -1282,9 +1282,9 @@ function Step4({ data, onChange }: Step4Props) {
             return (
               <div
                 key={`${file.name}_${file.lastModified}_${idx}`}
-                className="rounded-lg border border-slate-800 bg-slate-900/60 p-2"
+                className="rounded-lg border border-border bg-card p-2"
               >
-                <div className="relative aspect-square overflow-hidden rounded-md bg-slate-950/60">
+                <div className="relative aspect-square overflow-hidden rounded-md bg-card">
                   {isImage && previewUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -1293,9 +1293,9 @@ function Step4({ data, onChange }: Step4Props) {
                       className="absolute inset-0 h-full w-full object-cover"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-300">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 text-muted-foreground">
                       <FileText size={40} aria-hidden="true" />
-                      <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         PDF
                       </span>
                     </div>
@@ -1304,16 +1304,16 @@ function Step4({ data, onChange }: Step4Props) {
                     type="button"
                     onClick={() => removeFile(idx)}
                     aria-label={`Smazat soubor ${file.name}`}
-                    className="absolute right-1.5 top-1.5 rounded-full bg-red-500 p-1.5 text-white shadow transition hover:bg-red-600"
+                    className="absolute right-1.5 top-1.5 rounded-full bg-destructive p-1.5 text-destructive-foreground shadow transition hover:brightness-110"
                   >
                     <Trash2 size={12} aria-hidden="true" />
                   </button>
                 </div>
                 <div className="mt-2 space-y-0.5">
-                  <p className="truncate text-xs font-medium text-slate-200" title={file.name}>
+                  <p className="truncate text-xs font-medium text-foreground" title={file.name}>
                     {file.name}
                   </p>
-                  <p className="text-[10px] text-slate-500">{formatFileSize(file.size)}</p>
+                  <p className="text-[10px] text-muted-foreground">{formatFileSize(file.size)}</p>
                 </div>
               </div>
             )
@@ -1323,19 +1323,19 @@ function Step4({ data, onChange }: Step4Props) {
 
       {/* Progress / status */}
       <div className="text-xs" aria-live="polite">
-        <span className="text-slate-400">
+        <span className="text-muted-foreground">
           {fileCount} / {MAX_EVIDENCE_FILES} souborů nahráno
         </span>
         {fileCount < MIN_EVIDENCE_FILES && (
-          <span className="ml-2 text-red-400">
+          <span className="ml-2 text-destructive">
             Minimálně {MIN_EVIDENCE_FILES} soubory potřeba
           </span>
         )}
         {fileCount >= MIN_EVIDENCE_FILES && fileCount < MAX_EVIDENCE_FILES && (
-          <span className="ml-2 text-emerald-400">✓ Dostatečně důkazů</span>
+          <span className="ml-2 text-success">✓ Dostatečně důkazů</span>
         )}
         {fileCount === MAX_EVIDENCE_FILES && (
-          <span className="ml-2 text-emerald-400">✓ Maximum nahráno</span>
+          <span className="ml-2 text-success">✓ Maximum nahráno</span>
         )}
       </div>
     </div>
@@ -1374,25 +1374,25 @@ function Step5({ data, onChange }: Step5Props) {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2 text-emerald-300">
+      <div className="flex items-center gap-2 text-success">
         <CheckCircle2 size={18} aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-slate-100">Potvrzení</h2>
+        <h2 className="text-lg font-semibold text-foreground">Potvrzení</h2>
       </div>
-      <p className="text-sm text-slate-400">
+      <p className="text-sm text-muted-foreground">
         Zkontroluj údaje a potvrď tři souhlasy nutné pro zveřejnění nahlášení.
       </p>
 
       {/* ── Souhrn ────────────────────────────────── */}
-      <section className="space-y-4 rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-        <h3 className="text-sm font-semibold text-white">Souhrn nahlášení</h3>
+      <section className="space-y-4 rounded-xl border border-border bg-card p-5">
+        <h3 className="text-sm font-semibold text-foreground">Souhrn nahlášení</h3>
 
         {/* 1. Co se stalo */}
-        <div className="border-l-2 border-purple-500/60 pl-3">
-          <div className="mb-1.5 flex items-center gap-2 text-purple-300">
+        <div className="border-l-2 border-primary/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-primary">
             <Shield size={14} aria-hidden="true" />
             <h4 className="text-xs font-semibold uppercase tracking-wide">Co se stalo</h4>
           </div>
-          <dl className="space-y-1 text-sm text-slate-300">
+          <dl className="space-y-1 text-sm text-muted-foreground">
             <SummaryRow label="Datum" value={formatCzechDate(data.incident_date)} />
             <SummaryRow
               label="Kategorie"
@@ -1415,20 +1415,20 @@ function Step5({ data, onChange }: Step5Props) {
         </div>
 
         {/* 2. O kom */}
-        <div className="border-l-2 border-pink-500/60 pl-3">
-          <div className="mb-1.5 flex items-center gap-2 text-pink-300">
+        <div className="border-l-2 border-primary/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-primary">
             <AlertCircle size={14} aria-hidden="true" />
             <h4 className="text-xs font-semibold uppercase tracking-wide">O kom</h4>
           </div>
-          <ul className="space-y-1 text-sm text-slate-300">
+          <ul className="space-y-1 text-sm text-muted-foreground">
             {data.identifiers.map((item) => {
               const meta = IDENTIFIER_TYPE_META[item.type]
               const masked = item.value.trim() ? maskIdentifier(item.value, item.type) : '—'
               return (
                 <li key={item.id} className="flex items-center gap-2">
                   <span aria-hidden="true">{meta.icon}</span>
-                  <span className="text-slate-400">{meta.label}:</span>
-                  <span className="font-mono text-slate-200">{masked}</span>
+                  <span className="text-muted-foreground">{meta.label}:</span>
+                  <span className="font-mono text-foreground">{masked}</span>
                 </li>
               )
             })}
@@ -1436,26 +1436,26 @@ function Step5({ data, onChange }: Step5Props) {
         </div>
 
         {/* 3. Detaily */}
-        <div className="border-l-2 border-purple-500/60 pl-3">
-          <div className="mb-1.5 flex items-center gap-2 text-purple-300">
+        <div className="border-l-2 border-primary/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-primary">
             <AlertCircle size={14} aria-hidden="true" />
             <h4 className="text-xs font-semibold uppercase tracking-wide">Detaily</h4>
           </div>
-          <dl className="space-y-1 text-sm text-slate-300">
+          <dl className="space-y-1 text-sm text-muted-foreground">
             <SummaryRow
               label="Částka"
               value={`${data.amount_czk.toLocaleString('cs-CZ')} Kč`}
             />
             <div>
-              <dt className="text-xs text-slate-500">Popis</dt>
-              <dd className="mt-1 whitespace-pre-wrap text-slate-200">
+              <dt className="text-xs text-muted-foreground">Popis</dt>
+              <dd className="mt-1 whitespace-pre-wrap text-foreground">
                 {visibleDescription}
               </dd>
               {descriptionTooLong && (
                 <button
                   type="button"
                   onClick={() => setDescriptionExpanded((s) => !s)}
-                  className="mt-1 text-xs font-medium text-purple-300 hover:text-purple-200"
+                  className="mt-1 text-xs font-medium text-primary hover:text-primary"
                 >
                   {descriptionExpanded ? 'Skrýt' : 'Zobrazit celý popis'}
                 </button>
@@ -1465,21 +1465,21 @@ function Step5({ data, onChange }: Step5Props) {
         </div>
 
         {/* 4. Důkazy */}
-        <div className="border-l-2 border-cyan-500/60 pl-3">
-          <div className="mb-1.5 flex items-center gap-2 text-cyan-300">
+        <div className="border-l-2 border-primary/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-primary">
             <Upload size={14} aria-hidden="true" />
             <h4 className="text-xs font-semibold uppercase tracking-wide">Důkazy</h4>
           </div>
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-muted-foreground">
             {data.evidence_files.length} {data.evidence_files.length === 1 ? 'soubor' : data.evidence_files.length >= 2 && data.evidence_files.length <= 4 ? 'soubory' : 'souborů'}
           </p>
           {data.evidence_files.length > 0 && (
-            <ul className="mt-1 space-y-0.5 text-xs text-slate-400">
+            <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
               {data.evidence_files.map((f, i) => (
                 <li key={`${f.name}_${f.lastModified}_${i}`} className="flex items-center gap-2">
-                  <FileText size={12} aria-hidden="true" className="text-slate-500" />
+                  <FileText size={12} aria-hidden="true" className="text-muted-foreground" />
                   <span className="truncate">{f.name}</span>
-                  <span className="text-slate-600">·</span>
+                  <span className="text-muted-foreground">·</span>
                   <span>{formatFileSize(f.size)}</span>
                 </li>
               ))}
@@ -1488,12 +1488,12 @@ function Step5({ data, onChange }: Step5Props) {
         </div>
 
         {/* 5. Příští kroky */}
-        <div className="border-l-2 border-blue-500/60 pl-3">
-          <div className="mb-1.5 flex items-center gap-2 text-blue-300">
+        <div className="border-l-2 border-primary/60 pl-3">
+          <div className="mb-1.5 flex items-center gap-2 text-primary">
             <Info size={14} aria-hidden="true" />
             <h4 className="text-xs font-semibold uppercase tracking-wide">Příští kroky</h4>
           </div>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             Po odeslání projde nahlášení AI předkontrolou. Pokud poskytneš
             e-mail dotčené osoby (jeden z identifikátorů typu e-mail), bude
             informována a má 14 dní na vyjádření. Poté bude nahlášení
@@ -1503,8 +1503,8 @@ function Step5({ data, onChange }: Step5Props) {
       </section>
 
       {/* ── Konsenty ──────────────────────────────── */}
-      <section className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/40 p-5">
-        <h3 className="mb-3 text-sm font-semibold text-white">Souhlasy</h3>
+      <section className="space-y-2 rounded-xl border border-border bg-card p-5">
+        <h3 className="mb-3 text-sm font-semibold text-foreground">Souhlasy</h3>
 
         <ConsentRow
           checked={data.truth_confirmation}
@@ -1535,7 +1535,7 @@ function Step5({ data, onChange }: Step5Props) {
         </ConsentRow>
       </section>
 
-      <p className="border-l-2 border-slate-600 pl-3 text-xs text-slate-400">
+      <p className="border-l-2 border-border pl-3 text-xs text-muted-foreground">
         Nahlášení vychází z tvé zkušenosti a zveřejňuješ ho na vlastní
         odpovědnost. Neklikni.cz neověřuje pravdivost jednotlivých údajů
         a neručí za ně. Za obsah nahlášení odpovídá výhradně nahlašující.
@@ -1553,8 +1553,8 @@ interface SummaryRowProps {
 function SummaryRow({ label, value }: SummaryRowProps) {
   return (
     <div className="flex flex-wrap items-baseline gap-x-2">
-      <dt className="text-xs text-slate-500">{label}:</dt>
-      <dd className="text-slate-200">{value}</dd>
+      <dt className="text-xs text-muted-foreground">{label}:</dt>
+      <dd className="text-foreground">{value}</dd>
     </div>
   )
 }
@@ -1568,14 +1568,14 @@ interface ConsentRowProps {
 
 function ConsentRow({ checked, onChange, children }: ConsentRowProps) {
   return (
-    <label className="flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors hover:bg-slate-900/40">
+    <label className="flex cursor-pointer items-start gap-3 rounded-lg p-3 transition-colors hover:bg-card">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-4 w-4 cursor-pointer accent-purple-600 focus:ring-2 focus:ring-purple-500/30"
+        className="mt-0.5 h-4 w-4 cursor-pointer accent-blue-600 focus:ring-2 focus:ring-primary/30"
       />
-      <span className="text-sm text-slate-300">{children}</span>
+      <span className="text-sm text-muted-foreground">{children}</span>
     </label>
   )
 }

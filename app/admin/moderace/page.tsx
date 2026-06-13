@@ -225,12 +225,12 @@ export default async function ModeracePage() {
       <div className="mx-auto max-w-5xl px-4 pt-24 pb-10 sm:pb-14">
         <header className="mb-8">
           <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300">
               <Flag size={12} /> Admin
             </div>
             <Link
               href="/admin/uzivatele"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-purple-500/30 hover:text-purple-200 transition-colors"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/30 hover:text-blue-200 transition-colors"
             >
               → Uživatelé
             </Link>
@@ -333,7 +333,7 @@ export default async function ModeracePage() {
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 title={`${fileBaseName(ev.file_path)} · ${formatBytes(ev.file_size_bytes)}`}
-                                className="group relative block overflow-hidden rounded-lg border border-slate-700 bg-slate-950/60 hover:border-purple-500/50 transition-colors"
+                                className="group relative block overflow-hidden rounded-lg border border-slate-700 bg-slate-950/60 hover:border-blue-500/50 transition-colors"
                               >
                                 <img
                                   src={ev.signedUrl}
@@ -352,9 +352,9 @@ export default async function ModeracePage() {
                               href={ev.signedUrl}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-slate-700 bg-slate-950/60 hover:border-purple-500/50 hover:bg-slate-900 transition-colors p-2 text-center"
+                              className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-slate-700 bg-slate-950/60 hover:border-blue-500/50 hover:bg-slate-900 transition-colors p-2 text-center"
                             >
-                              <FileText size={22} className="text-purple-300" />
+                              <FileText size={22} className="text-blue-300" />
                               <span className="text-[11px] font-semibold text-slate-200">{ev.mime_type.split('/')[1]?.toUpperCase() ?? 'Soubor'}</span>
                               <span className="text-[10px] text-slate-500">{formatBytes(ev.file_size_bytes)}</span>
                             </a>

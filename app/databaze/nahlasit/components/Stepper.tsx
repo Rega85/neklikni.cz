@@ -44,10 +44,10 @@ export function Stepper({ currentStep, totalSteps, labels }: StepperProps) {
               className={[
                 'flex h-9 w-9 items-center justify-center rounded-full border text-xs font-semibold transition-all sm:h-10 sm:w-10 sm:text-sm',
                 isActive &&
-                  'border-purple-400/60 bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-[0_0_24px_-4px_rgba(168,85,247,0.7)] animate-pulse-soft',
+                  'border-primary bg-primary text-primary-foreground',
                 isDone &&
-                  'border-purple-400/40 bg-purple-500/20 text-purple-200',
-                !isActive && !isDone && 'border-slate-700 bg-slate-900/60 text-slate-500',
+                  'border-primary/40 bg-primary/15 text-primary',
+                !isActive && !isDone && 'border-border bg-card text-muted-foreground',
               ]
                 .filter(Boolean)
                 .join(' ')}
@@ -57,7 +57,7 @@ export function Stepper({ currentStep, totalSteps, labels }: StepperProps) {
             <span
               className={[
                 'text-[10px] font-medium leading-tight sm:text-xs',
-                isActive ? 'text-slate-100' : 'text-slate-500',
+                isActive ? 'text-foreground' : 'text-muted-foreground',
               ].join(' ')}
             >
               {label}

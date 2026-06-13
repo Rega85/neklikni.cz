@@ -97,7 +97,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
             <div className="space-y-6 pt-8 border-t border-white/5">
               <div>
-                <h4 className="text-[10px] font-black uppercase tracking-widest text-purple-400 mb-3">Hloubková analýza</h4>
+                <h4 className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-3">Hloubková analýza</h4>
                 <p className="text-slate-300 leading-relaxed">
                   {report.analysis || "Analýza není pro tento typ reportu k dispozici."}
                 </p>

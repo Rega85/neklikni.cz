@@ -68,7 +68,7 @@ export default function KontaktPage() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Karel Novák"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 px-4 text-white placeholder:text-slate-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none transition-colors"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 px-4 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-colors"
               />
             </div>
 
@@ -82,7 +82,7 @@ export default function KontaktPage() {
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
                 placeholder="karel@novak.cz"
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 px-4 text-white placeholder:text-slate-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none transition-colors"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 px-4 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-colors"
               />
             </div>
 
@@ -96,7 +96,7 @@ export default function KontaktPage() {
                 onChange={(e) => setForm({ ...form, message: e.target.value })}
                 placeholder="Napiš nám cokoliv..."
                 rows={5}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 px-4 text-white placeholder:text-slate-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none transition-colors resize-none"
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 px-4 text-white placeholder:text-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 focus:outline-none transition-colors resize-none"
               />
             </div>
 
@@ -105,7 +105,7 @@ export default function KontaktPage() {
             <button
               type="submit"
               disabled={loading || !form.name || !form.email || !form.message}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+              className="w-full bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-500 hover:to-blue-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
             >
               {loading ? "Odesílám..." : <><Send size={18} /> Odeslat zprávu</>}
             </button>

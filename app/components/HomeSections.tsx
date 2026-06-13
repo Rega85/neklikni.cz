@@ -101,13 +101,13 @@ export default function HomeSections() {
       {/* ─── How It Works ───────────────────────────────── */}
       <section>
         <header className="text-center mb-10 sm:mb-12 space-y-3 animate-fade-up">
-          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-300 bg-blue-500/10 border border-blue-400/20 px-3 py-1.5 rounded-full">
+          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary bg-card border border-border px-3 py-1.5 rounded-full">
             <Sparkles size={12} /> Jak to funguje
           </span>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tighter">
-            Tři kroky k <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">jistotě</span>
+            Tři kroky k <span className="text-primary">jistotě</span>
           </h2>
-          <p className="text-slate-400 max-w-xl mx-auto">Žádné instalace, žádný účet. Vlož → klikni → vyhodnoť.</p>
+          <p className="text-muted-foreground max-w-xl mx-auto">Žádné instalace, žádný účet. Vlož → klikni → vyhodnoť.</p>
         </header>
 
         <div className="grid md:grid-cols-3 gap-5">
@@ -115,14 +115,14 @@ export default function HomeSections() {
             const Icon = step.icon;
             return (
               <div key={step.title} className="surface-card p-6 sm:p-7 relative animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
-                <div className="absolute -top-3 -left-3 w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center font-black text-white text-sm shadow-lg shadow-purple-500/30">
+                <div className="absolute -top-3 -left-3 w-10 h-10 rounded-2xl bg-primary flex items-center justify-center font-black text-primary-foreground text-sm shadow-lg shadow-primary/30">
                   {i + 1}
                 </div>
-                <div className="bg-purple-500/15 text-purple-300 w-12 h-12 rounded-2xl flex items-center justify-center mb-4 mt-2">
+                <div className="bg-primary/10 text-primary w-12 h-12 rounded-2xl flex items-center justify-center mb-4 mt-2">
                   <Icon size={22} />
                 </div>
                 <h3 className="text-lg font-black mb-2">{step.title}</h3>
-                <p className="text-slate-400 text-sm leading-relaxed">{step.text}</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{step.text}</p>
               </div>
             );
           })}
@@ -132,11 +132,11 @@ export default function HomeSections() {
       {/* ─── Benefits Grid ──────────────────────────────── */}
       <section>
         <header className="text-center mb-10 sm:mb-12 space-y-3 animate-fade-up">
-          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-purple-300 bg-purple-500/10 border border-purple-400/20 px-3 py-1.5 rounded-full">
+          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary bg-card border border-border px-3 py-1.5 rounded-full">
             <Sparkles size={12} /> Proč Neklikni
           </span>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tighter">
-            AI bodyguard, který <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">nikdy nespí</span>
+            AI bodyguard, který <span className="text-primary">nikdy nespí</span>
           </h2>
         </header>
 
@@ -145,12 +145,12 @@ export default function HomeSections() {
             const Icon = b.icon;
             return (
               <div key={b.title} className="surface-card p-6 flex gap-4 items-start animate-fade-up" style={{ animationDelay: `${i * 80}ms` }}>
-                <div className="bg-gradient-to-br from-purple-500/20 to-blue-500/20 text-purple-300 w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
+                <div className="bg-primary/10 text-primary w-11 h-11 rounded-2xl flex items-center justify-center shrink-0">
                   <Icon size={20} />
                 </div>
                 <div>
                   <h3 className="font-black text-base mb-1">{b.title}</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">{b.text}</p>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{b.text}</p>
                 </div>
               </div>
             );
@@ -161,25 +161,25 @@ export default function HomeSections() {
       {/* ─── Use Cases ──────────────────────────────────── */}
       <section>
         <header className="text-center mb-10 sm:mb-12 space-y-3 animate-fade-up">
-          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-yellow-300 bg-yellow-500/10 border border-yellow-400/20 px-3 py-1.5 rounded-full">
+          <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-warning bg-card border border-border px-3 py-1.5 rounded-full">
             <Sparkles size={12} /> Reálné scénáře použití
           </span>
           <h2 className="text-3xl sm:text-4xl font-black tracking-tighter">
-            Pro koho <span className="bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">to dává smysl</span>
+            Pro koho <span className="text-warning">to dává smysl</span>
           </h2>
-          <p className="text-slate-400 max-w-xl mx-auto text-sm">Reálné situace, ve kterých Neklikni pomáhá. Bez vymyšlených hvězdiček.</p>
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm">Reálné situace, ve kterých Neklikni pomáhá. Bez vymyšlených hvězdiček.</p>
         </header>
 
         {/* 4 karty: 2×2 na tabletu, 4 v řadě na desktopu */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {USE_CASES.map((t, i) => (
             <figure key={t.title} className="surface-card p-6 flex flex-col animate-fade-up" style={{ animationDelay: `${i * 100}ms` }}>
-              <Quote size={20} className="text-purple-400/60 mb-3" />
-              <span className="inline-block text-[10px] font-black uppercase tracking-widest text-purple-300 bg-purple-500/10 border border-purple-400/20 px-2.5 py-1 rounded-full mb-3 w-fit">
+              <Quote size={20} className="text-primary/60 mb-3" />
+              <span className="inline-block text-[10px] font-black uppercase tracking-widest text-primary bg-card border border-border px-2.5 py-1 rounded-full mb-3 w-fit">
                 {t.label}
               </span>
               <h3 className="font-black text-lg leading-tight mb-3">{t.title}</h3>
-              <p className="text-slate-300 text-sm leading-relaxed flex-1">
+              <p className="text-muted-foreground text-sm leading-relaxed flex-1">
                 {t.text}
               </p>
             </figure>
@@ -193,21 +193,21 @@ export default function HomeSections() {
       {/* ─── Pricing CTA Banner ─────────────────────────── */}
       <section className="surface-card-elevated p-8 sm:p-12 text-center space-y-5 animate-fade-up">
         <h2 className="text-3xl sm:text-4xl font-black tracking-tighter">
-          Připraven na <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">víc analýz</span>?
+          Připraven na <span className="text-primary">víc analýz</span>?
         </h2>
-        <p className="text-slate-300 max-w-xl mx-auto leading-relaxed">
+        <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed">
           Od 99 Kč měsíčně získáš 50 analýz, screenshoty a plný verdikt. Zruš kdykoli, 14denní garance vrácení peněz.
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
           <Link
             href="/pricing"
-            className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-black text-sm uppercase tracking-wider shadow-lg shadow-purple-500/30 transition-all active:scale-[0.98]"
+            className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-primary hover:brightness-110 text-primary-foreground font-black text-sm uppercase tracking-wider shadow-lg shadow-primary/30 transition-all active:scale-[0.98]"
           >
             Zobrazit ceník
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
         </div>
-        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-slate-400 pt-2">
+        <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground pt-2">
           <span>✓ Zrušit kdykoli</span>
           <span>✓ Žádný závazek</span>
           <span>✓ Garance vrácení peněz</span>
@@ -218,21 +218,21 @@ export default function HomeSections() {
       <section className="max-w-3xl mx-auto w-full">
         <header className="text-center mb-8 space-y-2 animate-fade-up">
           <h2 className="text-2xl sm:text-3xl font-black tracking-tighter">Časté otázky</h2>
-          <p className="text-slate-400 text-sm">
-            Víc odpovědí na <Link href="/pricing" className="text-purple-300 hover:text-purple-200 underline underline-offset-2">stránce s ceníkem</Link>.
+          <p className="text-muted-foreground text-sm">
+            Víc odpovědí na <Link href="/pricing" className="text-primary hover:text-primary/80 underline underline-offset-2">stránce s ceníkem</Link>.
           </p>
         </header>
 
         <div className="space-y-2">
           {FAQ_HOME.map((item, i) => (
             <details key={item.q} className="group surface-card overflow-hidden animate-fade-up" style={{ animationDelay: `${i * 60}ms` }}>
-              <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors font-bold text-sm sm:text-base">
+              <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between gap-3 hover:bg-secondary/40 transition-colors font-bold text-sm sm:text-base">
                 <span>{item.q}</span>
-                <span className="text-slate-400 group-open:rotate-180 group-open:text-purple-400 transition-transform shrink-0">
+                <span className="text-muted-foreground group-open:rotate-180 group-open:text-primary transition-transform shrink-0">
                   <ArrowRight size={16} className="rotate-90" />
                 </span>
               </summary>
-              <div className="px-5 pb-5 text-slate-300 text-sm leading-relaxed">{item.a}</div>
+              <div className="px-5 pb-5 text-muted-foreground text-sm leading-relaxed">{item.a}</div>
             </details>
           ))}
         </div>

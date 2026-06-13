@@ -89,28 +89,28 @@ export default function Page() {
       </ul>
 
       {/* Mid-article CTA — check message */}
-      <div className="not-prose my-8 rounded-2xl border border-purple-500/30 bg-purple-500/5 p-5 space-y-3">
-        <p className="font-bold text-white">Píše ti prodejce nebo kupující něco podezřelého?</p>
-        <p className="text-sm text-slate-300">
+      <div className="not-prose my-8 rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-3">
+        <p className="font-bold text-foreground">Píše ti prodejce nebo kupující něco podezřelého?</p>
+        <p className="text-sm text-muted-foreground">
           Zkopíruj zprávu nebo screenshot — AI odpoví do 10 sekund, jestli jde o podezřelý vzorec.
         </p>
         <Link
           href="/"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 bg-primary hover:brightness-110 text-primary-foreground px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
         >
           Prověřit zprávu zdarma →
         </Link>
       </div>
 
       {/* Mid-article CTA — verify seller */}
-      <div className="not-prose my-8 rounded-2xl border border-cyan-500/30 bg-cyan-500/5 p-5 space-y-3">
-        <p className="font-bold text-white">Neznáš prodejce? Ověř jeho telefon nebo číslo účtu.</p>
-        <p className="text-sm text-slate-300">
+      <div className="not-prose my-8 rounded-2xl border border-primary/30 bg-primary/5 p-5 space-y-3">
+        <p className="font-bold text-foreground">Neznáš prodejce? Ověř jeho telefon nebo číslo účtu.</p>
+        <p className="text-sm text-muted-foreground">
           V databázi nahlášených incidentů zjistíš, jestli dané číslo nebo účet figuroval v předchozích hlášeních.
         </p>
         <Link
           href="/databaze/hledat"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-cyan-600 to-purple-600 hover:from-cyan-500 hover:to-purple-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 bg-primary hover:brightness-110 text-primary-foreground px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
         >
           Ověřit v databázi →
         </Link>
@@ -178,15 +178,15 @@ export default function Page() {
       </ul>
 
       {/* End CTA — report */}
-      <div className="not-prose mt-10 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-5 space-y-3">
-        <p className="font-bold text-white">Podvedl tě někdo? Nahlas ho a ochraň ostatní.</p>
-        <p className="text-sm text-slate-300">
+      <div className="not-prose mt-10 rounded-2xl border border-success/30 bg-success/5 p-5 space-y-3">
+        <p className="font-bold text-foreground">Podvedl tě někdo? Nahlas ho a ochraň ostatní.</p>
+        <p className="text-sm text-muted-foreground">
           Každé nahlášení čísla účtu, telefonu nebo profilu pomáhá dalším lidem rozpoznat podezřelou protistranu dřív,
           než pošlou peníze.
         </p>
         <Link
           href="/databaze/nahlasit"
-          className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
+          className="inline-flex items-center gap-2 bg-success hover:brightness-110 text-success-foreground px-4 py-2.5 rounded-xl font-bold text-sm transition-all"
         >
           Nahlásit incident →
         </Link>

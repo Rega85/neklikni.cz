@@ -34,7 +34,7 @@ export default function AnalysisScanner({ messages = DEFAULT_MESSAGES }: Props) 
     <div
       role="status"
       aria-live="polite"
-      className="analysis-scanner relative w-full overflow-hidden rounded-xl border border-violet-500/25 bg-slate-950/70 backdrop-blur-xl shadow-[0_0_40px_-15px_rgba(139,92,246,0.55)] px-5 py-4"
+      className="analysis-scanner relative w-full overflow-hidden rounded-xl border border-primary/25 bg-card backdrop-blur-xl shadow-[0_0_40px_-15px_oklch(0.62_0.19_256_/_0.4)] px-5 py-4"
     >
       {!reduceMotion && (
         <>
@@ -52,13 +52,13 @@ export default function AnalysisScanner({ messages = DEFAULT_MESSAGES }: Props) 
       <div className="relative z-[1] flex items-center gap-3">
         <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden="true">
           {!reduceMotion && (
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-violet-400 opacity-75" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
           )}
-          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-gradient-to-br from-violet-400 to-cyan-300 shadow-[0_0_10px_rgba(139,92,246,0.9)]" />
+          <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_oklch(0.62_0.19_256_/_0.6)]" />
         </span>
         <p
           key={messageIndex}
-          className="text-sm font-medium text-slate-200 tracking-wide animate-[fade-up_400ms_ease-out]"
+          className="text-sm font-medium text-foreground tracking-wide animate-[fade-up_400ms_ease-out]"
         >
           {messages[messageIndex % messages.length]}
         </p>

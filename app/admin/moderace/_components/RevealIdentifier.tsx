@@ -70,7 +70,7 @@ export function RevealIdentifier({ identifierId, incidentId, type, valueMasked }
           type="button"
           onClick={handleReveal}
           disabled={loading}
-          className="ml-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-purple-300 hover:text-purple-200 disabled:opacity-60"
+          className="ml-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-blue-300 hover:text-blue-200 disabled:opacity-60"
           title="Odkrýt plnou hodnotu (zaloguje se)"
         >
           {loading ? <Loader2 size={11} className="animate-spin" /> : <Eye size={11} />}

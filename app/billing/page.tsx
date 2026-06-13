@@ -46,7 +46,7 @@ export default function BillingPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center">
-      <Loader2 className="animate-spin text-purple-500" size={32} />
+      <Loader2 className="animate-spin text-blue-500" size={32} />
     </div>
   );
 
@@ -72,7 +72,7 @@ export default function BillingPage() {
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Aktuální tarif</p>
               <p className="text-white font-black text-2xl">{tier.toUpperCase()}</p>
             </div>
-            <CreditCard size={32} className="text-purple-500" />
+            <CreditCard size={32} className="text-blue-500" />
           </div>
           <div>
             <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Zbývající kredity</p>
@@ -80,7 +80,7 @@ export default function BillingPage() {
           </div>
         </div>
 
-        <Link href="/pricing" className="w-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-black uppercase py-4 rounded-2xl transition-colors">
+        <Link href="/pricing" className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black uppercase py-4 rounded-2xl transition-colors">
           <Zap size={16} fill="currentColor" /> Změnit tarif nebo dobít
         </Link>
 

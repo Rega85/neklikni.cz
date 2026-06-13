@@ -46,7 +46,7 @@ export default function SuccessPage() {
 
         <Link 
           href="/"
-          className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-bold py-4 px-10 rounded-2xl transition-all shadow-lg shadow-purple-500/20 active:scale-95"
+          className="group flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-500 hover:to-blue-500 text-white font-bold py-4 px-10 rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-95"
         >
           Chci tam hned <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
         </Link>

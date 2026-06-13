@@ -45,9 +45,9 @@ export default function RiskGauge({ value, size = 200 }: Props) {
     ? { from: "#fbbf24", to: "#f59e0b" }            // amber gradient
     : { from: "#34d399", to: "#10b981" };           // green gradient
 
-  const numColor = isHigh ? "text-red-400" : isMid ? "text-amber-400" : "text-emerald-400";
+  const numColor = isHigh ? "text-destructive" : isMid ? "text-warning" : "text-success";
   const label = isHigh ? "Vysoké riziko" : isMid ? "Střední riziko" : "Nízké riziko";
-  const labelColor = isHigh ? "text-red-300/90" : isMid ? "text-amber-300/90" : "text-emerald-300/90";
+  const labelColor = isHigh ? "text-destructive/90" : isMid ? "text-warning/90" : "text-success/90";
 
   return (
     <div className="relative inline-block" style={{ width: size, height: size }}>

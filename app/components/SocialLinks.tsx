@@ -28,7 +28,7 @@ export default function SocialLinks({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Facebook NeKlikni.cz"
-        className="text-slate-400 hover:text-white transition-colors"
+        className="text-muted-foreground hover:text-foreground transition-colors"
       >
         <Facebook size={size} />
       </a>
@@ -37,7 +37,7 @@ export default function SocialLinks({
         target="_blank"
         rel="noopener noreferrer"
         aria-label="TikTok NeKlikni.cz"
-        className="text-slate-400 hover:text-white transition-colors"
+        className="text-muted-foreground hover:text-foreground transition-colors"
       >
         <TikTokIcon size={size} />
       </a>

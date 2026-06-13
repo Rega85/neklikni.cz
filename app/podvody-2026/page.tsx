@@ -99,7 +99,7 @@ export default function Podvody2026() {
         </div>
 
         <header className="space-y-4 mb-10">
-          <div className="flex items-center gap-2 text-purple-400">
+          <div className="flex items-center gap-2 text-blue-400">
             <Shield size={20} />
             <span className="text-xs font-black uppercase tracking-widest">NeKlikni.cz</span>
           </div>
@@ -155,7 +155,7 @@ export default function Podvody2026() {
           </p>
           <p className="mt-2">
             Pokud máš podezřelou zprávu, vlož ji na{" "}
-            <Link href="/" className="text-purple-300 underline">neklikni.cz</Link> — AI ti odpoví do 3 sekund.
+            <Link href="/" className="text-blue-300 underline">neklikni.cz</Link> — AI ti odpoví do 3 sekund.
           </p>
         </footer>
       </main>

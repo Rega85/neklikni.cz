@@ -87,12 +87,12 @@ export default async function UzivatelePage() {
       <div className="mx-auto max-w-6xl px-4 pt-24 pb-10 sm:pb-14">
         <header className="mb-8">
           <div className="flex items-center gap-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
+            <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300">
               <Flag size={12} /> Admin
             </div>
             <Link
               href="/admin/moderace"
-              className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-purple-500/30 hover:text-purple-200 transition-colors"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/30 hover:text-blue-200 transition-colors"
             >
               ← Moderační fronta
             </Link>
@@ -132,7 +132,7 @@ export default async function UzivatelePage() {
                     <td className="px-4 py-3 font-mono text-xs">
                       <Link
                         href={`/admin/uzivatele/${user.id}`}
-                        className="text-slate-200 hover:text-purple-300 transition-colors"
+                        className="text-slate-200 hover:text-blue-300 transition-colors"
                       >
                         {user.email ?? '—'}
                       </Link>
@@ -145,7 +145,7 @@ export default async function UzivatelePage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       {incidentCount > 0 ? (
-                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/20 text-xs font-bold text-purple-300">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/20 text-xs font-bold text-blue-300">
                           {incidentCount}
                         </span>
                       ) : (

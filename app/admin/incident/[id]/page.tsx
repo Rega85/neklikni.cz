@@ -47,9 +47,9 @@ const STATUS_STYLE: Record<string, string> = {
   needs_more_info:      'bg-orange-500/10 text-orange-300 ring-1 ring-orange-500/30',
   ai_reviewed:          'bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/30',
   pending_merge_review: 'bg-amber-500/10 text-amber-300 ring-1 ring-amber-500/30',
-  notified:             'bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-500/30',
+  notified:             'bg-sky-500/10 text-sky-300 ring-1 ring-sky-500/30',
   published:            'bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/30',
-  objected:             'bg-purple-500/10 text-purple-300 ring-1 ring-purple-500/30',
+  objected:             'bg-blue-500/10 text-blue-300 ring-1 ring-blue-500/30',
   removed:              'bg-red-500/10 text-red-300 ring-1 ring-red-500/30',
 }
 
@@ -231,18 +231,18 @@ export default async function IncidentDetailPage({
 
         {/* Navigace */}
         <div className="flex flex-wrap items-center gap-3 mb-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-3 py-1 text-xs font-medium text-blue-300">
             <Flag size={12} /> Admin
           </div>
           <Link
             href={`/admin/uzivatele/${incident.reporter_id}`}
-            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-purple-500/30 hover:text-purple-200 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/30 hover:text-blue-200 transition-colors"
           >
             <ArrowLeft size={11} /> Profil uživatele
           </Link>
           <Link
             href="/admin/moderace"
-            className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-purple-500/30 hover:text-purple-200 transition-colors"
+            className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/30 hover:text-blue-200 transition-colors"
           >
             Moderační fronta
           </Link>
@@ -328,7 +328,7 @@ export default async function IncidentDetailPage({
                       target="_blank"
                       rel="noopener noreferrer"
                       title={`${fileBaseName(ev.file_path)} · ${formatBytes(ev.file_size_bytes)}`}
-                      className="group relative block overflow-hidden rounded-lg border border-slate-700 bg-slate-950/60 hover:border-purple-500/50 transition-colors"
+                      className="group relative block overflow-hidden rounded-lg border border-slate-700 bg-slate-950/60 hover:border-blue-500/50 transition-colors"
                     >
                       <img src={ev.signedUrl} alt="Důkaz" className="aspect-square w-full object-cover" />
                       <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -343,9 +343,9 @@ export default async function IncidentDetailPage({
                     href={ev.signedUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-slate-700 bg-slate-950/60 hover:border-purple-500/50 hover:bg-slate-900 transition-colors p-2 text-center"
+                    className="flex aspect-square flex-col items-center justify-center gap-1 rounded-lg border border-slate-700 bg-slate-950/60 hover:border-blue-500/50 hover:bg-slate-900 transition-colors p-2 text-center"
                   >
-                    <FileText size={22} className="text-purple-300" />
+                    <FileText size={22} className="text-blue-300" />
                     <span className="text-[11px] font-semibold text-slate-200">
                       {ev.mime_type.split('/')[1]?.toUpperCase() ?? 'Soubor'}
                     </span>

@@ -90,27 +90,27 @@ export default function RegisterPage() {
   };
 
   if (done) return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 text-center">
-      <CheckCircle2 className="w-20 h-20 text-green-400 mb-6 animate-bounce" />
-      <h1 className="text-3xl font-bold text-white mb-4">Zkontroluj e-mail!</h1>
-      <p className="text-slate-400 max-w-md">
-        Poslali jsme ti potvrzovací odkaz na <span className="text-white font-bold">{email}</span>.
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+      <CheckCircle2 className="w-20 h-20 text-success mb-6 animate-bounce" />
+      <h1 className="text-3xl font-bold text-foreground mb-4">Zkontroluj e-mail!</h1>
+      <p className="text-muted-foreground max-w-md">
+        Poslali jsme ti potvrzovací odkaz na <span className="text-foreground font-bold">{email}</span>.
         Klikni na tlačítko v e-mailu a jsi rovnou přihlášen — heslo nemusíš zadávat znovu.
       </p>
-      <p className="text-slate-500 text-sm mt-4 max-w-md">
-        Nedorazil? Zkontroluj složku <span className="text-slate-300">Spam / Hromadné</span>.
+      <p className="text-muted-foreground text-sm mt-4 max-w-md">
+        Nedorazil? Zkontroluj složku <span className="text-foreground">Spam / Hromadné</span>.
       </p>
-      <button onClick={() => router.push(loginHref)} className="mt-8 text-purple-400 hover:text-purple-300 text-sm font-bold transition-colors">
+      <button onClick={() => router.push(loginHref)} className="mt-8 text-primary hover:text-primary/80 text-sm font-bold transition-colors">
         Zpět na přihlášení
       </button>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl">
-        <h1 className="text-3xl font-bold text-white mb-2 text-center">Registrace</h1>
-        <p className="text-slate-400 mb-6 text-center">Vytvoř si účet a získej 5 analýz zdarma navíc.</p>
+    <div className="min-h-screen flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-md surface-card p-8 rounded-3xl">
+        <h1 className="text-3xl font-bold text-foreground mb-2 text-center">Registrace</h1>
+        <p className="text-muted-foreground mb-6 text-center">Vytvoř si účet a získej 5 analýz zdarma navíc.</p>
 
         {/* Google OAuth */}
         <button
@@ -126,64 +126,64 @@ export default function RegisterPage() {
         {/* Oddělovač */}
         <div className="relative mb-5">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-slate-700" />
+            <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center">
-            <span className="bg-slate-900 px-3 text-xs text-slate-500 uppercase tracking-widest">nebo</span>
+            <span className="bg-card px-3 text-xs text-muted-foreground uppercase tracking-widest">nebo</span>
           </div>
         </div>
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div className="relative">
-            <Mail className="absolute left-4 top-4 text-slate-500" size={20} />
+            <Mail className="absolute left-4 top-4 text-muted-foreground" size={20} />
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="karel@novak.cz"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none transition-colors"
+              className="w-full bg-card border border-border rounded-xl py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none transition-colors"
             />
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-4 top-4 text-slate-500" size={20} />
+            <Lock className="absolute left-4 top-4 text-muted-foreground" size={20} />
             <input
               type="password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Heslo (min. 6 znaků)"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none transition-colors"
+              className="w-full bg-card border border-border rounded-xl py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none transition-colors"
             />
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-4 top-4 text-slate-500" size={20} />
+            <Lock className="absolute left-4 top-4 text-muted-foreground" size={20} />
             <input
               type="password"
               required
               value={passwordConfirm}
               onChange={(e) => setPasswordConfirm(e.target.value)}
               placeholder="Zopakuj heslo"
-              className="w-full bg-slate-950 border border-slate-700 rounded-xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 focus:outline-none transition-colors"
+              className="w-full bg-card border border-border rounded-xl py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none transition-colors"
             />
           </div>
 
-          {error && <p className="text-red-400 text-sm font-medium">{error}</p>}
+          {error && <p className="text-destructive text-sm font-medium">{error}</p>}
 
           <button
             type="submit"
             disabled={loading || googleLoading || !email || !password || !passwordConfirm}
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-400 hover:to-purple-500 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
+            className="w-full bg-primary hover:brightness-110 text-primary-foreground font-bold py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 transition-all"
           >
             {loading ? "Registruji..." : <>Vytvořit účet <ArrowRight size={20} /></>}
           </button>
         </form>
 
-        <p className="text-slate-500 text-sm mt-6 text-center">
+        <p className="text-muted-foreground text-sm mt-6 text-center">
           Už máš účet?{" "}
-          <a href={loginHref} className="text-purple-400 hover:text-purple-300 font-bold transition-colors">
+          <a href={loginHref} className="text-primary hover:text-primary/80 font-bold transition-colors">
             Přihlásit se
           </a>
         </p>

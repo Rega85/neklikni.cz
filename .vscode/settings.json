@@ -1,3 +1,4 @@
 {
-    "explorer.compactFolders": false
+    "explorer.compactFolders": false,
+    "github.copilot.chat.anthropic.useMessagesApi": true
 }
