@@ -15,14 +15,26 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import {
   AlertCircle,
+  CreditCard,
+  Facebook,
   FileCheck,
+  Hash,
+  HelpCircle,
+  Mail,
+  Phone,
   Plus,
   Scale,
   Search as SearchIcon,
   Shield,
   ShieldCheck,
+  type LucideIcon,
 } from 'lucide-react'
 import PageHero from '../components/PageHero'
+import { getRecentPublishedIncidents, type RecentIncidentCard } from './_lib/recentIncidents'
+import { CATEGORY_LABELS, type IdentifierType } from '@/types/databaze'
+import { identifierLabel } from '@/utils/databaze/identifiers'
+
+export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Databáze nahlášených incidentů — Neklikni.cz',
@@ -31,9 +43,32 @@ export const metadata: Metadata = {
 }
 
 
+const TYPE_ICON: Record<IdentifierType, LucideIcon> = {
+  phone: Phone,
+  account: CreditCard,
+  email: Mail,
+  facebook_url: Facebook,
+  var_symbol: Hash,
+  other: HelpCircle,
+}
+
+
+function formatCzechDate(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('cs-CZ', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+
 // ── Page ─────────────────────────────────────────────
 
-export default function DatabazePage() {
+export default async function DatabazePage() {
+  const recentIncidents = await getRecentPublishedIncidents(15)
+
   return (
     <main className="min-h-screen">
       <PageHero
@@ -113,6 +148,23 @@ export default function DatabazePage() {
           </div>
         </section>
 
+        {/* ── Naposledy nahlášené případy ──────────── */}
+        {recentIncidents.length > 0 && (
+          <section className="mb-12">
+            <h2 className="mb-2 text-center text-2xl font-bold text-foreground">
+              Naposledy nahlášené případy
+            </h2>
+            <p className="mb-6 text-center text-sm text-muted-foreground">
+              Záznamy od uživatelů, zveřejněné po AI předkontrole a uplynutí lhůty pro vyjádření.
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {recentIncidents.map((incident) => (
+                <IncidentCard key={incident.id} incident={incident} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* ── CTA cards ──────────────────────────── */}
         <section className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
           <CtaCard
@@ -186,6 +238,44 @@ function HowItWorksStep({
       </div>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text}</p>
     </div>
+  )
+}
+
+
+function IncidentCard({ incident }: { incident: RecentIncidentCard }) {
+  const Icon = TYPE_ICON[incident.identifierType]
+  const categoryLabel =
+    incident.category === 'other' && incident.categoryOther
+      ? incident.categoryOther
+      : CATEGORY_LABELS[incident.category]
+
+  return (
+    <Link
+      href={`/databaze/pripad/${incident.id}`}
+      className="group flex flex-col gap-3 rounded-xl border border-border bg-card p-4 transition hover:border-primary/50 hover:bg-secondary/40"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-secondary px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          <Icon size={12} aria-hidden="true" />
+          {identifierLabel(incident.identifierType, incident.identifierMasked)}
+        </span>
+        <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
+          Nahlášeno uživateli
+        </span>
+      </div>
+
+      <p className="font-mono text-sm text-foreground">{incident.identifierMasked}</p>
+
+      <p className="text-sm font-semibold text-foreground">{categoryLabel}</p>
+
+      <div className="mt-auto flex items-center justify-between text-xs text-muted-foreground">
+        <span>{formatCzechDate(incident.publicAt)}</span>
+        <span>
+          {incident.subjectIncidentCount}{' '}
+          {incident.subjectIncidentCount === 1 ? 'nahlášení' : 'nahlášení celkem'}
+        </span>
+      </div>
+    </Link>
   )
 }
 
