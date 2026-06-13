@@ -130,7 +130,7 @@ export default function HomeSections() {
       </section>
 
       {/* ─── Benefits Grid ──────────────────────────────── */}
-      <section>
+      <section className="section-band p-6 sm:p-10">
         <header className="text-center mb-10 sm:mb-12 space-y-3 animate-fade-up">
           <span className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-primary bg-card border border-border px-3 py-1.5 rounded-full">
             <Sparkles size={12} /> Proč Neklikni
@@ -201,7 +201,7 @@ export default function HomeSections() {
         <div className="flex flex-wrap justify-center gap-3 pt-2">
           <Link
             href="/pricing"
-            className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl bg-primary hover:brightness-110 text-primary-foreground font-black text-sm uppercase tracking-wider shadow-lg shadow-primary/30 transition-all active:scale-[0.98]"
+            className="group inline-flex items-center gap-2 px-7 py-3.5 rounded-2xl border border-primary/40 text-primary hover:bg-primary/10 font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98]"
           >
             Zobrazit ceník
             <ArrowRight size={16} className="group-hover:translate-x-0.5 transition-transform" />
@@ -215,7 +215,7 @@ export default function HomeSections() {
       </section>
 
       {/* ─── Mini FAQ ───────────────────────────────────── */}
-      <section className="max-w-3xl mx-auto w-full">
+      <section className="section-band max-w-3xl mx-auto w-full p-6 sm:p-10">
         <header className="text-center mb-8 space-y-2 animate-fade-up">
           <h2 className="text-2xl sm:text-3xl font-black tracking-tighter">Časté otázky</h2>
           <p className="text-muted-foreground text-sm">

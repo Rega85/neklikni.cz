@@ -46,7 +46,7 @@ export default function LeadMagnet() {
   };
 
   return (
-    <section className="surface-card-elevated p-6 sm:p-10 animate-fade-up overflow-hidden">
+    <section className="surface-card-accent p-6 sm:p-10 animate-fade-up overflow-hidden">
       <div className="grid md:grid-cols-2 gap-8 items-center">
         <div className="space-y-4">
           {/* 3D book mockup */}

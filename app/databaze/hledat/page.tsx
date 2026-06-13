@@ -753,7 +753,7 @@ export default function HledatPage() {
           )}
         </header>
 
-        <form onSubmit={handleSubmit} className="mb-8 flex flex-col gap-3 sm:flex-row">
+        <form onSubmit={handleSubmit} className="mb-8 flex flex-col sm:flex-row rounded-xl border border-border bg-card overflow-hidden transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30">
           <input
             ref={inputRef}
             type="search"
@@ -761,12 +761,12 @@ export default function HledatPage() {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="+420 ... | email@... | 12345/0100 | facebook.com/..."
             disabled={isLoading}
-            className="surface-card-elevated flex-1 rounded-xl border border-border bg-card p-4 text-base font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+            className="flex-1 border-0 bg-transparent p-4 text-base font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 disabled:opacity-60"
           />
           <button
             type="submit"
             disabled={!query.trim() || isLoading}
-            className="bg-primary hover:brightness-110 text-primary-foreground inline-flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-base font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none sm:px-8"
+            className="bg-primary hover:brightness-110 text-primary-foreground inline-flex items-center justify-center gap-2 border-t border-border px-6 py-4 text-base font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none sm:border-t-0 sm:border-l sm:px-8"
           >
             {isLoading ? (
               <>

@@ -48,7 +48,7 @@ export default function DatabazePage() {
         <form
           action="/databaze/hledat"
           method="get"
-          className="mb-10 flex flex-col gap-3 sm:flex-row"
+          className="mb-10 flex flex-col sm:flex-row rounded-xl border border-border bg-card overflow-hidden transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/30"
         >
           <label htmlFor="q" className="sr-only">
             Identifikátor k vyhledání
@@ -59,11 +59,11 @@ export default function DatabazePage() {
             type="search"
             required
             placeholder="Telefon, e-mail, číslo účtu…"
-            className="surface-card-elevated flex-1 rounded-xl border border-border bg-card p-4 text-base font-medium text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+            className="flex-1 border-0 bg-transparent p-4 text-base font-medium text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0"
           />
           <button
             type="submit"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground transition hover:brightness-110 sm:px-8"
+            className="inline-flex items-center justify-center gap-2 border-t border-border bg-primary px-6 py-4 text-base font-semibold text-primary-foreground transition hover:brightness-110 sm:border-t-0 sm:border-l sm:px-8"
           >
             <SearchIcon size={18} aria-hidden="true" />
             Ověřit

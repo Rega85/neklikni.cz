@@ -688,7 +688,7 @@ export default function Home() {
             <div className="max-w-xl mx-auto w-full space-y-3 text-left">
               <form
                 onSubmit={handleHeroSearch}
-                className="flex flex-col gap-3 sm:flex-row"
+                className="flex flex-col sm:flex-row rounded-2xl border border-border bg-card overflow-hidden transition-colors focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/30"
               >
                 <label htmlFor="hero_search_q" className="sr-only">
                   Telefon, e-mail, číslo účtu nebo profil k ověření
@@ -703,12 +703,12 @@ export default function Home() {
                   onChange={handleQueryChange}
                   placeholder="Telefon, e-mail, číslo účtu…"
                   disabled={searchLoading}
-                  className="flex-1 min-h-[56px] rounded-2xl border border-border bg-card px-5 py-4 sm:py-5 text-base sm:text-lg text-foreground placeholder:text-muted-foreground focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60"
+                  className="flex-1 min-h-[56px] border-0 bg-transparent px-5 py-4 sm:py-5 text-base sm:text-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 disabled:opacity-60"
                 />
                 <button
                   type="submit"
                   disabled={!searchQuery.trim() || searchLoading}
-                  className="group inline-flex items-center justify-center gap-2 min-h-[56px] rounded-2xl bg-primary hover:brightness-110 px-6 py-4 sm:py-5 text-base sm:text-lg font-bold text-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                  className="group inline-flex items-center justify-center gap-2 min-h-[56px] border-t border-border bg-primary hover:brightness-110 px-6 py-4 sm:py-5 sm:border-t-0 sm:border-l text-base sm:text-lg font-bold text-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   {searchLoading ? (
                     <Loader2

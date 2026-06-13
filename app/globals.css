@@ -141,6 +141,21 @@
   backdrop-filter: blur(28px);
   box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.5);
 }
+/* Primary-tinted card — used to make a single high-value section (e.g. lead
+   magnet) visually pop out from neighboring surface-card sections. */
+.surface-card-accent {
+  background: color-mix(in oklch, var(--primary) 6%, transparent);
+  border: 1px solid color-mix(in oklch, var(--primary) 18%, transparent);
+  border-radius: 24px;
+  backdrop-filter: blur(28px);
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.5);
+}
+/* Alternating section band — lighter tint to break up long stretches of
+   --background on the homepage. */
+.section-band {
+  background: var(--card);
+  border-radius: 40px;
+}
 
 /* ── Logo glow ring (the one allowed ambient effect) ─────── */
 @keyframes logo-glow {
