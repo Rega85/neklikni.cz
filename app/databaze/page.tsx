@@ -79,6 +79,25 @@ export default async function DatabazePage() {
       />
 
       <div className="mx-auto max-w-3xl px-4 py-12 sm:py-16">
+        {/* ── Nahlásit incident (primární akce stránky) ── */}
+        <Link
+          href="/databaze/nahlasit"
+          className="group mb-4 flex items-center justify-between gap-4 rounded-xl border border-primary/40 bg-primary/5 p-4 transition hover:border-primary hover:bg-primary/10"
+        >
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground transition group-hover:scale-105">
+              <Plus size={20} aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-sm font-bold text-foreground">Nahlásit incident</p>
+              <p className="text-sm text-muted-foreground">Máte zkušenost s podvodem? Sdílejte ji a ochraňte ostatní.</p>
+            </div>
+          </div>
+          <span className="hidden shrink-0 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary transition group-hover:bg-primary group-hover:text-primary-foreground sm:inline-flex">
+            Nahlásit
+          </span>
+        </Link>
+
         {/* ── Search form (native GET) ───────────── */}
         <form
           action="/databaze/hledat"
@@ -166,14 +185,7 @@ export default async function DatabazePage() {
         )}
 
         {/* ── CTA cards ──────────────────────────── */}
-        <section className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <CtaCard
-            href="/databaze/nahlasit"
-            icon={<Plus size={24} aria-hidden="true" />}
-            title="Nahlásit incident"
-            description="Sdílej zkušenost s ostatními"
-            emphasize
-          />
+        <section className="mb-12 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <CtaCard
             href="/databaze/hledat"
             icon={<SearchIcon size={24} aria-hidden="true" />}

@@ -328,12 +328,17 @@ function FoundPanel({
   subject,
   normalizedValue,
   tier,
+  searchedQuery,
 }: {
   subject: SearchResultSubject
   normalizedValue?: string
   tier: string | null
+  searchedQuery: string
 }) {
   const isPaidTier = tier === 'basic' || tier === 'pro' || tier === 'oneshot'
+  const reportUrl = searchedQuery.trim()
+    ? `/databaze/nahlasit?prefill=${encodeURIComponent(searchedQuery.trim())}`
+    : '/databaze/nahlasit'
   const isDanger = subject.trust_score < 50
   const cardClass = isDanger
     ? 'border-destructive/30 bg-destructive/10'
@@ -438,6 +443,16 @@ function FoundPanel({
             ověřením. Neklikni.cz neručí za jejich správnost. Rozhodnutí, jak
             s informací naložíš, je na tobě.
           </p>
+
+          {/* ── Stalo se vám to taky? ────────────────────────── */}
+          <div className="rounded-xl border border-border bg-secondary/40 p-4">
+            <p className="text-sm text-foreground">
+              Stalo se vám to taky?{' '}
+              <Link href={reportUrl} className="font-semibold text-primary hover:underline">
+                Nahlaste podvod a ochraňte ostatní
+              </Link>
+            </p>
+          </div>
 
           {/* CTAs */}
           <div className="flex flex-wrap gap-3 pt-2">
@@ -823,6 +838,7 @@ export default function HledatPage() {
                   subject={result.subject}
                   normalizedValue={result.normalized_value}
                   tier={tier}
+                  searchedQuery={lastQuery}
                 />
               ) : result.detected_type === null ? (
                 // API nerozpoznalo formát — bez "Nahlásit incident" CTA

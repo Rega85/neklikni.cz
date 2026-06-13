@@ -18,6 +18,7 @@ const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 const navItems = [
   { href: "/", label: "Domů", icon: Home },
   { href: "/databaze", label: "Databáze", icon: Database },
+  { href: "/databaze/nahlasit", label: "Nahlásit podvod", icon: Flag, accent: true },
   { href: "/blog", label: "Blog", icon: BookOpen },
   { href: "/pricing", label: "Ceník", icon: Tag },
 ];
@@ -99,7 +100,7 @@ export default function Header() {
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
-    if (href === "/databaze") return pathname.startsWith("/databaze");
+    if (href === "/databaze") return pathname.startsWith("/databaze") && !pathname.startsWith("/databaze/nahlasit");
     return pathname === href || pathname.startsWith(`${href}/`);
   };
 
@@ -142,7 +143,7 @@ export default function Header() {
                   aria-current={active ? "page" : undefined}
                   className={`flex items-center gap-1.5 ${navBase} ${active ? navActive : navInactive}`}
                 >
-                  <Icon size={14} /> {item.label}
+                  <Icon size={14} className={item.accent && !active ? "text-primary" : undefined} /> {item.label}
                 </Link>
               );
             })}
@@ -187,7 +188,7 @@ export default function Header() {
                         aria-current={active ? "page" : undefined}
                         className={`${mobileBase} ${active ? mobileActive : mobileInactive}`}
                       >
-                        <Icon size={16} className="shrink-0" /><span>{item.label}</span>
+                        <Icon size={16} className={`shrink-0 ${item.accent && !active ? "text-primary" : ""}`} /><span>{item.label}</span>
                       </Link>
                     );
                   })}
