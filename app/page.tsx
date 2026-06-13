@@ -708,7 +708,7 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={!searchQuery.trim() || searchLoading}
-                  className="group inline-flex items-center justify-center gap-2 min-h-[56px] border-t border-border bg-primary hover:brightness-110 px-6 py-4 sm:py-5 sm:border-t-0 sm:border-l text-base sm:text-lg font-bold text-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+                  className="group inline-flex items-center justify-center gap-2 min-h-[56px] border-t border-border bg-primary hover:brightness-110 px-6 py-4 sm:py-5 sm:border-t-0 sm:border-l text-base sm:text-lg font-bold text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed disabled:shadow-none"
                 >
                   {searchLoading ? (
                     <Loader2
