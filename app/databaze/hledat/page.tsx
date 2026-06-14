@@ -21,6 +21,7 @@ import {
   Check,
   CreditCard,
   Facebook,
+  Globe,
   Hash,
   HelpCircle,
   Loader2,
@@ -87,6 +88,7 @@ const TYPE_ICON: Record<IdentifierType, LucideIcon> = {
   account: CreditCard,
   email: Mail,
   facebook_url: Facebook,
+  website: Globe,
   var_symbol: Hash,
   other: HelpCircle,
 }
@@ -96,6 +98,7 @@ const TYPE_LABEL: Record<IdentifierType, string> = {
   account: 'Číslo účtu',
   email: 'E-mail',
   facebook_url: 'Facebook',
+  website: 'Web',
   var_symbol: 'Var. symbol',
   other: 'Identifikátor',
 }
@@ -706,7 +709,7 @@ export default function HledatPage() {
     if (!q || isLoading) return
 
     const detectedType = detectIdentifierType(q)
-    const UNAMBIGUOUS = ['phone', 'email', 'account', 'facebook_url']
+    const UNAMBIGUOUS = ['phone', 'email', 'account', 'facebook_url', 'website']
     const isUnambiguous = detectedType !== null && UNAMBIGUOUS.includes(detectedType)
 
     if (!isUnambiguous && looksLikeFullMessage(q)) {

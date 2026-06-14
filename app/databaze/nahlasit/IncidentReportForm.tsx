@@ -51,6 +51,7 @@ import {
   normalizeFacebookUrl,
   normalizePhone,
   normalizeVarSymbol,
+  normalizeWebsite,
 } from '@/utils/databaze/identifiers'
 import { compressImage, isCompressibleImage } from '@/utils/databaze/imageCompress'
 import { Stepper } from './components/Stepper'
@@ -163,6 +164,8 @@ function normalizeByType(type: IdentifierType, raw: string): string | null {
       return normalizeEmail(raw)
     case 'facebook_url':
       return normalizeFacebookUrl(raw)
+    case 'website':
+      return normalizeWebsite(raw)
     case 'var_symbol':
       return normalizeVarSymbol(raw)
     case 'other':
@@ -204,6 +207,11 @@ const IDENTIFIER_TYPE_META: Record<IdentifierType, TypeMeta> = {
     label: 'Facebook profil',
     chipClass: 'border-primary/30 bg-primary/15 text-primary',
   },
+  website: {
+    icon: '🌐',
+    label: 'Web / e-shop',
+    chipClass: 'border-primary/30 bg-primary/15 text-primary',
+  },
   var_symbol: {
     icon: '🔢',
     label: 'Variabilní symbol',
@@ -221,6 +229,7 @@ const IDENTIFIER_TYPE_KEYS: IdentifierType[] = [
   'account',
   'email',
   'facebook_url',
+  'website',
   'var_symbol',
   'other',
 ]
@@ -849,7 +858,7 @@ function IdentifierCard({
       <div className="flex items-start gap-2">
         <input
           type="text"
-          placeholder="Vlož telefon, číslo účtu, e-mail, FB profil nebo variabilní symbol"
+          placeholder="Vlož telefon, číslo účtu, e-mail, web e-shopu, FB profil nebo variabilní symbol"
           value={item.value}
           onChange={(e) => onValueChange(e.target.value)}
           className={`${FIELD_BASE} flex-1`}

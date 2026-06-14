@@ -46,6 +46,7 @@ export type IdentifierType =
   | 'account'
   | 'email'
   | 'facebook_url'
+  | 'website'
   | 'var_symbol'
   | 'other'
 

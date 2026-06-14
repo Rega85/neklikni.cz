@@ -33,6 +33,7 @@ import {
   normalizeIban,
   normalizeEmail,
   normalizeFacebookUrl,
+  normalizeWebsite,
   normalizeVarSymbol,
   hashIdentifier,
   maskIdentifier,
@@ -99,6 +100,7 @@ const VALID_IDENTIFIER_TYPES: ReadonlySet<IdentifierType> = new Set([
   'account',
   'email',
   'facebook_url',
+  'website',
   'var_symbol',
   'other',
 ])
@@ -176,6 +178,8 @@ function normalizeByType(
       return normalizeEmail(raw)
     case 'facebook_url':
       return normalizeFacebookUrl(raw)
+    case 'website':
+      return normalizeWebsite(raw)
     case 'var_symbol':
       return normalizeVarSymbol(raw)
     case 'other':

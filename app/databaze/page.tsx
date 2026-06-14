@@ -18,6 +18,7 @@ import {
   CreditCard,
   Facebook,
   FileCheck,
+  Globe,
   Hash,
   HelpCircle,
   Mail,
@@ -48,6 +49,7 @@ const TYPE_ICON: Record<IdentifierType, LucideIcon> = {
   account: CreditCard,
   email: Mail,
   facebook_url: Facebook,
+  website: Globe,
   var_symbol: Hash,
   other: HelpCircle,
 }

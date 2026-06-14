@@ -16,6 +16,7 @@ export type IdentifierType =
   | 'account'
   | 'email'
   | 'facebook_url'
+  | 'website'
   | 'var_symbol'
   | 'other'
 
@@ -240,6 +241,45 @@ export function normalizeFacebookUrl(raw: string): string | null {
 
 
 /**
+ * Vzor doménového jména s volitelnou cestou — alespoň jedna tečka,
+ * TLD musí být písmenné (2+ znaky). Vylučuje IP adresy a čistě
+ * číselné/var_symbol vstupy.
+ */
+const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}(\/.*)?$/
+
+/**
+ * Normalizuje web/doménu (e-shop, podvodný web…) do kanonického tvaru
+ * `domena.tld[/cesta]`.
+ *
+ * Strip protokolu (`http(s)://`), `www.` prefixu, koncového lomítka,
+ * lowercase. Vyžaduje platný tvar domény (alespoň jedna tečka + písmenné
+ * TLD), jinak vrací `null`.
+ *
+ * @example
+ *   normalizeWebsite('https://www.Eshop-XY.cz/')  // 'eshop-xy.cz'
+ *   normalizeWebsite('www.eshop-xy.cz')           // 'eshop-xy.cz'
+ *   normalizeWebsite('eshop-xy.cz')               // 'eshop-xy.cz'
+ *   normalizeWebsite('eshop-xy.cz/produkt/')      // 'eshop-xy.cz/produkt'
+ *   normalizeWebsite('12345')                     // null
+ *   normalizeWebsite('pavel@example.cz')          // null
+ */
+export function normalizeWebsite(raw: string): string | null {
+  if (typeof raw !== 'string') return null
+
+  let cleaned = raw.trim().toLowerCase()
+  if (cleaned === '') return null
+
+  cleaned = cleaned.replace(/^https?:\/\//, '')
+  cleaned = cleaned.replace(/^www\./, '')
+  cleaned = cleaned.replace(/\/+$/, '')
+
+  if (!DOMAIN_RE.test(cleaned)) return null
+
+  return cleaned
+}
+
+
+/**
  * Normalizuje variabilní symbol (jen číslice, 1-10 cifer).
  *
  * @example
@@ -263,11 +303,17 @@ export function normalizeVarSymbol(raw: string): string | null {
 /**
  * Auto-detekce typu identifikátoru z formátu vstupu.
  *
- * Priorita (při shodě): email > facebook_url > account > phone > var_symbol.
+ * Priorita (při shodě):
+ *   email > facebook_url > website > account > phone > var_symbol.
+ *
+ * `website` musí být kontrolován před `account`/`var_symbol`, protože
+ * čistě numerické domény (např. "123.cz") by jinak omylem spadly do
+ * variabilního symbolu.
  *
  * @example
  *   detectIdentifierType('pavel@example.cz')        // 'email'
  *   detectIdentifierType('facebook.com/honza')      // 'facebook_url'
+ *   detectIdentifierType('eshop-xy.cz')             // 'website'
  *   detectIdentifierType('12345/0100')              // 'account'
  *   detectIdentifierType('+420 777 123 456')        // 'phone'
  *   detectIdentifierType('12345')                   // 'var_symbol'
@@ -278,6 +324,7 @@ export function detectIdentifierType(raw: string): IdentifierType | null {
 
   if (normalizeEmail(raw) !== null) return 'email'
   if (normalizeFacebookUrl(raw) !== null) return 'facebook_url'
+  if (normalizeWebsite(raw) !== null) return 'website'
   if (normalizeAccount(raw) !== null) return 'account'
   if (normalizeIban(raw) !== null) return 'account'
   if (normalizePhone(raw) !== null) return 'phone'
@@ -303,6 +350,8 @@ export function identifierLabel(type: IdentifierType, valueMasked?: string): str
       return 'E-mail'
     case 'facebook_url':
       return 'Profil na platformě'
+    case 'website':
+      return 'Web / e-shop'
     case 'var_symbol':
       return 'Variabilní symbol'
     case 'account':
@@ -346,6 +395,7 @@ export async function hashIdentifier(value: string): Promise<string> {
  * - account: ponech prefix, poslední cifru čísla, bank kód
  * - email: ponech první znak local-part, celý doménu
  * - facebook_url: ponech první znak každého segmentu jména
+ * - website: bez maskování — doména podvodného webu není osobní údaj
  * - var_symbol: ponech první 2 a poslední 3 cifry (pokud délka > 5)
  * - other / fallback: první 2 znaky + asterisky + posledních 2
  *
@@ -370,6 +420,8 @@ export function maskIdentifier(value: string, type: IdentifierType): string {
       return maskEmail(value)
     case 'facebook_url':
       return maskFacebookUrl(value)
+    case 'website':
+      return value
     case 'var_symbol':
       return maskVarSymbol(value)
     case 'other':

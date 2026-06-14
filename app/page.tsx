@@ -706,7 +706,7 @@ export default function Home() {
                 className="flex flex-col sm:flex-row rounded-2xl border border-border bg-card overflow-hidden transition-colors focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/30"
               >
                 <label htmlFor="hero_search_q" className="sr-only">
-                  Telefon, e-mail, číslo účtu nebo profil k ověření
+                  Telefon, e-mail, číslo účtu, web e-shopu nebo profil k ověření
                 </label>
                 <input
                   id="hero_search_q"
@@ -716,7 +716,7 @@ export default function Home() {
                   autoComplete="off"
                   value={searchQuery}
                   onChange={handleQueryChange}
-                  placeholder="Telefon, e-mail, číslo účtu…"
+                  placeholder="Telefon, e-mail, číslo účtu nebo web e-shopu…"
                   disabled={searchLoading}
                   className="flex-1 min-h-[56px] border-0 bg-transparent px-5 py-4 sm:py-5 text-base sm:text-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 disabled:opacity-60"
                 />

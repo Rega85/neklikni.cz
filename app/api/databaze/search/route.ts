@@ -40,6 +40,7 @@ import {
   normalizePhone,
   normalizePhoneVariants,
   normalizeVarSymbol,
+  normalizeWebsite,
 } from '@/utils/databaze/identifiers'
 import type { DatabazeDatabase, SearchLogQueryType } from '../_lib/database'
 import { checkRateLimit, hashForRL } from '../../_lib/ratelimit'
@@ -71,6 +72,8 @@ function normalizeByType(type: IdentifierType, raw: string): string | null {
       return normalizeEmail(raw)
     case 'facebook_url':
       return normalizeFacebookUrl(raw)
+    case 'website':
+      return normalizeWebsite(raw)
     case 'var_symbol':
       return normalizeVarSymbol(raw)
     case 'other':
@@ -86,13 +89,15 @@ const TYPE_LABEL_GENITIV: Record<IdentifierType, string> = {
   account: 'číslo účtu',
   email: 'e-mail',
   facebook_url: 'Facebook profil',
+  website: 'web/doménu',
   var_symbol: 'variabilní symbol',
   other: 'identifikátor',
 }
 
 
-// search_log.query_type je užší enum než IdentifierType — facebook_url a
-// var_symbol mapujeme na 'url'/'other' pro jednodušší konverzní reporting.
+// search_log.query_type je užší enum než IdentifierType — facebook_url,
+// website a var_symbol mapujeme na 'url'/'other' pro jednodušší konverzní
+// reporting.
 function toSearchLogType(type: IdentifierType | null): SearchLogQueryType {
   switch (type) {
     case 'phone':
@@ -100,6 +105,7 @@ function toSearchLogType(type: IdentifierType | null): SearchLogQueryType {
     case 'email':
       return type
     case 'facebook_url':
+    case 'website':
       return 'url'
     default:
       return 'other'
@@ -291,7 +297,7 @@ export async function POST(req: Request) {
       found: false,
       detected_type: null,
       message:
-        'Formát nelze rozpoznat. Použijte telefon (+420...), e-mail, číslo účtu (12345/0100), Facebook profil nebo variabilní symbol.',
+        'Formát nelze rozpoznat. Použijte telefon (+420...), e-mail, číslo účtu (12345/0100), web e-shopu, Facebook profil nebo variabilní symbol.',
     }
     return respond(response, undefined, { queryType: 'other', found: false })
   }
