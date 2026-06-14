@@ -4,6 +4,7 @@ import "./globals.css";
 import { ReactNode } from "react";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import MobileReportCta from "./components/MobileReportCta";
 import CookieConsent from "./components/CookieConsent";
 import GaScript from "./components/GaScript";
 
@@ -68,6 +69,7 @@ export default function RootLayout({
         <GaScript />
         <Header />
         {children}
+        <MobileReportCta />
         <Footer />
         <CookieConsent />
       </body>

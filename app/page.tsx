@@ -650,26 +650,41 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen ">
       <HomeSchema />
-      <main className="flex-grow text-foreground pt-10 sm:pt-16 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
+      <main className="flex-grow text-foreground pt-20 sm:pt-16 px-4 sm:px-6 pb-8 flex flex-col items-center relative">
         {/* ── HERO: dva rovnocenné vstupy — databáze i AI zpráva ── */}
         <section className="max-w-2xl w-full mx-auto relative z-10 text-center space-y-4 sm:space-y-5">
           {stats.analyses !== null && (
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-card border border-border text-xs sm:text-[13px] text-muted-foreground backdrop-blur-sm">
-              <span className="relative flex h-2 w-2" aria-hidden="true">
-                <span className="motion-safe:animate-[ping_2s_ease-in-out_infinite] absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-              </span>
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-success">
-                online
-              </span>
-              <span className="text-muted-foreground">·</span>
-              <span>
+            <>
+              {/* Mobile — kompaktní jednořádkový badge */}
+              <div className="flex sm:hidden items-center justify-center gap-1.5 text-[12px] text-muted-foreground">
+                <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+                  <span className="motion-safe:animate-[ping_2s_ease-in-out_infinite] absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                </span>
                 <span className="font-semibold text-foreground">
                   {stats.analyses.toLocaleString("cs-CZ")}
-                </span>{" "}
-                prověřených zpráv a kontaktů
-              </span>
-            </div>
+                </span>
+                <span>prověřeno</span>
+              </div>
+
+              {/* Desktop — plný badge */}
+              <div className="hidden sm:inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-card border border-border text-xs sm:text-[13px] text-muted-foreground backdrop-blur-sm">
+                <span className="relative flex h-2 w-2" aria-hidden="true">
+                  <span className="motion-safe:animate-[ping_2s_ease-in-out_infinite] absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+                </span>
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-success">
+                  online
+                </span>
+                <span className="text-muted-foreground">·</span>
+                <span>
+                  <span className="font-semibold text-foreground">
+                    {stats.analyses.toLocaleString("cs-CZ")}
+                  </span>{" "}
+                  prověřených zpráv a kontaktů
+                </span>
+              </div>
+            </>
           )}
 
           <h1 className="text-balance font-sans font-black tracking-tight text-foreground text-4xl sm:text-5xl lg:text-6xl leading-[1.1]">
