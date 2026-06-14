@@ -132,7 +132,7 @@ export default function Header() {
             </span>
           </Link>
           <nav className="hidden lg:flex items-center gap-1">
-            {navItems.map((item) => {
+            {navItems.filter((item) => !item.accent).map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
               return (
@@ -143,7 +143,28 @@ export default function Header() {
                   aria-current={active ? "page" : undefined}
                   className={`flex items-center gap-1.5 ${navBase} ${active ? navActive : navInactive}`}
                 >
-                  <Icon size={14} className={item.accent && !active ? "text-primary" : undefined} /> {item.label}
+                  <Icon size={14} /> {item.label}
+                </Link>
+              );
+            })}
+
+            {/* "Nahlásit podvod" — akce, ne navigace: oddělená, zvýrazněná */}
+            <span className="mx-1 h-5 w-px bg-border" aria-hidden="true" />
+            {navItems.filter((item) => item.accent).map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-3.5 py-2 text-sm font-semibold transition-colors ${
+                    active
+                      ? "border-primary/60 bg-primary/15 text-primary"
+                      : "border-primary/30 bg-primary/5 text-primary hover:border-primary/50 hover:bg-primary/10"
+                  }`}
+                >
+                  <Icon size={14} className="text-primary" /> {item.label}
                 </Link>
               );
             })}
