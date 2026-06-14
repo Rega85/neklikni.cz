@@ -256,6 +256,32 @@ export type SearchLogInsert = {
 }
 
 
+// ── coi_risky_eshops ──────────────────────────────────
+// Veřejný seznam rizikových e-shopů ČOI (cizí zdroj, read-only pro app)
+
+export type CoiRiskyEshopRow = {
+  id: string
+  domain: string
+  reason: string | null
+  category: string | null
+  reported_date: string | null
+  source: string
+  source_url: string | null
+  imported_at: string
+}
+
+export type CoiRiskyEshopInsert = {
+  id?: string
+  domain: string
+  reason?: string | null
+  category?: string | null
+  reported_date?: string | null
+  source?: string
+  source_url?: string | null
+  imported_at?: string
+}
+
+
 // ── Database wrapper ──────────────────────────────────
 
 export type DatabazeDatabase = {
@@ -301,6 +327,12 @@ export type DatabazeDatabase = {
         Row: SearchLogRow
         Insert: SearchLogInsert
         Update: Partial<SearchLogInsert>
+        Relationships: []
+      }
+      coi_risky_eshops: {
+        Row: CoiRiskyEshopRow
+        Insert: CoiRiskyEshopInsert
+        Update: Partial<CoiRiskyEshopInsert>
         Relationships: []
       }
     }

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "import:coi": "npx tsx scripts/import-coi.ts",
+    "import:coi:dry": "npx tsx scripts/import-coi.ts --dry-run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

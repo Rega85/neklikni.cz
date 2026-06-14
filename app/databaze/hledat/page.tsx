@@ -20,6 +20,7 @@ import {
   ArrowRight,
   Check,
   CreditCard,
+  ExternalLink,
   Facebook,
   Globe,
   Hash,
@@ -32,6 +33,7 @@ import {
   Megaphone,
   Phone,
   Search as SearchIcon,
+  ShieldAlert,
   ShieldCheck,
   Sparkles,
   UserCheck,
@@ -49,6 +51,15 @@ import AnalysisScanner from '@/app/components/AnalysisScanner'
 
 
 // ── API response shapes ──────────────────────────────
+
+interface CoiMatch {
+  domain: string
+  reason: string | null
+  category: string | null
+  reported_date: string | null
+  source: string
+  source_url: string | null
+}
 
 interface SearchResultSubject {
   id: string
@@ -71,6 +82,7 @@ interface SearchResult {
   detected_type: IdentifierType | null
   normalized_value?: string
   subject?: SearchResultSubject
+  coi_match?: CoiMatch
   message?: string
 }
 
@@ -265,6 +277,101 @@ function NotFoundPanel({
             Trvejte na osobním vyzvednutí, používejte escrow služby (Bazoš
             Bezpečně, Sbazar Bezpečný nákup), nikdy neposílejte peníze předem
             a ověřte identitu (Bank iD nebo OP).
+          </p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+
+const COI_CATEGORY_LABELS: Record<string, string> = {
+  anonymni_provozovatel: 'Anonymní provozovatel',
+  neoveritelne_sidlo: 'Neověřitelné sídlo',
+  chybejici_kontakt: 'Chybějící kontakt',
+  neodpovida_na_reklamace: 'Neodpovídá na reklamace',
+  podezrele_ceny: 'Podezřele nízké ceny',
+  falzifikat: 'Podezření z prodeje falzifikátů',
+  rozporne_udaje: 'Rozporné údaje',
+  zneuzite_udaje: 'Zneužité údaje',
+  mimo_eu: 'Sídlo mimo EU',
+  jine: 'Jiný důvod',
+  chybne_obchodni_podminky: 'Chybné obchodní podmínky',
+  podvodna_kampan: 'Podvodná kampaň',
+}
+
+function CoiWarningPanel({ match }: { match: CoiMatch }) {
+  const categoryLabel = match.category
+    ? (COI_CATEGORY_LABELS[match.category] ?? match.category)
+    : null
+
+  const formattedDate = match.reported_date
+    ? new Date(match.reported_date).toLocaleDateString('cs-CZ', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null
+
+  return (
+    <section className="surface-card-elevated rounded-2xl border border-orange-500/30 bg-orange-500/5 p-6 backdrop-blur-md sm:p-8">
+      <div className="flex items-start gap-3">
+        <ShieldAlert
+          size={28}
+          className="flex-shrink-0 text-orange-500"
+          aria-hidden="true"
+        />
+        <div className="flex-1 space-y-4">
+          {/* Badge zdroje — vizuálně odlišný od uživatelských nahlášení */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400">
+              <Globe size={11} aria-hidden="true" />
+              Veřejný zdroj: ČOI
+            </span>
+            {categoryLabel && (
+              <span className="rounded-full border border-border bg-card px-3 py-1 text-xs text-muted-foreground">
+                {categoryLabel}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <h2 className="text-xl font-bold text-foreground">
+              ČOI tento web zařadila mezi rizikové e-shopy
+            </h2>
+            <p className="mt-1 text-sm font-mono text-muted-foreground">{match.domain}</p>
+          </div>
+
+          {match.reason && (
+            <blockquote className="border-l-2 border-orange-500/40 pl-4 text-sm leading-relaxed text-muted-foreground">
+              {match.reason}
+            </blockquote>
+          )}
+
+          {/* Atribuce — povinná */}
+          <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 text-xs leading-relaxed text-muted-foreground space-y-1">
+            <p>
+              <span className="font-semibold text-foreground">Zdroj:</span>{' '}
+              Česká obchodní inspekce (ČOI)
+              {formattedDate && <>, publikováno {formattedDate}</>}
+            </p>
+            {match.source_url && (
+              <a
+                href={match.source_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-orange-600 underline underline-offset-2 hover:text-orange-500 dark:text-orange-400"
+              >
+                Zobrazit originální záznam na coi.gov.cz
+                <ExternalLink size={11} aria-hidden="true" />
+              </a>
+            )}
+          </div>
+
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            ČOI před nákupem na tomto webu varuje. Toto není nahlášení uživatele
+            Neklikni.cz — jde o veřejný seznam vydávaný Českou obchodní inspekcí.
+            Neklikni.cz data přebírá a zobrazuje s plnou atribucí.
           </p>
         </div>
       </div>
@@ -836,6 +943,12 @@ export default function HledatPage() {
           {!isLoading && limitReached && <LimitReachedPanel />}
           {!isLoading && !limitReached && result && (
             <>
+              {/* ČOI varování — zobrazí se vždy, pokud existuje, nezávisle
+                  na user incidentech (jiný zdroj, jiný badge, jiná formulace) */}
+              {result.coi_match && (
+                <CoiWarningPanel match={result.coi_match} />
+              )}
+
               {result.found && result.subject ? (
                 <FoundPanel
                   subject={result.subject}
@@ -847,10 +960,14 @@ export default function HledatPage() {
                 // API nerozpoznalo formát — bez "Nahlásit incident" CTA
                 <UnknownFormatPanel message={result.message ?? ''} />
               ) : (
-                <NotFoundPanel
-                  message={result.message ?? 'Žádný výsledek.'}
-                  searchedQuery={lastQuery}
-                />
+                // Není v user incidentech — zobraz "nenalezeno" jen pokud
+                // není ČOI match (ten sám o sobě je výsledkem)
+                !result.coi_match && (
+                  <NotFoundPanel
+                    message={result.message ?? 'Žádný výsledek.'}
+                    searchedQuery={lastQuery}
+                  />
+                )
               )}
               <ReferralCard isLoggedIn={isAuthed} />
             </>

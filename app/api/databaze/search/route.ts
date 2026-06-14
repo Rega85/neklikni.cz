@@ -13,10 +13,14 @@
  *  3. Rate limit (anon: cookie + Redis IP hash, auth: Redis per user-id)
  *  4. Detekce typu identifikátoru + normalizace + SHA-256 hash
  *  5. Lookup `subject_identifiers` přes value_hash
+ *     PRO TYP 'website': paralelně také lookup v `coi_risky_eshops`
  *  6. Pokud match → fetch subjekt, agregace incidentů, top kategorie,
  *     time range, všechny identifikátory subjektu, claim status
  *  7. Audit log (best-effort)
  *  8. Response (na anon volání nastavuje cookie token)
+ *
+ *  coi_match: přítomen pokud domain odpovídá záznamu v ČOI seznamu
+ *  (nezávisle na tom, zda existuje user incident — oboje se vrátí).
  */
 
 import { NextResponse } from 'next/server'
@@ -42,7 +46,7 @@ import {
   normalizeVarSymbol,
   normalizeWebsite,
 } from '@/utils/databaze/identifiers'
-import type { DatabazeDatabase, SearchLogQueryType } from '../_lib/database'
+import type { CoiRiskyEshopRow, DatabazeDatabase, SearchLogQueryType } from '../_lib/database'
 import { checkRateLimit, hashForRL } from '../../_lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
@@ -146,12 +150,22 @@ interface SearchResultSubject {
   }>
 }
 
+export interface CoiMatch {
+  domain: string
+  reason: string | null
+  category: string | null
+  reported_date: string | null
+  source: string
+  source_url: string | null
+}
 
 interface SearchResponse {
   found: boolean
   detected_type: IdentifierType | null
   normalized_value?: string
   subject?: SearchResultSubject
+  /** Záznam z ČOI seznamu rizikových e-shopů (nezávislý na user incidentech) */
+  coi_match?: CoiMatch
   message?: string
 }
 
@@ -332,14 +346,49 @@ export async function POST(req: Request) {
 
   const masked = maskIdentifier(normalized, detected_type)
 
-  // 5. Lookup subject_identifiers
+  // 5. Lookup subject_identifiers (+ paralelní ČOI lookup pro typ website)
+
+  // Pro typ website: normalizovaná hodnota může obsahovat cestu
+  // (např. "eshop-xy.cz/produkt"). ČOI ukládá jen root doménu → ořízneme.
+  const coiDomain = detected_type === 'website'
+    ? normalized.split('/')[0]
+    : null
+
   try {
-    const { data: idRow, error: idErr } = await supabaseAdmin()
-      .from('subject_identifiers')
-      .select('subject_id')
-      .in('value_hash', searchHashes)
-      .limit(1)
-      .maybeSingle()
+    // Paralelní dotazy: user incidenty + ČOI (pokud typ website)
+    const [idResult, coiResult] = await Promise.all([
+      supabaseAdmin()
+        .from('subject_identifiers')
+        .select('subject_id')
+        .in('value_hash', searchHashes)
+        .limit(1)
+        .maybeSingle(),
+      coiDomain
+        ? supabaseAdmin()
+            .from('coi_risky_eshops')
+            .select('domain, reason, category, reported_date, source, source_url')
+            .eq('domain', coiDomain)
+            .limit(1)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ])
+
+    const { data: idRow, error: idErr } = idResult
+    const coiMatch: CoiMatch | undefined = (coiResult.data as CoiRiskyEshopRow | null)
+      ? {
+          domain: (coiResult.data as CoiRiskyEshopRow).domain,
+          reason: (coiResult.data as CoiRiskyEshopRow).reason,
+          category: (coiResult.data as CoiRiskyEshopRow).category,
+          reported_date: (coiResult.data as CoiRiskyEshopRow).reported_date,
+          source: (coiResult.data as CoiRiskyEshopRow).source,
+          source_url: (coiResult.data as CoiRiskyEshopRow).source_url,
+        }
+      : undefined
+
+    if (coiResult.error) {
+      // ČOI lookup chyba není kritická — logujeme, ale nepřerušujeme
+      console.warn('COI eshop lookup failed:', coiResult.error)
+    }
 
     if (idErr) {
       console.error('Search identifier lookup failed:', idErr)
@@ -354,10 +403,11 @@ export async function POST(req: Request) {
         found: false,
         detected_type,
         normalized_value: masked,
+        coi_match: coiMatch,
         message:
           'Tento subjekt zatím není v naší databázi. To ale neznamená, že je 100% bezpečný — buď opatrný a ověř ho i jinak (Bank iD, osobní vyzvednutí, escrow služby jako Bazoš Bezpečně).',
       }
-      return respond(response, undefined, { queryType: toSearchLogType(detected_type), found: false })
+      return respond(response, undefined, { queryType: toSearchLogType(detected_type), found: Boolean(coiMatch) })
     }
 
     const subjectId = idRow.subject_id
@@ -459,6 +509,7 @@ export async function POST(req: Request) {
       found: true,
       detected_type,
       normalized_value: masked,
+      coi_match: coiMatch,
       subject: {
         id: subjectRow.id,
         display_name_masked: subjectRow.display_name_masked ?? masked,
