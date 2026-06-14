@@ -70,6 +70,15 @@ const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS) as Array<[IncidentCateg
 const PLATFORM_OPTIONS = Object.entries(PLATFORM_LABELS) as Array<[IncidentPlatform, string]>
 const SEVERITY_OPTIONS = Object.entries(SEVERITY_LABELS) as Array<[IncidentSeverity, string]>
 
+// Odvození závažnosti z částky ztráty (krok 3) podle škály v SEVERITY_LABELS.
+function deriveSeverity(amountCzk: number): IncidentSeverity {
+  if (amountCzk <= 0) return 'attempt'
+  if (amountCzk < 1_000) return 'minor'
+  if (amountCzk <= 10_000) return 'medium'
+  if (amountCzk <= 100_000) return 'major'
+  return 'severe'
+}
+
 // Sdílené class strings pro inputy a selecty — drží konzistenci v brand stylu.
 const FIELD_BASE =
   'w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30'
@@ -93,7 +102,9 @@ interface FormData {
   category_other: string
   platform: IncidentPlatform | ''
   platform_other: string
-  severity: IncidentSeverity | ''
+  severity: IncidentSeverity
+  /** True pokud severity ještě nebyla manuálně přepsána — odvozuje se z amount_czk. */
+  severityAuto: boolean
 
   // Step 2
   identifiers: IdentifierItem[]
@@ -127,7 +138,8 @@ function initialFormData(): FormData {
     category_other: '',
     platform: '',
     platform_other: '',
-    severity: '',
+    severity: 'attempt',
+    severityAuto: true,
     identifiers: [newIdentifier()],
     amount_czk: 0,
     description: '',
@@ -222,7 +234,6 @@ function isStep1Valid(d: FormData): boolean {
   if (d.category === 'other' && d.category_other.trim() === '') return false
   if (!d.platform) return false
   if (d.platform === 'other' && d.platform_other.trim() === '') return false
-  if (!d.severity) return false
   return true
 }
 
@@ -232,7 +243,7 @@ function isStep2Valid(d: FormData): boolean {
   return true
 }
 
-const DESCRIPTION_MIN = 50
+const DESCRIPTION_MIN = 20
 const DESCRIPTION_MAX = 1000
 const AMOUNT_MAX = 100_000_000
 
@@ -245,7 +256,7 @@ function isStep3Valid(d: FormData): boolean {
   return true
 }
 
-const MIN_EVIDENCE_FILES = 2
+const MIN_EVIDENCE_FILES = 1
 const MAX_EVIDENCE_FILES = 5
 
 function isFileAllowed(file: File): boolean {
@@ -684,21 +695,19 @@ function Step1({ data, onChange }: Step1Props) {
         </div>
       )}
 
-      {/* Závažnost */}
+      {/* Závažnost — odvozena automaticky z částky v kroku Detaily */}
       <div>
         <label htmlFor="severity" className={LABEL_BASE}>
-          Závažnost <span className="text-destructive">*</span>
+          Závažnost
         </label>
         <select
           id="severity"
-          required
           value={data.severity}
-          onChange={(e) => onChange({ severity: e.target.value as IncidentSeverity | '' })}
+          onChange={(e) =>
+            onChange({ severity: e.target.value as IncidentSeverity, severityAuto: false })
+          }
           className={FIELD_BASE}
         >
-          <option value="" disabled>
-            Vyber závažnost
-          </option>
           {SEVERITY_OPTIONS.map(([key, label]) => (
             <option key={key} value={key}>
               {label}
@@ -706,7 +715,9 @@ function Step1({ data, onChange }: Step1Props) {
           ))}
         </select>
         <p className="mt-1.5 text-xs text-muted-foreground">
-          Pokus = bez ztráty; Drobný = do 1 000 Kč; Střední = 1–10 tis. Kč; Velký = 10–100 tis. Kč; Závažný = nad 100 tis. Kč.
+          {data.severityAuto
+            ? 'Dopočítá se automaticky podle částky ztráty v kroku Detaily. Můžeš ji ale i přepsat ručně.'
+            : 'Nastaveno ručně. Pokus = bez ztráty; Drobný = do 1 000 Kč; Střední = 1–10 tis. Kč; Velký = 10–100 tis. Kč; Závažný = nad 100 tis. Kč.'}
         </p>
       </div>
     </div>
@@ -898,6 +909,36 @@ function IdentifierCard({
 
 const DESCRIPTION_WARN = 950
 
+// Šablony pro nejčastější scénáře — klik vloží textovou kostru, kterou
+// uživatel jen doplní. Snižuje tření při psaní popisu od nuly.
+const DESCRIPTION_TEMPLATES: Array<{ label: string; text: string }> = [
+  {
+    label: 'Nedodané zboží po platbě',
+    text:
+      'Po platbě [částka] Kč za [zboží] na [platforma] mi zboží nebylo doručeno. ' +
+      'Komunikace s prodávajícím probíhala přes [kanál komunikace]. ' +
+      'Od platby uplynulo [doba] a zboží stále nedorazilo.',
+  },
+  {
+    label: 'Falešný e-shop',
+    text:
+      'Objednal/a jsem [zboží] v e-shopu [název/URL e-shopu] za [částka] Kč. ' +
+      'Po zaplacení [co se stalo — např. obchod nereaguje, web zmizel, zboží nepřišlo].',
+  },
+  {
+    label: 'Phishing SMS/e-mail',
+    text:
+      'Obdržel/a jsem zprávu od [odesílatel, např. "Česká pošta" nebo banka] s odkazem na [doména/URL]. ' +
+      'Po kliknutí na odkaz / zadání údajů [co se stalo — např. odečtena platba ve výši [částka] Kč, zneužité přihlašovací údaje].',
+  },
+  {
+    label: 'Podvodný prodejce (marketplace)',
+    text:
+      'Na [platforma, např. Vinted / Facebook Marketplace] jsem komunikoval/a s prodejcem ohledně [zboží]. ' +
+      'Po zaplacení [částka] Kč na účet/telefon [identifikátor] [co se stalo dál].',
+  },
+]
+
 interface Step3Props {
   data: FormData
   onChange: (patch: Partial<FormData>) => void
@@ -939,12 +980,17 @@ function Step3({ data, onChange }: Step3Props) {
           }
           onChange={(e) => {
             const raw = e.target.value
-            if (raw === '') {
-              onChange({ amount_czk: 0 })
-              return
-            }
-            const parsed = Math.floor(Number(raw))
-            onChange({ amount_czk: Number.isFinite(parsed) ? Math.max(0, parsed) : 0 })
+            const amount =
+              raw === ''
+                ? 0
+                : (() => {
+                    const parsed = Math.floor(Number(raw))
+                    return Number.isFinite(parsed) ? Math.max(0, parsed) : 0
+                  })()
+            onChange({
+              amount_czk: amount,
+              ...(data.severityAuto ? { severity: deriveSeverity(amount) } : {}),
+            })
           }}
           className={`${FIELD_BASE} text-lg font-semibold`}
         />
@@ -970,6 +1016,21 @@ function Step3({ data, onChange }: Step3Props) {
             {len} / {DESCRIPTION_MAX} znaků
           </span>
         </div>
+
+        {/* Šablony pro častá scénáře — klik předvyplní kostru popisu */}
+        <div className="mb-2 flex flex-wrap gap-2">
+          {DESCRIPTION_TEMPLATES.map((tpl) => (
+            <button
+              key={tpl.label}
+              type="button"
+              onClick={() => onChange({ description: tpl.text })}
+              className="rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground transition hover:border-primary hover:text-primary"
+            >
+              {tpl.label}
+            </button>
+          ))}
+        </div>
+
         <textarea
           id="description"
           required
@@ -1167,7 +1228,7 @@ function Step4({ data, onChange }: Step4Props) {
         <h2 className="text-lg font-semibold text-foreground">Důkazy</h2>
       </div>
       <p className="text-sm text-muted-foreground">
-        Nahraj 2–5 souborů jako důkaz incidentu. Podporujeme obrázky
+        Nahraj 1–5 souborů jako důkaz incidentu. Podporujeme obrázky
         (PNG, JPG, WEBP) a PDF dokumenty. Velké obrázky se automaticky
         zoptimalizují, PDF musí být do {limitMB} MB.
       </p>
@@ -1328,7 +1389,7 @@ function Step4({ data, onChange }: Step4Props) {
         </span>
         {fileCount < MIN_EVIDENCE_FILES && (
           <span className="ml-2 text-destructive">
-            Minimálně {MIN_EVIDENCE_FILES} soubory potřeba
+            Minimálně {MIN_EVIDENCE_FILES} soubor potřeba
           </span>
         )}
         {fileCount >= MIN_EVIDENCE_FILES && fileCount < MAX_EVIDENCE_FILES && (

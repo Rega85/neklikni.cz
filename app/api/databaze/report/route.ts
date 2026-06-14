@@ -54,7 +54,7 @@ import { sendAdminNewIncidentNotification, sendReporterConfirmation } from '../_
 export const dynamic = 'force-dynamic'
 
 const REPORTS_PER_DAY_LIMIT = 3
-const MIN_EVIDENCE_FILES = 2
+const MIN_EVIDENCE_FILES = 1
 const MAX_EVIDENCE_FILES = 5
 
 const STORAGE_BUCKET = 'evidence'
@@ -267,8 +267,8 @@ function parseFormData(form: FormData): ParsedFields | string {
   }
 
   const description = form.get('description')
-  if (typeof description !== 'string' || description.length < 50 || description.length > 1000) {
-    return 'Popis musí být 50–1000 znaků'
+  if (typeof description !== 'string' || description.length < 20 || description.length > 1000) {
+    return 'Popis musí být 20–1000 znaků'
   }
 
   const contactRaw = form.get('contact_for_subject_email')
