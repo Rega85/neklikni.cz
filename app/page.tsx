@@ -107,11 +107,21 @@ type SearchSubject = {
   }>;
 };
 
+type CoiMatch = {
+  domain: string;
+  reason: string | null;
+  category: string | null;
+  reported_date: string | null;
+  source: string;
+  source_url: string | null;
+};
+
 type SearchApiResult = {
   found: boolean;
   detected_type: IdentifierType | null;
   normalized_value?: string;
   subject?: SearchSubject;
+  coi_match?: CoiMatch;
   message?: string;
 };
 
@@ -1031,6 +1041,62 @@ export default function Home() {
 
                 {!searchLoading && !limitReached && searchResult && (
                   <>
+                    {/* ČOI varování — nezávislé na user incidentech */}
+                    {searchResult.coi_match && (
+                      <div className="rounded-[32px] border-2 border-orange-500/30 bg-orange-500/5 backdrop-blur-md p-6 sm:p-8 text-left space-y-4">
+                        <div className="flex items-start gap-3">
+                          <AlertTriangle
+                            size={28}
+                            className="flex-shrink-0 text-orange-500"
+                            aria-hidden="true"
+                          />
+                          <div className="space-y-3 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="inline-flex items-center gap-1.5 rounded-full border border-orange-500/30 bg-orange-500/10 px-3 py-1 text-xs font-semibold text-orange-600 dark:text-orange-400">
+                                Veřejný zdroj: ČOI
+                              </span>
+                            </div>
+                            <h2 className="text-xl sm:text-2xl font-black text-foreground">
+                              ČOI tento web zařadila mezi rizikové e-shopy
+                            </h2>
+                            <p className="text-xs font-mono text-muted-foreground">
+                              {searchResult.coi_match.domain}
+                            </p>
+                            {searchResult.coi_match.reason && (
+                              <blockquote className="border-l-2 border-orange-500/40 pl-4 text-sm leading-relaxed text-muted-foreground">
+                                {searchResult.coi_match.reason}
+                              </blockquote>
+                            )}
+                            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 p-4 text-xs leading-relaxed text-muted-foreground space-y-1">
+                              <p>
+                                <span className="font-semibold text-foreground">Zdroj:</span>{" "}
+                                Česká obchodní inspekce (ČOI)
+                                {searchResult.coi_match.reported_date && (
+                                  <>, publikováno{" "}
+                                  {new Date(searchResult.coi_match.reported_date).toLocaleDateString("cs-CZ", { year: "numeric", month: "long", day: "numeric" })}
+                                  </>
+                                )}
+                              </p>
+                              {searchResult.coi_match.source_url && (
+                                <a
+                                  href={searchResult.coi_match.source_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-orange-600 underline underline-offset-2 hover:text-orange-500 dark:text-orange-400"
+                                >
+                                  Zobrazit originální záznam na coi.gov.cz →
+                                </a>
+                              )}
+                            </div>
+                            <p className="text-xs leading-relaxed text-muted-foreground">
+                              ČOI před nákupem na tomto webu varuje. Toto není nahlášení uživatele
+                              Neklikni.cz — jde o veřejný seznam vydávaný Českou obchodní inspekcí.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {searchResult.found && searchResult.subject ? (
                       <div
                         className={`rounded-[32px] border-2 backdrop-blur-3xl shadow-2xl p-6 sm:p-8 text-left space-y-5 ${
@@ -1168,7 +1234,8 @@ export default function Home() {
                           </div>
                         </div>
                       </div>
-                    ) : (
+                    ) : !searchResult.coi_match ? (
+                      // "Nenalezen" — nezobrazovat pokud je ČOI match (ten sám o sobě je výsledkem)
                       <div className="rounded-[32px] border-2 border-primary/30 bg-primary/5 backdrop-blur-md p-6 sm:p-8 text-left space-y-5">
                         <div className="flex items-start gap-3">
                           <ShieldCheck
@@ -1218,7 +1285,7 @@ export default function Home() {
                           <ArrowRight size={14} aria-hidden="true" />
                         </Link>
                       </div>
-                    )}
+                    ) : null}
 
                     {searchResult.found && (
                       <ReferralCard
