@@ -1287,7 +1287,7 @@ export default function Home() {
                       </div>
                     ) : null}
 
-                    {searchResult.found && (
+                    {(searchResult.found || !!searchResult.coi_match) && (
                       <ReferralCard
                         isLoggedIn={profileChecked ? profile !== null : null}
                       />

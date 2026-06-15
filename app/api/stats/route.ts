@@ -20,17 +20,64 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Skutečný počet provedených AI analýz: baseline + registrovaní uživatelé
-    // (1 řádek = 1 analýza) + anonymní uživatelé (count = počet za den/IP).
-    const [usageLog, anonUsage, incidents] = await Promise.all([
-      supabaseAdmin.from("usage_log").select("*", { count: "exact", head: true }),
-      supabaseAdmin.from("anonymous_usage").select("count"),
-      databazeAdmin.from("incidents").select("*", { count: "exact", head: true }).eq("status", "published"),
-    ]);
+    // Načti admin IDs pro filtrování testovací aktivity z výsledků.
+    // app_admins je malá tabulka (1-2 řádky) — extra round-trip je OK,
+    // celý endpoint má 5min cache (revalidate=300).
+    const { data: adminRows } = await supabaseAdmin
+      .from("app_admins")
+      .select("user_id")
+    const adminIds = (adminRows ?? []).map(
+      (r: { user_id: string }) => r.user_id
+    )
+    const notAdminFilter = adminIds.length > 0
+      ? `(${adminIds.join(",")})`
+      : null
 
-    const total = usageLog.error || anonUsage.error
-      ? null
-      : ANALYTICS_BASELINE + (usageLog.count ?? 0) + (anonUsage.data ?? []).reduce((sum, row) => sum + (row.count ?? 0), 0);
+    // Paralelní dotazy:
+    //   usageLog   — AI analýzy přihlášených (bez adminů)
+    //   anonUsage  — AI analýzy anonymních uživatelů (agregát per IP/den)
+    //   incidents  — schválená nahlášení v databázi podvodů
+    //   searchLog  — vyhledávání v databázi (anonymní i přihlášení, bez adminů)
+    const [usageLog, anonUsage, incidents, searchLog] = await Promise.all([
+      notAdminFilter
+        ? supabaseAdmin
+            .from("usage_log")
+            .select("*", { count: "exact", head: true })
+            .not("user_id", "in", notAdminFilter)
+        : supabaseAdmin
+            .from("usage_log")
+            .select("*", { count: "exact", head: true }),
+
+      supabaseAdmin.from("anonymous_usage").select("count"),
+
+      databazeAdmin
+        .from("incidents")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "published"),
+
+      notAdminFilter
+        ? databazeAdmin
+            .from("search_log")
+            .select("*", { count: "exact", head: true })
+            .or(`user_id.is.null,user_id.not.in.${notAdminFilter}`)
+        : databazeAdmin
+            .from("search_log")
+            .select("*", { count: "exact", head: true }),
+    ])
+
+    const anonAiTotal = (anonUsage.data ?? []).reduce(
+      (sum: number, row: { count: number | null }) => sum + (row.count ?? 0),
+      0,
+    )
+
+    const total =
+      usageLog.error || anonUsage.error || searchLog.error
+        ? null
+        : ANALYTICS_BASELINE
+            + (usageLog.count ?? 0)   // AI analýzy přihlášených (bez adminů)
+            + anonAiTotal             // AI analýzy anonymních
+            + (searchLog.count ?? 0) // databázová vyhledávání (bez adminů)
+            + (incidents.error ? 0 : incidents.count ?? 0) // schválená nahlášení
 
     return NextResponse.json({
       total,
