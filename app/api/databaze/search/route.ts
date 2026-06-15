@@ -354,10 +354,6 @@ export async function POST(req: Request) {
     ? normalized.split('/')[0]
     : null
 
-  // [DEBUG] Dočasný log pro diagnostiku COI vyhledávání — odstranit po potvrzení
-  console.log('[debug:search] detected_type:', detected_type, '| normalized:', normalized, '| coiDomain:', coiDomain)
-  console.log('[debug:search] supabaseUrl:', process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/https?:\/\/([^.]+).*/, '$1…'))
-
   try {
     // Paralelní dotazy: user incidenty + ČOI (pokud typ website)
     const [idResult, coiResult] = await Promise.all([
@@ -376,9 +372,6 @@ export async function POST(req: Request) {
             .maybeSingle()
         : Promise.resolve({ data: null, error: null }),
     ])
-
-    // [DEBUG] Dočasný log — odstranit po diagnostice
-    console.log('[debug:search:coi] data:', JSON.stringify(coiResult.data), '| error:', JSON.stringify(coiResult.error))
 
     const { data: idRow, error: idErr } = idResult
     const coiMatch: CoiMatch | undefined = (coiResult.data as CoiRiskyEshopRow | null)
