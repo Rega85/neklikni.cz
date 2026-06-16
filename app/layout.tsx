@@ -17,7 +17,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "NeKlikni.cz | AI bodyguard pro tvůj klidný internet",
-  description: "Prověřte si podezřelou zprávu, SMS nebo odkaz dřív, než na něj kliknete. AI analýza phishingu s modelem Sonnet 3.5.",
+  description: "Ověř si podezřelou zprávu, e-shop nebo kontakt. Naše pokročilá AI a databáze nahlášených podvodů ti řeknou, čemu věřit.",
   metadataBase: new URL('https://www.neklikni.cz'),
   manifest: "/manifest.json",
   openGraph: {
