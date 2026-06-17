@@ -280,8 +280,21 @@ export async function POST(req: Request) {
 
   } catch (err: any) {
     console.warn("Analyze error:", err);
-    if (err?.status === 429 || err?.message?.includes("rate limit")) {
-      return NextResponse.json({ error: "AI služba je přetížena. Zkuste to za chvíli." }, { status: 503 });
+    const msg = String(err?.message ?? '').toLowerCase();
+    const isAiUnavailable =
+      err?.status === 429 ||
+      (err?.status >= 500) ||
+      msg.includes('rate limit') ||
+      msg.includes('timeout') ||
+      msg.includes('overloaded');
+    if (isAiUnavailable) {
+      return NextResponse.json(
+        {
+          error: "Naše AI je momentálně přetížená. Zkuste to prosím za chvíli — nebo mezitím využijte vyhledávání v databázi, které funguje i teď.",
+          aiUnavailable: true,
+        },
+        { status: 503 },
+      );
     }
     return NextResponse.json({ error: "Chyba serveru. Zkuste to znovu." }, { status: 500 });
   }
@@ -337,6 +350,25 @@ function extractJson(raw: string): any {
   throw new Error("AI nevrátila validní JSON");
 }
 
+const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 529]);
+
+async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const isLast = attempt === maxAttempts;
+      const retryable =
+        RETRYABLE_STATUSES.has(err?.status) ||
+        String(err?.message).toLowerCase().includes('timeout') ||
+        String(err?.message).toLowerCase().includes('overloaded');
+      if (isLast || !retryable) throw err;
+      await new Promise((r) => setTimeout(r, attempt * 1000));
+    }
+  }
+  throw new Error('unreachable');
+}
+
 async function runAnalysis(text: string | null, tier: string, images: string[] = []) {
   const model = TIER_MODELS[tier] || TIER_MODELS.free;
   const basePrompt = ["pro", "easy"].includes(tier) ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
@@ -374,12 +406,12 @@ async function runAnalysis(text: string | null, tier: string, images: string[] =
     userContent = `Analyzuj tuto zprávu/odkaz na phishing a podvody:\n\n${text}`;
   }
 
-  const msg = await anthropic.messages.create({
+  const msg = await withRetry(() => anthropic.messages.create({
     model,
     max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: "user", content: userContent }],
-  });
+  }));
 
   const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
   const aiData = sanitizeCyrillic(extractJson(raw));

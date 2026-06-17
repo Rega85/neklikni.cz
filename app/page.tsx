@@ -247,6 +247,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [aiUnavailable, setAiUnavailable] = useState(false);
   const [copied, setCopied] = useState(false);
   const [ctaCopied, setCtaCopied] = useState(false);
   const [images, setImages] = useState<string[]>([]);
@@ -415,6 +416,7 @@ export default function Home() {
     setLoading(true);
     setResult(null);
     setError(null);
+    setAiUnavailable(false);
     trackEvent("analyze_started", {
       kind: hasImages ? "image" : "text",
       image_count: images.length,
@@ -452,6 +454,7 @@ export default function Home() {
             reason: "no_credits",
           });
         } else {
+          setAiUnavailable(data.aiUnavailable === true);
           setError(data.error || "Něco se pokazilo. Zkuste to znovu.");
         }
         return;
@@ -976,9 +979,21 @@ export default function Home() {
               </div>
 
               {error && (
-                <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-5 text-destructive text-sm">
-                  {error}
-                </div>
+                aiUnavailable ? (
+                  <div className="bg-warning/10 border border-warning/30 rounded-2xl p-5 text-sm space-y-3">
+                    <p className="text-foreground font-medium">{error}</p>
+                    <Link
+                      href="/databaze"
+                      className="inline-flex items-center gap-1.5 text-primary font-semibold hover:underline"
+                    >
+                      Přejít na databázi podvodů <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                ) : (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-5 text-destructive text-sm">
+                    {error}
+                  </div>
+                )
               )}
             </div>
           )}
