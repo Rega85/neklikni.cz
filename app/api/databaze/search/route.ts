@@ -443,6 +443,7 @@ export async function POST(req: Request) {
       .select('category, incident_date')
       .eq('subject_id', subjectId)
       .in('status', PUBLIC_STATUSES)
+      .neq('resolution_status', 'withdrawn')
 
     if (iErr) {
       console.error('Search incidents fetch failed:', iErr)

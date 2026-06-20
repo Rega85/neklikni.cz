@@ -37,6 +37,7 @@ import {
 import { CATEGORY_LABELS, type IdentifierType } from '@/types/databaze'
 import { identifierLabel } from '@/utils/databaze/identifiers'
 import { getPublishedIncidentDetail } from '../../_lib/recentIncidents'
+import { ResolveAction } from './ResolveAction'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,9 +95,9 @@ export async function generateMetadata({
   params: Promise<{ id: string }>
 }): Promise<Metadata> {
   const { id } = await params
-  const incident = await getPublishedIncidentDetail(id, false)
+  const incident = await getPublishedIncidentDetail(id, false, null)
 
-  if (!incident) {
+  if (!incident || incident.status !== 'published') {
     return { title: 'Případ nenalezen — Neklikni.cz' }
   }
 
@@ -111,7 +112,7 @@ export async function generateMetadata({
 
   return {
     title: `${label} — nahlášený případ — Neklikni.cz`,
-    description: `Nahlášený případ: ${label}. ${idLabel}. Zveřejněno ${formatCzechDate(incident.publicAt)}. Veřejná databáze nahlášených obchodních incidentů Neklikni.cz.`,
+    description: `Nahlášený případ: ${label}. ${idLabel}. Zveřejněno ${formatCzechDate(incident.publicAt ?? incident.incidentDate)}. Veřejná databáze nahlášených obchodních incidentů Neklikni.cz.`,
   }
 }
 
@@ -125,9 +126,11 @@ export default async function IncidentDetailPage({
 }) {
   const { id } = await params
   const userId = await getCurrentUserId()
-  const incident = await getPublishedIncidentDetail(id, userId !== null)
+  const incident = await getPublishedIncidentDetail(id, userId !== null, userId)
 
   if (!incident) notFound()
+
+  const isOwner = userId !== null && userId === incident.reporterId
 
   const label =
     incident.category === 'other' && incident.categoryOther
@@ -146,13 +149,33 @@ export default async function IncidentDetailPage({
 
         <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
           <div className="mb-4 flex items-center justify-between gap-2">
-            <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
-              Nahlášeno uživateli
-            </span>
-            <span className="text-xs text-muted-foreground">
-              Zveřejněno {formatCzechDate(incident.publicAt)}
-            </span>
+            {incident.resolutionStatus === 'resolved_amicably' ? (
+              <span className="inline-flex items-center rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-medium text-success">
+                ✓ Vyřešeno smírně{incident.resolutionAt ? ` dne ${formatCzechDate(incident.resolutionAt)}` : ''}
+              </span>
+            ) : incident.resolutionStatus === 'withdrawn' ? (
+              <span className="inline-flex items-center rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">
+                Staženo / neplatné
+              </span>
+            ) : incident.status !== 'published' ? (
+              <span className="inline-flex items-center rounded-full border border-border bg-secondary px-3 py-1 text-xs font-medium text-muted-foreground">
+                Čeká na zpracování
+              </span>
+            ) : (
+              <span className="inline-flex items-center rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-medium text-warning">
+                Nahlášeno uživateli
+              </span>
+            )}
+            {incident.publicAt && (
+              <span className="text-xs text-muted-foreground">
+                Zveřejněno {formatCzechDate(incident.publicAt)}
+              </span>
+            )}
           </div>
+
+          {incident.resolutionStatus !== 'active' && incident.resolutionNote && (
+            <p className="mb-4 text-sm text-muted-foreground">{incident.resolutionNote}</p>
+          )}
 
           <h1 className="mb-4 text-2xl font-bold text-foreground">{label}</h1>
 
@@ -239,6 +262,15 @@ export default async function IncidentDetailPage({
                   Registrovat zdarma
                 </Link>
               </div>
+            </div>
+          )}
+
+          {isOwner && (
+            <div className="mb-6">
+              <ResolveAction
+                incidentId={incident.id}
+                resolutionStatus={incident.resolutionStatus}
+              />
             </div>
           )}
 

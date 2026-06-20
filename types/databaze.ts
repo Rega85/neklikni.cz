@@ -114,6 +114,14 @@ export type IncidentStatus =
 
 
 /**
+ * Stav vyřešení incidentu z pohledu nahlašovatele (po zveřejnění).
+ * Odděleno od `incident_status` (workflow moderace/publikace).
+ * Viz `incident_resolution_status` v DB.
+ */
+export type IncidentResolutionStatus = 'active' | 'resolved_amicably' | 'withdrawn'
+
+
+/**
  * Typ nahraného důkazu.
  * Viz `evidence_type` v DB.
  */
@@ -212,6 +220,16 @@ export const SEVERITY_WEIGHTS: Record<IncidentSeverity, number> = {
   medium: 2,
   major: 4,
   severe: 8,
+}
+
+
+/**
+ * Lidsky čitelný popis resolution stavu (česky).
+ */
+export const RESOLUTION_STATUS_LABELS: Record<IncidentResolutionStatus, string> = {
+  active: 'Aktivní',
+  resolved_amicably: 'Vyřešeno smírně',
+  withdrawn: 'Staženo',
 }
 
 

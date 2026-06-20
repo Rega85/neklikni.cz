@@ -10,7 +10,7 @@
 
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import type { DatabazeDatabase } from '@/app/api/databaze/_lib/database'
-import type { IdentifierType, IncidentCategory } from '@/types/databaze'
+import type { IdentifierType, IncidentCategory, IncidentResolutionStatus, IncidentStatus } from '@/types/databaze'
 
 type SupabaseAdminClient = ReturnType<typeof createSupabaseClient<DatabazeDatabase>>
 let _supabaseAdmin: SupabaseAdminClient | null = null
@@ -52,6 +52,7 @@ export async function getRecentPublishedIncidents(
     .from('incidents')
     .select('id, subject_id, incident_date, category, category_other, public_at')
     .eq('status', 'published')
+    .neq('resolution_status', 'withdrawn')
     .order('public_at', { ascending: false })
     .limit(limit)
 
@@ -75,7 +76,8 @@ export async function getRecentPublishedIncidents(
       .from('incidents')
       .select('subject_id')
       .in('subject_id', subjectIds)
-      .eq('status', 'published'),
+      .eq('status', 'published')
+      .neq('resolution_status', 'withdrawn'),
   ])
 
   const activeSubjectIds = new Set(
@@ -129,18 +131,26 @@ export interface IncidentDetail {
   category: IncidentCategory
   categoryOther: string | null
   incidentDate: string
-  publicAt: string
+  publicAt: string | null
   description: string
+  status: IncidentStatus
+  reporterId: string
+  resolutionStatus: IncidentResolutionStatus
+  resolutionNote: string | null
+  resolutionAt: string | null
   identifiers: Array<{ type: IdentifierType; valueMasked: string; value: string | null }>
   timeline: IncidentTimelineEntry[]
 }
 
 
 /**
- * Vrátí detail veřejně publikovaného incidentu pro /databaze/pripad/[id].
+ * Vrátí detail incidentu pro /databaze/pripad/[id].
  *
- * Vrací `null`, pokud incident neexistuje, nemá `status = 'published'`,
- * nebo subjekt nemá `visibility_status = 'active'`.
+ * Veřejně (a pro přihlášené, kteří nejsou autorem) vrací `null`, pokud
+ * incident neexistuje, nemá `status = 'published'`, nebo subjekt nemá
+ * `visibility_status = 'active'`. Vlastní (i nepublikované) nahlášení
+ * vidí jeho autor vždy — jinak by link "Zobrazit" z `/profile` 404oval
+ * pro nahlášení čekající na moderaci.
  *
  * `includeFull` (jen pro přihlášené uživatele) přidá nemaskovanou hodnotu
  * identifikátorů (`identifiers[].value`).
@@ -148,16 +158,21 @@ export interface IncidentDetail {
 export async function getPublishedIncidentDetail(
   id: string,
   includeFull: boolean,
+  viewerUserId: string | null = null,
 ): Promise<IncidentDetail | null> {
   const { data: incident, error: incidentErr } = await supabaseAdmin()
     .from('incidents')
-    .select('id, subject_id, incident_date, category, category_other, description, public_at, status')
+    .select(
+      'id, subject_id, reporter_id, incident_date, category, category_other, description, public_at, status, resolution_status, resolution_note, resolution_at',
+    )
     .eq('id', id)
     .maybeSingle()
 
-  if (incidentErr || !incident || incident.status !== 'published' || !incident.public_at) {
-    return null
-  }
+  if (incidentErr || !incident) return null
+
+  const isOwner = viewerUserId !== null && viewerUserId === incident.reporter_id
+  if (incident.status !== 'published' && !isOwner) return null
+  if (incident.status === 'published' && !incident.public_at) return null
 
   const { data: subject } = await supabaseAdmin()
     .from('subjects')
@@ -202,6 +217,11 @@ export async function getPublishedIncidentDetail(
     incidentDate: incident.incident_date,
     publicAt: incident.public_at,
     description: incident.description,
+    status: incident.status,
+    reporterId: incident.reporter_id,
+    resolutionStatus: incident.resolution_status,
+    resolutionNote: incident.resolution_note,
+    resolutionAt: incident.resolution_at,
     identifiers,
     timeline,
   }

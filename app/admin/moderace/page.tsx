@@ -57,6 +57,7 @@ interface QueueRow {
   ai_summary: string | null
   ai_red_flags: unknown
   admin_note: string | null
+  no_evidence_explanation: string | null
   reporter_id: string
 }
 
@@ -118,7 +119,7 @@ export default async function ModeracePage() {
   const { data: incidents, error } = await sb
     .from('incidents')
     .select(
-      'id, created_at, incident_date, category, category_other, platform, platform_other, severity, amount_czk, description, status, subject_id, ai_confidence_score, ai_summary, ai_red_flags, admin_note, reporter_id',
+      'id, created_at, incident_date, category, category_other, platform, platform_other, severity, amount_czk, description, status, subject_id, ai_confidence_score, ai_summary, ai_red_flags, admin_note, no_evidence_explanation, reporter_id',
     )
     .in('status', QUEUE_STATUSES)
     .order('created_at', { ascending: false })
@@ -361,6 +362,15 @@ export default async function ModeracePage() {
                           )
                         })}
                       </div>
+                    </div>
+                  )}
+
+                  {row.no_evidence_explanation && (
+                    <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+                      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-amber-300">
+                        <AlertTriangle size={11} /> Bez vizuálního dokladu — textové zdůvodnění
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-amber-100/90">{row.no_evidence_explanation}</p>
                     </div>
                   )}
 

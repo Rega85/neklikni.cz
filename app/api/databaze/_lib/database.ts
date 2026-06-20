@@ -138,6 +138,10 @@ export type IncidentRow = {
   objection_at: string | null
   removed_at: string | null
   removed_reason: string | null
+  no_evidence_explanation: string | null
+  resolution_status: 'active' | 'resolved_amicably' | 'withdrawn'
+  resolution_note: string | null
+  resolution_at: string | null
   created_at: string
   updated_at: string
 }
@@ -165,6 +169,10 @@ export type IncidentInsert = {
   objection_at?: string | null
   removed_at?: string | null
   removed_reason?: string | null
+  no_evidence_explanation?: string | null
+  resolution_status?: 'active' | 'resolved_amicably' | 'withdrawn'
+  resolution_note?: string | null
+  resolution_at?: string | null
   created_at?: string
   updated_at?: string
 }

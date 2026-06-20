@@ -57,6 +57,7 @@ export const dynamic = 'force-dynamic'
 const REPORTS_PER_DAY_LIMIT = 3
 const MIN_EVIDENCE_FILES = 1
 const MAX_EVIDENCE_FILES = 5
+const NO_EVIDENCE_EXPLANATION_MIN = 80
 
 const STORAGE_BUCKET = 'evidence'
 
@@ -150,6 +151,8 @@ interface ParsedFields {
   contact_for_subject_email: string | null
   identifiers: Array<{ type: IdentifierType; value: string }>
   files: File[]
+  no_evidence: boolean
+  no_evidence_explanation: string | null
   truth_confirmation: boolean
   data_processing_consent: boolean
   law_enforcement_consent: boolean
@@ -160,7 +163,7 @@ interface ParsedFields {
 // verzi (CONSENT_VERSION v IncidentReportForm.tsx). Cokoli mimo whitelist
 // odmítáme — chrání proti zfalšované hodnotě, která by ublížila integritě
 // audit trailu.
-const ACCEPTED_CONSENT_VERSIONS: ReadonlySet<string> = new Set(['2026-05'])
+const ACCEPTED_CONSENT_VERSIONS: ReadonlySet<string> = new Set(['2026-05', '2026-06'])
 
 
 // ── Helpers ──────────────────────────────────────────
@@ -324,21 +327,33 @@ function parseFormData(form: FormData): ParsedFields | string {
   }
   const consent_version = consentVersionRaw
 
-  // soubory
+  // soubory / ventil "nemám doklad"
+  const no_evidence = parseBoolean(form.get('no_evidence'))
   const filesRaw = form.getAll('evidence_files')
   const files: File[] = []
   for (const f of filesRaw) {
     if (f instanceof File) files.push(f)
   }
-  if (files.length < MIN_EVIDENCE_FILES || files.length > MAX_EVIDENCE_FILES) {
-    return `Musíte nahrát ${MIN_EVIDENCE_FILES}–${MAX_EVIDENCE_FILES} souborů jako důkaz`
-  }
-  for (const f of files) {
-    if (f.size > MAX_FILE_SIZE_BYTES) {
-      return `Soubor "${f.name}" přesahuje limit ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB`
+
+  let no_evidence_explanation: string | null = null
+  if (no_evidence) {
+    const explanationRaw = form.get('no_evidence_explanation')
+    const explanation = typeof explanationRaw === 'string' ? explanationRaw.trim() : ''
+    if (explanation.length < NO_EVIDENCE_EXPLANATION_MIN) {
+      return `Zdůvodnění chybějícího dokladu musí mít alespoň ${NO_EVIDENCE_EXPLANATION_MIN} znaků`
     }
-    if (!ALLOWED_MIME_TYPES.includes(f.type as (typeof ALLOWED_MIME_TYPES)[number])) {
-      return `Soubor "${f.name}" má nepodporovaný formát (${f.type})`
+    no_evidence_explanation = explanation
+  } else {
+    if (files.length < MIN_EVIDENCE_FILES || files.length > MAX_EVIDENCE_FILES) {
+      return `Musíte nahrát ${MIN_EVIDENCE_FILES}–${MAX_EVIDENCE_FILES} souborů jako důkaz, nebo zaškrtnout "nemám doklad" a vyplnit zdůvodnění`
+    }
+    for (const f of files) {
+      if (f.size > MAX_FILE_SIZE_BYTES) {
+        return `Soubor "${f.name}" přesahuje limit ${MAX_FILE_SIZE_BYTES / 1024 / 1024} MB`
+      }
+      if (!ALLOWED_MIME_TYPES.includes(f.type as (typeof ALLOWED_MIME_TYPES)[number])) {
+        return `Soubor "${f.name}" má nepodporovaný formát (${f.type})`
+      }
     }
   }
 
@@ -354,6 +369,8 @@ function parseFormData(form: FormData): ParsedFields | string {
     contact_for_subject_email,
     identifiers,
     files,
+    no_evidence,
+    no_evidence_explanation,
     truth_confirmation,
     data_processing_consent,
     law_enforcement_consent,
@@ -650,6 +667,7 @@ export async function POST(req: Request) {
         amount_czk: parsed.amount_czk,
         description: parsed.description,
         contact_for_subject_email: parsed.contact_for_subject_email,
+        no_evidence_explanation: parsed.no_evidence_explanation,
         ai_confidence_score: aiResult.confidence_score,
         ai_summary: aiResult.ai_summary,
         ai_red_flags: aiResult.red_flags,
@@ -790,6 +808,7 @@ export async function POST(req: Request) {
           ai_recommendation: aiResult.recommendation,
           red_flag_count: aiResult.red_flags.length,
           files_count: parsed.files.length,
+          no_evidence: parsed.no_evidence,
           new_identifiers_count: newIdentifiersToInsert.length,
           needs_merge_review: needsMergeReview,
           conflicting_subject_ids: conflictingSubjectIds,

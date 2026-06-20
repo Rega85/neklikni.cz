@@ -64,7 +64,7 @@ const STEP_LABELS = ['Co se stalo?', 'O kom?', 'Detaily', 'Důkazy', 'Potvrzení
 // v audit_log.metadata.consent.version — kdyby se znění v budoucnu
 // změnilo, existující záznamy zachovají vazbu na text, který uživatel
 // reálně viděl. Bump při jakékoli změně textu v ConsentRow níže.
-const CONSENT_VERSION = '2026-05'
+const CONSENT_VERSION = '2026-06'
 
 // Typované option arrays — `Object.entries` ztrácí specifický typ klíče.
 const CATEGORY_OPTIONS = Object.entries(CATEGORY_LABELS) as Array<[IncidentCategory, string]>
@@ -116,6 +116,10 @@ interface FormData {
 
   // Step 4
   evidence_files: File[]
+  /** Checkbox: "Nemám k dispozici screenshot ani jiný doklad". */
+  no_evidence: boolean
+  /** Povinné zdůvodnění, vyplňuje se jen pokud no_evidence === true. */
+  no_evidence_explanation: string
 
   // Step 5
   truth_confirmation: boolean
@@ -145,6 +149,8 @@ function initialFormData(): FormData {
     amount_czk: 0,
     description: '',
     evidence_files: [],
+    no_evidence: false,
+    no_evidence_explanation: '',
     truth_confirmation: false,
     data_processing_consent: false,
     law_enforcement_consent: false,
@@ -267,6 +273,7 @@ function isStep3Valid(d: FormData): boolean {
 
 const MIN_EVIDENCE_FILES = 1
 const MAX_EVIDENCE_FILES = 5
+const NO_EVIDENCE_EXPLANATION_MIN = 80
 
 function isFileAllowed(file: File): boolean {
   const allowed: readonly string[] = ALLOWED_MIME_TYPES
@@ -274,6 +281,9 @@ function isFileAllowed(file: File): boolean {
 }
 
 function isStep4Valid(d: FormData): boolean {
+  if (d.no_evidence) {
+    return d.no_evidence_explanation.trim().length >= NO_EVIDENCE_EXPLANATION_MIN
+  }
   const n = d.evidence_files.length
   if (n < MIN_EVIDENCE_FILES || n > MAX_EVIDENCE_FILES) return false
   // Defensive — files by neměly projít validací při přidání, ale check znovu
@@ -383,8 +393,13 @@ export function IncidentReportForm() {
       payload.append('data_processing_consent', String(formData.data_processing_consent))
       payload.append('law_enforcement_consent', String(formData.law_enforcement_consent))
       payload.append('consent_version', CONSENT_VERSION)
-      for (const file of formData.evidence_files) {
-        payload.append('evidence_files', file)
+      payload.append('no_evidence', String(formData.no_evidence))
+      if (formData.no_evidence) {
+        payload.append('no_evidence_explanation', formData.no_evidence_explanation)
+      } else {
+        for (const file of formData.evidence_files) {
+          payload.append('evidence_files', file)
+        }
       }
 
       const res = await fetch('/api/databaze/report', {
@@ -1262,6 +1277,56 @@ function Step4({ data, onChange }: Step4Props) {
         </p>
       </div>
 
+      {/* Ventil — alternativa k povinnému souboru */}
+      <label className="flex items-start gap-3 rounded-lg border border-border bg-card p-3 text-sm">
+        <input
+          type="checkbox"
+          checked={data.no_evidence}
+          onChange={(e) => {
+            const checked = e.target.checked
+            onChange(
+              checked
+                ? { no_evidence: true, evidence_files: [] }
+                : { no_evidence: false, no_evidence_explanation: '' },
+            )
+          }}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-primary"
+        />
+        <span className="text-foreground">
+          Nemám k dispozici screenshot ani jiný doklad
+        </span>
+      </label>
+
+      {data.no_evidence ? (
+        <div className="space-y-2">
+          <label htmlFor="no_evidence_explanation" className="block text-sm font-medium text-foreground">
+            Popiš podrobně, jak ses o podvodu dozvěděl/a
+          </label>
+          <p className="text-xs text-muted-foreground">
+            Např. telefonát, platba v hotovosti, ústní domluva. Čím
+            konkrétnější popis, tím spíš nahlášení projde moderací.
+          </p>
+          <textarea
+            id="no_evidence_explanation"
+            rows={5}
+            value={data.no_evidence_explanation}
+            onChange={(e) => onChange({ no_evidence_explanation: e.target.value })}
+            placeholder="Popiš okolnosti incidentu co nejpodrobněji…"
+            className="w-full rounded-lg border border-border bg-card p-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          <div className="text-xs" aria-live="polite">
+            {data.no_evidence_explanation.trim().length < NO_EVIDENCE_EXPLANATION_MIN ? (
+              <span className="text-destructive">
+                Minimálně {NO_EVIDENCE_EXPLANATION_MIN} znaků
+                ({data.no_evidence_explanation.trim().length}/{NO_EVIDENCE_EXPLANATION_MIN})
+              </span>
+            ) : (
+              <span className="text-success">✓ Dostatečně podrobné</span>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
       {/* Drop zone — visible only when room for more */}
       {canAddMore && (
         <label
@@ -1408,6 +1473,8 @@ function Step4({ data, onChange }: Step4Props) {
           <span className="ml-2 text-success">✓ Maximum nahráno</span>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1580,10 +1647,11 @@ function Step5({ data, onChange }: Step5Props) {
           checked={data.truth_confirmation}
           onChange={(v) => onChange({ truth_confirmation: v })}
         >
-          Potvrzuji, že údaje, které jsem v tomto formuláři uvedl/a, jsou
-          pravdivé a vycházejí z mé osobní zkušenosti. Beru na vědomí, že
-          vědomě nepravdivé nahlášení může být klasifikováno jako pomluva
-          podle § 184 trestního zákoníku.
+          Potvrzuji, že popisuji skutečnou událost tak, jak jsem ji
+          sám/sama zažil/a. Nahlašování je tu pro ochranu ostatních —
+          proto prosím uvádějte jen to, čím jste si jistí. Vědomě
+          nepravdivé nahlášení může mít právní následky (pomluva podle
+          § 184 trestního zákoníku).
         </ConsentRow>
 
         <ConsentRow

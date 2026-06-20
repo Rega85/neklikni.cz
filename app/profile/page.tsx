@@ -2,13 +2,23 @@
 
 
 import { useEffect, useState } from "react";
-import { Loader2, CreditCard, Zap, Gift, Copy, Check } from "lucide-react";
+import { Loader2, CreditCard, Zap, Gift, Copy, Check, FileText } from "lucide-react";
 import Link from "next/link";
+import { CATEGORY_LABELS, type IncidentCategory } from "@/types/databaze";
+
+interface MyIncident {
+  id: string;
+  incident_date: string;
+  category: IncidentCategory;
+  category_other: string | null;
+  created_at: string;
+}
 
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<{user: any, profile: any} | null>(null);
   const [copied, setCopied] = useState(false);
+  const [myIncidents, setMyIncidents] = useState<MyIncident[] | null>(null);
 
   useEffect(() => {
     fetch('/api/me', { cache: 'no-store' })
@@ -16,6 +26,13 @@ export default function ProfilePage() {
       .then(d => setData(d))
       .catch(() => setData(null))
       .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    fetch('/api/databaze/my-incidents', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setMyIncidents(d?.incidents ?? []))
+      .catch(() => setMyIncidents([]));
   }, []);
 
   if (loading) return (
@@ -79,6 +96,38 @@ export default function ProfilePage() {
             <Zap size={14} fill="currentColor" /> Koupit kredity
           </Link>
         </div>
+
+        {myIncidents && myIncidents.length > 0 && (
+          <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText size={20} className="text-blue-400" />
+              <p className="text-white font-black uppercase tracking-widest text-sm">Tvoje nahlášení</p>
+            </div>
+            <ul className="divide-y divide-white/10">
+              {myIncidents.map((incident) => (
+                <li key={incident.id} className="flex items-center justify-between gap-3 py-3">
+                  <div>
+                    <p className="text-white text-sm font-medium">
+                      {incident.category === "other" && incident.category_other
+                        ? incident.category_other
+                        : CATEGORY_LABELS[incident.category] ?? incident.category}
+                    </p>
+                    <p className="text-slate-500 text-xs">
+                      {new Date(incident.created_at).toLocaleDateString("cs-CZ")}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/databaze/pripad/${incident.id}`}
+                    className="text-blue-400 text-xs font-bold uppercase shrink-0 hover:text-blue-300"
+                  >
+                    Zobrazit
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {referralCode && (
           <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-4">
             <div className="flex items-center gap-2">
