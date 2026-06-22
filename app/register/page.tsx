@@ -4,6 +4,11 @@ import { createClient } from '@/utils/supabase/client';
 import { Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// Verze znění newsletter checkboxu níže. Posílá se přes emailRedirectTo
+// a čte ji app/auth/callback/route.ts (ACCEPTED_NEWSLETTER_CONSENT_VERSIONS).
+// Bump při jakékoli změně textu checkboxu.
+const NEWSLETTER_CONSENT_VERSION = '2026-06';
+
 function translateError(msg: string): string {
   if (/already registered|already in use|already exists/i.test(msg))
     return 'Tento e-mail je již registrován. Přihlaste se.';
@@ -35,6 +40,7 @@ export default function RegisterPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
+  const [newsletterConsent, setNewsletterConsent] = useState(false);
   const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -75,10 +81,18 @@ export default function RegisterPage() {
     }
 
     setLoading(true);
+    // consent/consent_version se protáhnou potvrzovacím e-mailem až do
+    // /auth/callback (stejně jako next) — checkbox tu uživatel viděl, takže
+    // se mu newsletter onboarding modal po OAuth/magic-link už nezobrazí.
+    const confirmUrl = new URL(`${location.origin}/auth/callback`);
+    confirmUrl.searchParams.set('next', safeRedirect);
+    confirmUrl.searchParams.set('consent', newsletterConsent ? '1' : '0');
+    confirmUrl.searchParams.set('consent_version', NEWSLETTER_CONSENT_VERSION);
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(safeRedirect)}` },
+      options: { emailRedirectTo: confirmUrl.toString() },
     });
 
     if (error) {
@@ -169,6 +183,28 @@ export default function RegisterPage() {
               className="w-full bg-card border border-border rounded-xl py-4 pl-12 pr-4 text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/30 focus:outline-none transition-colors"
             />
           </div>
+
+          <label className="flex items-start gap-2.5 text-xs text-muted-foreground leading-relaxed cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={newsletterConsent}
+              onChange={(e) => setNewsletterConsent(e.target.checked)}
+              disabled={loading}
+              className="mt-0.5 w-4 h-4 shrink-0 rounded border-border bg-card text-primary accent-primary focus:ring-2 focus:ring-primary/30 focus:ring-offset-0 cursor-pointer"
+            />
+            <span>
+              Chci dostávat občasné tipy a upozornění na nové podvody e-mailem. Odhlásit se můžu kdykoli.{" "}
+              <a
+                href="/gdpr"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:text-primary/80 underline underline-offset-2"
+              >
+                Zásady ochrany osobních údajů
+              </a>
+              .
+            </span>
+          </label>
 
           {error && <p className="text-destructive text-sm font-medium">{error}</p>}
 

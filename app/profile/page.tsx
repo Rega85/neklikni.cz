@@ -2,9 +2,12 @@
 
 
 import { useEffect, useState } from "react";
-import { Loader2, CreditCard, Zap, Gift, Copy, Check, FileText } from "lucide-react";
+import { Loader2, CreditCard, Zap, Gift, Copy, Check, FileText, Mail } from "lucide-react";
 import Link from "next/link";
 import { CATEGORY_LABELS, type IncidentCategory } from "@/types/databaze";
+
+// Stejná verze jako v app/register/page.tsx a app/onboarding/newsletter/page.tsx.
+const NEWSLETTER_CONSENT_VERSION = "2026-06";
 
 interface MyIncident {
   id: string;
@@ -19,11 +22,16 @@ export default function ProfilePage() {
   const [data, setData] = useState<{user: any, profile: any} | null>(null);
   const [copied, setCopied] = useState(false);
   const [myIncidents, setMyIncidents] = useState<MyIncident[] | null>(null);
+  const [newsletterOn, setNewsletterOn] = useState(false);
+  const [newsletterSyncing, setNewsletterSyncing] = useState(false);
 
   useEffect(() => {
     fetch('/api/me', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
-      .then(d => setData(d))
+      .then(d => {
+        setData(d);
+        if (d?.profile) setNewsletterOn(!!d.profile.newsletter_consent);
+      })
       .catch(() => setData(null))
       .finally(() => setLoading(false));
   }, []);
@@ -63,6 +71,24 @@ export default function ProfilePage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
+  }
+
+  async function toggleNewsletter() {
+    if (newsletterSyncing) return;
+    const next = !newsletterOn;
+    setNewsletterSyncing(true);
+    try {
+      const res = await fetch('/api/profile/newsletter-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ consent: next, consent_version: NEWSLETTER_CONSENT_VERSION }),
+      });
+      if (res.ok) setNewsletterOn(next);
+    } catch {
+      // necháme newsletterOn beze změny — uživatel uvidí, že se přepínač nehnul
+    } finally {
+      setNewsletterSyncing(false);
+    }
   }
 
   return (
@@ -127,6 +153,30 @@ export default function ProfilePage() {
             </ul>
           </div>
         )}
+
+        <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Mail size={20} className="text-blue-400 shrink-0" />
+              <div>
+                <p className="text-white font-black uppercase tracking-widest text-sm">Newsletter</p>
+                <p className="text-slate-400 text-xs mt-0.5">Tipy a upozornění na nové podvody e-mailem.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={newsletterOn}
+              onClick={toggleNewsletter}
+              disabled={newsletterSyncing}
+              className={`relative shrink-0 w-12 h-7 rounded-full transition-colors disabled:opacity-50 ${newsletterOn ? "bg-blue-600" : "bg-slate-700"}`}
+            >
+              <span
+                className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${newsletterOn ? "translate-x-5" : "translate-x-0"}`}
+              />
+            </button>
+          </div>
+        </div>
 
         {referralCode && (
           <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-4">
