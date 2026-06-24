@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft, Clock, Calendar } from "lucide-react";
-import type { Article } from "../_data/articles";
-import { ARTICLES } from "../_data/articles";
+import type { PostFrontmatter } from "@/lib/blog";
+import { getAllPosts } from "@/lib/blog";
 
 export default function ArticleLayout({
   article,
   children,
 }: {
-  article: Article;
+  article: PostFrontmatter & { slug: string };
   children: React.ReactNode;
 }) {
   const dateText = new Date(article.publishedAt).toLocaleDateString("cs-CZ", {
@@ -16,7 +16,7 @@ export default function ArticleLayout({
     year: "numeric",
   });
 
-  const related = ARTICLES.filter((a) => a.slug !== article.slug).slice(0, 2);
+  const related = getAllPosts().filter((a) => a.slug !== article.slug).slice(0, 2);
 
   return (
     <main className="min-h-screen">
