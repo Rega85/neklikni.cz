@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Clock, ArrowRight } from "lucide-react";
-import { ARTICLES } from "./_data/articles";
+import { getAllPosts } from "@/lib/blog";
 import PageHero from "@/app/components/PageHero";
 
 export const metadata: Metadata = {
@@ -31,7 +31,7 @@ export default function BlogIndex() {
       />
       <div className="mx-auto max-w-5xl px-4 pb-20 sm:px-6">
         <div className="grid sm:grid-cols-2 gap-5">
-          {ARTICLES.map((a, i) => (
+          {getAllPosts().map((a, i) => (
             <Link
               key={a.slug}
               href={`/blog/${a.slug}`}

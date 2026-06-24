@@ -1,0 +1,89 @@
+---
+title: "Bankovní phishing v Česku: ČSOB, Komerční banka, Air Bank — jak útočníci pracují"
+description: "Reálné ukázky phishingových e-mailů a SMS, které se vydávají za české banky. Jak je rozeznat během 5 sekund a co dělat, když na podvod kliknete."
+publishedAt: "2026-05-05"
+readMinutes: 8
+category: "Bankovní podvody"
+---
+
+Bankovní phishing je v Česku nejdražší typ podvodu — průměrná škoda přesahuje
+**80 000 Kč** (Policie ČR, 2025). Útočníci se vydávají za
+**ČSOB, Komerční banku, Air Bank, Českou spořitelnu, Raiffeisen i mBank**
+a snaží se získat tvé přihlašovací údaje, číslo karty nebo SMS kódy z 3D Secure.
+
+## Tři hlavní kanály útoku
+
+1. **E-mail s falešnou žádostí o ověření účtu** — typicky
+   „Z bezpečnostních důvodů jsme zablokovali váš účet, prosím přihlaste se zde".
+2. **SMS o podezřelé transakci** — „Detekovali jsme platbu 12 800 Kč v zahraničí.
+   Pokud jste to nebyli vy, zrušte zde: ...".
+3. **Telefonát od „bezpečnostního oddělení banky"** (vishing) — útočník zná tvé jméno,
+   vystrašuje s „právě probíhajícím útokem" a navádí k převodu peněz na „bezpečný účet".
+
+## Konkrétní ukázky a charakteristické fráze
+
+### ČSOB
+
+> Vážený kliente, z důvodu podezřelé aktivity jsme dočasně zablokovali Vaši kartu.
+> Pro odblokování klikněte: `csob-overeni.cz/login`.
+> Neodpovídejte na tuto SMS.
+
+Skutečné domény ČSOB: `csob.cz`, `csobonline.cz`. Vše ostatní
+(`csob-overeni.cz`, `csob-bezpecnost.com`, `cs-csob.cz`) je podvod.
+
+### Komerční banka
+
+> Vaše karta byla použita pro platbu 8 945 Kč v zahraničí. Pokud transakce není vaše, zamítněte ji zde:
+> `kb-secure.com/storno`
+
+Skutečné domény KB: `kb.cz`, `mojebanka.cz`. Žádné z nich nemá podtržítko.
+
+### Air Bank
+
+> Air Bank: Aktualizujte si bezpečnostní certifikát, jinak Vám bude zablokováno bankovnictví.
+> `airbank-update.cz`
+
+Skutečné domény: `airbank.cz`, `ib.airbank.cz`. „Update" certifikátu se nikdy nedělá přes SMS odkaz.
+
+## Jaký je vzorec phishingu
+
+Bez ohledu na konkrétní banku jde vždy o stejný psychologický trik:
+
+1. **Vyvolat strach** — „Váš účet je zablokovaný / proběhla podezřelá transakce".
+2. **Vytvořit časový tlak** — „Pokud nejednáte do 24 hodin, peníze budou převedeny".
+3. **Ukázat „jednoduché řešení"** — odkaz, který jen vypadá důvěryhodně.
+4. **Sebrat přihlašovací údaje + 3D Secure SMS** — útočník v pozadí spustí převod a tobě pošle SMS, abys ji „potvrdil pro ochranu".
+
+## Sedm bodů kontroly za 5 sekund
+
+1. **Doména se shoduje s oficiální?** (ČSOB = `csob.cz`, KB = `kb.cz`, Air Bank = `airbank.cz`, Česká spořitelna = `csas.cz`)
+2. **Je v doméně pomlčka, podtržítko nebo nezvyklá koncovka?** Pokud ano, je to podvod (`csob-secure.com`).
+3. **Oslovuje tě obecně** („Vážený kliente") místo jménem? Skutečná banka tě obvykle osloví jménem.
+4. **Tlačí na čas?** Útočníci ano, banky ne.
+5. **Žádá tě o přihlašovací údaje, kód z karty nebo SMS kód?** Banka tě o to nikdy neptá — tyto informace ti slouží jen k autorizaci, neposíláš je nikomu.
+6. **SMS přišla z běžného čísla?** Skutečné banky posílají SMS ze zkrácených jmen („CSOB", „KB", „AIRBANK").
+7. **Je tam diakritika a správná čeština?** Útočníci často chybují — „ucet", „zaplatte", „Vas".
+
+## Co dělat, když jsi přihlašovací údaje zadal(a)
+
+1. **Okamžitě se přihlas do bankovnictví ze zařízení, které jsi nepoužil pro klik na odkaz** (jiný telefon / počítač) a změň heslo.
+2. **Zablokuj kartu** v aplikaci nebo na infolince banky.
+3. **Sleduj transakce** — pokud něco proběhlo, ihned to nahlas bance jako neautorizovanou transakci.
+4. **Banka má 30 dní** na rozhodnutí o vrácení podle zákona č. 370/2017 Sb. Doloží ti, že jsi nejednal(a) hrubě nedbale.
+5. **Nahlaš na Policii ČR** přes <a href="https://www.policie.cz" target="_blank" rel="noopener noreferrer">policie.cz</a> nebo 158.
+
+## Pozor na vishing — telefonický podvod
+
+Telefonát od „bezpečnostního oddělení banky" je nejnebezpečnější forma, protože je interaktivní —
+útočník reaguje na tvé pochybnosti. Zlatá pravidla:
+
+- **Banka tě nikdy nezavolá s žádostí o převod peněz na „bezpečný účet".**
+- **Banka po telefonu nikdy nežádá kód z autorizační SMS** ani heslo do bankovnictví.
+- Když máš pochybnost, **zavěs a sám zavolej na číslo z webu banky** (ne na číslo, které ti dal volající).
+
+## Praktická obrana
+
+- Zapni si **notifikace o transakcích** v aplikaci banky — uvidíš každou platbu okamžitě.
+- Nastav si **nízký limit pro internetové platby**, který jednoduše navýšíš v aplikaci, když to potřebuješ.
+- Pro online nákupy **používej virtuální kartu** (Revolut, Air Bank, ČSOB) — když ji ukradnou, nepřijdeš o hlavní účet.
+- Pokud máš pochybnost, **pošli zprávu k ověření** — vlož text na NeKlikni.cz a do 3 sekund víš.
