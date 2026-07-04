@@ -74,11 +74,18 @@ export default function QuestionCard({ question, selected, onAnswer, onNext, isL
         layout shift). Vykresluje se okamžitě (žádný setTimeout), jen
         s krátkou 180ms vstupní animací (viz .animate-sheet-up), ať to
         necuká, ale ani nezdržuje.
+
+        z-[55]: CookieConsent je taky fixed bottom, z-50, bez route
+        výjimky (na rozdíl od MobileReportCta). Dokud host cookies
+        neodsouhlasil, obě liší kolidovaly na stejném místě. Náš panel
+        je jen krátkodobý (mezi kliknutím a "Další otázka"), takže dává
+        smysl, ať vyhraje on — cookie lišta je pořád plně funkční hned
+        po přechodu na další otázku nebo na výsledek.
       */}
       {answered && (
         <div
           key={question.id}
-          className={`animate-sheet-up fixed inset-x-0 bottom-0 z-[45] border-t backdrop-blur-xl px-4 pt-4 shadow-2xl ${
+          className={`animate-sheet-up fixed inset-x-0 bottom-0 z-[55] border-t backdrop-blur-xl px-4 pt-4 shadow-2xl ${
             wasCorrect ? "bg-success/15 border-success/30" : "bg-destructive/15 border-destructive/30"
           }`}
           style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom))" }}
