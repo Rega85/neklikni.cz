@@ -49,6 +49,9 @@ export function getRedis(): Redis | null {
   }
   try {
     _redis = new Redis({ url, token })
+    // TEMP diagnostic (viz /api/test/submit) — potvrzuje, že env proměnné
+    // jsou v tomhle runtime skutečně vidět, ne jen "asi nastavené" ve Vercelu.
+    console.log(`[ratelimit] Redis client inicializován (url prefix: ${url.slice(0, 24)}…)`)
     return _redis
   } catch (err) {
     console.error('[ratelimit] Redis init failed:', err)
