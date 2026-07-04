@@ -109,10 +109,17 @@
   0%, 100% { opacity: 1; }
   50%      { opacity: 0.55; }
 }
+/* Rychlý vstup pro okamžitou zpětnou vazbu (kvíz) — musí působit
+   instantně, ne jako pomalá "sekční" animace jako fade-up (0.5s). */
+@keyframes sheet-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
 
 .animate-fade-up   { animation: fade-up 0.5s ease-out both; }
 .animate-scale-in  { animation: scale-in 0.35s ease-out both; }
 .animate-pulse-soft { animation: pulse-soft 2.4s ease-in-out infinite; }
+.animate-sheet-up  { animation: sheet-up 0.18s ease-out both; }
 
 /* Stagger helper: just add classes .delay-100..500 */
 .delay-100 { animation-delay: 100ms; }
@@ -251,7 +258,8 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
   .animate-scale-in,
-  .animate-pulse-soft {
+  .animate-pulse-soft,
+  .animate-sheet-up {
     animation: none !important;
   }
 }

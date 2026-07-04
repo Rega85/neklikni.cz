@@ -11,7 +11,9 @@ import { Flag } from "lucide-react";
  */
 export default function MobileReportCta() {
   const pathname = usePathname();
-  if (pathname.startsWith("/databaze/nahlasit")) return null;
+  // /test má vlastní fixní spodní panel se zpětnou vazbou po odpovědi —
+  // dva soupeřící fixed bottom bary by se přes sebe přetahovaly.
+  if (pathname.startsWith("/databaze/nahlasit") || pathname.startsWith("/test")) return null;
 
   return (
     <>
