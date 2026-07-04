@@ -36,7 +36,7 @@ export interface RLResult {
 // undefined = not yet initialized, null = initialization failed / env missing
 let _redis: Redis | null | undefined = undefined
 
-function getRedis(): Redis | null {
+export function getRedis(): Redis | null {
   if (_redis !== undefined) return _redis
   const url = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
@@ -114,6 +114,58 @@ export async function checkRateLimit(
     return failOpen
       ? { allowed: true, remaining: -1 }
       : { allowed: false, remaining: 0 }
+  }
+}
+
+/**
+ * Claim a one-time key via Redis SET NX EX (atomic — no check-then-set race).
+ * Returns true the first time a given key is claimed, false on every
+ * subsequent call (or if Redis is unavailable — fail-closed, since the
+ * caller relies on this for replay protection, not just anti-spam).
+ *
+ * Used by /api/test/submit: 1 quiz seed = 1 scoring attempt, so a fixed
+ * seed can't be brute-forced by resubmitting different answers.
+ */
+export async function claimOnce(key: string, ttlSeconds: number): Promise<boolean> {
+  const redis = getRedis()
+  if (!redis) {
+    console.warn('[claimOnce] Redis unavailable — fail-closed, rejecting claim')
+    return false
+  }
+  try {
+    const result = await redis.set(key, '1', { nx: true, ex: ttlSeconds })
+    return result === 'OK'
+  } catch (err) {
+    console.error('[claimOnce] Redis error:', err)
+    return false
+  }
+}
+
+/**
+ * Krátkodobé úložiště jedné hodnoty pod klíčem (ne "claim", jen cache).
+ * Použito v /api/test/submit k uložení už spočítaného skóre pod seed,
+ * aby si ho /api/test/join mohl později přečíst a zapsat do žebříčku
+ * BEZ toho, aby klient posílal skóre nebo odpovědi znovu (což by
+ * vyžadovalo druhé volání claimOnce na už spálený seed).
+ */
+export async function setWithTtl<T>(key: string, value: T, ttlSeconds: number): Promise<void> {
+  const redis = getRedis()
+  if (!redis) return
+  try {
+    await redis.set(key, value, { ex: ttlSeconds })
+  } catch (err) {
+    console.error('[setWithTtl] Redis error:', err)
+  }
+}
+
+export async function getValue<T>(key: string): Promise<T | null> {
+  const redis = getRedis()
+  if (!redis) return null
+  try {
+    return await redis.get<T>(key)
+  } catch (err) {
+    console.error('[getValue] Redis error:', err)
+    return null
   }
 }
 
