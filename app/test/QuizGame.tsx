@@ -151,7 +151,7 @@ export default function QuizGame() {
 
   if (state === "loading" || state === "submitting") {
     content = (
-      <div className="rounded-2xl border border-border bg-card p-10 flex flex-col items-center gap-3 text-center">
+      <div className="surface-card p-10 flex flex-col items-center gap-3 text-center">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         <p className="text-sm text-muted-foreground">
           {state === "loading" ? "Připravuji kvíz…" : "Vyhodnocuji odpovědi…"}
@@ -174,7 +174,7 @@ export default function QuizGame() {
     );
   } else if (state === "done" && result) {
     content = (
-      <div className="rounded-2xl border border-border bg-card p-8 flex flex-col items-center gap-4 text-center">
+      <div className="surface-card-elevated p-8 flex flex-col items-center gap-4 text-center">
         <span className="text-6xl">{result.level.emoji}</span>
         <div>
           <p className="text-3xl font-bold text-foreground">{result.score} / 10</p>

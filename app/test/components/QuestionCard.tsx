@@ -25,7 +25,7 @@ export default function QuestionCard({ question, selected, onAnswer, onNext, isL
   const wasCorrect = answered && selected === question.correctIndex;
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-4 sm:p-6">
+    <div className="surface-card p-4 sm:p-6">
       <span className="inline-block text-[10px] font-bold uppercase tracking-widest text-muted-foreground bg-secondary px-2.5 py-1 rounded-full mb-4">
         {DIFFICULTY_LABEL[question.difficulty]}
       </span>
