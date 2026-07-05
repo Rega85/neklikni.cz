@@ -43,13 +43,19 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
   const { title, description } = buildOgCopy(score, mode);
   const ogImage = `/api/og?score=${score}`;
+  // Bez tohohle dědí stránka canonical/og:url z root layoutu, kde je
+  // natvrdo nastaveno na homepage — Facebook pak bere OG tagy z "/",
+  // ne z týhle konkrétní výsledkové URL (viz Sharer Debugger nález).
+  const pageUrl = `/test/vysledek?s=${score}&mode=${mode}`;
 
   return {
     title: `${title} | Neklikni.cz`,
     description,
+    alternates: { canonical: pageUrl },
     openGraph: {
       title,
       description,
+      url: pageUrl,
       images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     twitter: {
