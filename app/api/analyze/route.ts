@@ -57,6 +57,24 @@ Analyzuj zprávu detailně a vrať POUZE validní JSON bez markdown bloků:
     "technical_indicators": ["technický indikátor"]
   }
 }
+
+IDENTIFIKACE PRODEJCE (vyhodnoť JEN pokud je relevantní):
+Pokud z textu jasně vyplývá, že jde o NABÍDKU ZBOŽÍ/SLUŽBY, E-SHOP nebo
+PRODEJCE (indikátory: ceny, "koupit"/"objednat", konkrétní produkt,
+výprodej, sleva, platba předem apod.), aktivně vyhodnoť, jestli text/odkaz
+obsahuje ověřitelnou identifikaci prodejce (IČO, název firmy, adresa,
+kontakt):
+- Pokud identifikace CHYBÍ → je to varovný signál. Zmiň v "threats" nebo
+  "analysis", že nelze ověřit, kdo za nabídkou stojí — anonymní
+  provozovatel je nejčastější znak rizikových e-shopů.
+- Pokud identifikaci text UVÁDÍ → zmiň to jako mírně pozitivní signál,
+  ale nikdy ne jako záruku (údaje mohou být falešné).
+Tohle hodnocení NIKDY nepoužívej u obsahu, který zjevně není nabídka/
+prodej (článek, video, sociální síť, encyklopedie, informační web) —
+tam je absence IČO irelevantní a zmínit ji by byl falešný poplach.
+Pokud si nejsi jistý, jestli jde o prodejce, tohle hodnocení radši
+vynech, než abys vytvořil falešný poplach.
+
 DŮLEŽITÉ: Vždy odpovídej pouze v češtině s latinkou. Nikdy nepoužívej cyrilici, azbuku ani jiné nelatinkové znaky.`;
 
 export const dynamic = "force-dynamic";
