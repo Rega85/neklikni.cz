@@ -13,7 +13,8 @@ import type { IdentifierType } from '@/types/databaze'
 
 interface Props {
   identifierId: string
-  incidentId: string
+  /** Volitelné — jen pro kontext, kdy se odkrytí váže na konkrétní incident (moderace). */
+  incidentId?: string
   type: string
   valueMasked: string
 }

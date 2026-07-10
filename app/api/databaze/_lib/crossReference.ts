@@ -21,9 +21,28 @@ import {
   normalizeEmail,
   normalizePhone,
 } from '@/utils/databaze/identifiers'
-import type { IdentifierType, IncidentStatus } from '@/types/databaze'
+import type { IdentifierType, IncidentResolutionStatus, IncidentStatus } from '@/types/databaze'
 
-const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified']
+// Veřejně viditelné stavy. ai_reviewed sem NEpatří — od přepnutí na
+// manuální schvalování čeká AI-prověřený incident ve frontě
+// /admin/moderace, dokud admin neudělá explicit "Schválit".
+export const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified']
+
+/**
+ * True, pokud incident počítá do veřejného "found" stavu subjektu a do
+ * jeho incident_count — publikovaný/oznámený A NE smírně stažený
+ * reportérem. Jediné místo pravdy pro tohle pravidlo — používají ho
+ * checkIdentifiersInDatabase (níže) i app/api/databaze/search/route.ts,
+ * ať se nerozjedou (viz bug: subjekt evidován v DB s 0 nahlášeními,
+ * protože jediný incident měl status='removed' a nikdo to nekontroloval
+ * konzistentně).
+ */
+export function isQualifyingIncident(incident: {
+  status: IncidentStatus
+  resolution_status: IncidentResolutionStatus | string | null
+}): boolean {
+  return PUBLIC_STATUSES.includes(incident.status) && incident.resolution_status !== 'withdrawn'
+}
 
 export interface ExtractedIdentifier {
   type: IdentifierType
@@ -128,7 +147,8 @@ async function normalizeForLookup(
 /**
  * Pro každý identifikátor: normalize → hash → lookup v
  * `subject_identifiers`. Match vrátí `value_masked`, `incident_count`
- * (jen status IN PUBLIC_STATUSES) a `trust_score` z `subjects`.
+ * (jen incidenty splňující isQualifyingIncident) a `trust_score` z
+ * `subjects`.
  *
  * Best-effort: jakýkoliv DB error → vrací prázdné pole, neházet.
  */
@@ -166,9 +186,8 @@ export async function checkIdentifiersInDatabase(
         .in('id', subjectIds),
       client
         .from('incidents')
-        .select('subject_id, status')
-        .in('subject_id', subjectIds)
-        .in('status', PUBLIC_STATUSES),
+        .select('subject_id, status, resolution_status')
+        .in('subject_id', subjectIds),
     ])
 
     if (subjectsRes.error) {
@@ -193,7 +212,12 @@ export async function checkIdentifiersInDatabase(
     }
 
     const countBySubject = new Map<string, number>()
-    for (const inc of (incidentsRes.data ?? []) as Array<{ subject_id: string }>) {
+    for (const inc of (incidentsRes.data ?? []) as Array<{
+      subject_id: string
+      status: IncidentStatus
+      resolution_status: string | null
+    }>) {
+      if (!isQualifyingIncident(inc)) continue
       countBySubject.set(inc.subject_id, (countBySubject.get(inc.subject_id) ?? 0) + 1)
     }
 

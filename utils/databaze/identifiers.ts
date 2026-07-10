@@ -335,6 +335,38 @@ export function detectIdentifierType(raw: string): IdentifierType | null {
 
 
 /**
+ * Normalizuje raw vstup podle už detekovaného typu — dispatch na
+ * příslušný normalize* helper. Použito v /api/databaze/search a
+ * /admin/subjekty (vyhledávání podle identifikátoru).
+ *
+ * @example
+ *   normalizeByType('phone', '777 123 456')     // '+420777123456'
+ *   normalizeByType('account', '12345/0100')    // '12345/0100'
+ *   normalizeByType('website', 'eshop-xy.cz')   // 'eshop-xy.cz'
+ */
+export function normalizeByType(type: IdentifierType, raw: string): string | null {
+  switch (type) {
+    case 'phone':
+      return normalizePhone(raw)
+    case 'account':
+      return normalizeAccount(raw) ?? normalizeIban(raw)
+    case 'email':
+      return normalizeEmail(raw)
+    case 'facebook_url':
+      return normalizeFacebookUrl(raw)
+    case 'website':
+      return normalizeWebsite(raw)
+    case 'var_symbol':
+      return normalizeVarSymbol(raw)
+    case 'other':
+      return raw.trim() === '' ? null : raw.trim()
+    default:
+      return null
+  }
+}
+
+
+/**
  * Lidsky čitelný popisek typu identifikátoru pro UI (admin moderace,
  * veřejný search FoundPanel, homepage DB match list). Pokud je hodnota
  * (případně maskovaná) ve tvaru IBAN, vrátí "Číslo účtu (IBAN)", aby

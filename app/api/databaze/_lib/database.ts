@@ -142,6 +142,7 @@ export type IncidentRow = {
   resolution_status: 'active' | 'resolved_amicably' | 'withdrawn'
   resolution_note: string | null
   resolution_at: string | null
+  admin_note: string | null
   created_at: string
   updated_at: string
 }
@@ -173,6 +174,7 @@ export type IncidentInsert = {
   resolution_status?: 'active' | 'resolved_amicably' | 'withdrawn'
   resolution_note?: string | null
   resolution_at?: string | null
+  admin_note?: string | null
   created_at?: string
   updated_at?: string
 }

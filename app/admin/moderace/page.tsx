@@ -235,6 +235,12 @@ export default async function ModeracePage() {
             >
               → Uživatelé
             </Link>
+            <Link
+              href="/admin/subjekty"
+              className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/50 px-3 py-1 text-xs font-medium text-slate-300 hover:border-blue-500/30 hover:text-blue-200 transition-colors"
+            >
+              → Subjekty
+            </Link>
           </div>
           <h1 className="mt-3 text-3xl font-black tracking-tight">Moderační fronta</h1>
           <p className="mt-2 text-sm text-slate-400">

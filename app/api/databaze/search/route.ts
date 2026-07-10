@@ -30,24 +30,17 @@ import { cookies } from 'next/headers'
 import type {
   IdentifierType,
   IncidentCategory,
-  IncidentStatus,
   SubjectVisibility,
 } from '@/types/databaze'
 import {
   detectIdentifierType,
   hashIdentifier,
   maskIdentifier,
-  normalizeAccount,
-  normalizeEmail,
-  normalizeFacebookUrl,
-  normalizeIban,
-  normalizePhone,
+  normalizeByType,
   normalizePhoneVariants,
-  normalizeVarSymbol,
-  normalizeWebsite,
 } from '@/utils/databaze/identifiers'
 import type { DatabazeDatabase, SearchLogQueryType } from '../_lib/database'
-import { checkDomainsInCoi, type CoiMatch } from '../_lib/crossReference'
+import { checkDomainsInCoi, isQualifyingIncident, type CoiMatch } from '../_lib/crossReference'
 import { checkRateLimit, hashForRL } from '../../_lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
@@ -66,28 +59,6 @@ const ANON_COOKIE = 'nk_anon_search'
 
 
 // ── Helpers ──────────────────────────────────────────
-
-function normalizeByType(type: IdentifierType, raw: string): string | null {
-  switch (type) {
-    case 'phone':
-      return normalizePhone(raw)
-    case 'account':
-      return normalizeAccount(raw) ?? normalizeIban(raw)
-    case 'email':
-      return normalizeEmail(raw)
-    case 'facebook_url':
-      return normalizeFacebookUrl(raw)
-    case 'website':
-      return normalizeWebsite(raw)
-    case 'var_symbol':
-      return normalizeVarSymbol(raw)
-    case 'other':
-      return raw.trim() === '' ? null : raw.trim()
-    default:
-      return null
-  }
-}
-
 
 const TYPE_LABEL_GENITIV: Record<IdentifierType, string> = {
   phone: 'telefon',
@@ -160,12 +131,6 @@ interface SearchResponse {
   coi_match?: CoiMatch
   message?: string
 }
-
-
-// Veřejně viditelné stavy. ai_reviewed sem už NEpatří — od přepnutí na
-// manuální schvalování čeká AI-prověřený incident ve frontě
-// /admin/moderace, dokud admin neudělá explicit "Schválit".
-const PUBLIC_STATUSES: IncidentStatus[] = ['published', 'notified']
 
 
 // ── POST handler ─────────────────────────────────────
@@ -410,13 +375,13 @@ export async function POST(req: Request) {
       return respond(response, undefined, { queryType: toSearchLogType(detected_type), found: false })
     }
 
-    // 7. Incidenty pro agregaci
-    const { data: incidents, error: iErr } = await supabaseAdmin()
+    // 7. Incidenty pro agregaci — natáhni všechny (bez ohledu na status) a
+    // filtruj přes isQualifyingIncident(), ať tu platí přesně stejné
+    // pravidlo jako v checkIdentifiersInDatabase (crossReference.ts).
+    const { data: allIncidents, error: iErr } = await supabaseAdmin()
       .from('incidents')
-      .select('category, incident_date')
+      .select('category, incident_date, status, resolution_status')
       .eq('subject_id', subjectId)
-      .in('status', PUBLIC_STATUSES)
-      .neq('resolution_status', 'withdrawn')
 
     if (iErr) {
       console.error('Search incidents fetch failed:', iErr)
@@ -424,6 +389,25 @@ export async function POST(req: Request) {
         { error: 'Chyba při čtení incidentů.' },
         { status: 500 },
       )
+    }
+
+    const incidents = (allIncidents ?? []).filter(isQualifyingIncident)
+
+    if (incidents.length === 0) {
+      // Subjekt existuje (subject_identifiers řádek + visibility_status
+      // != 'removed'), ale nemá ani jeden kvalifikující incident — např.
+      // jediné nahlášení bylo v moderaci zamítnuto nebo stažené reportérem.
+      // Z pohledu hledajícího je to k nerozeznání od "nikdy nenahlášeno",
+      // takže vracíme stejnou odpověď jako pro !idRow.
+      const response: SearchResponse = {
+        found: false,
+        detected_type,
+        normalized_value: masked,
+        coi_match: coiMatch,
+        message:
+          'Tento subjekt zatím není v naší databázi. To ale neznamená, že je 100% bezpečný — buď opatrný a ověř ho i jinak (Bank iD, osobní vyzvednutí, escrow služby jako Bazoš Bezpečně).',
+      }
+      return respond(response, undefined, { queryType: toSearchLogType(detected_type), found: Boolean(coiMatch) })
     }
 
     const categoryCounts = new Map<IncidentCategory, number>()
