@@ -41,15 +41,17 @@ export interface DatabaseMatch {
   query_value: string
   incident_count: number
   trust_score: number
+  /** true = ověřený záznam (admin/moderace), false = komunitní nahlášení bez ověření. */
+  verified: boolean
 }
 
 // ── 1. Extrakce z textu ──────────────────────────────
 
-const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g
+export const EMAIL_RE = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g
 // Číslo účtu: volitelný prefix-, 2-10 číslic, /, 4 číslice
-const ACCOUNT_RE = /(?<![\d/-])(?:\d{1,6}-)?\d{2,10}\/\d{4}\b/g
+export const ACCOUNT_RE = /(?<![\d/-])(?:\d{1,6}-)?\d{2,10}\/\d{4}\b/g
 // Telefon: +420 / 00420 / 420 prefix nebo holé 9 číslic (s mezerami)
-const PHONE_RE = /(?:\+420|00420|420)?[\s-]?(?:\d[\s-]?){9}/g
+export const PHONE_RE = /(?:\+420|00420|420)?[\s-]?(?:\d[\s-]?){9}/g
 
 /**
  * Vytáhne z textu emaily, čísla účtů a telefony. Vrací raw hodnoty
@@ -147,7 +149,7 @@ export async function checkIdentifiersInDatabase(
     const hashes = normalized.map((n) => n.hash)
     const { data: idRows, error: idErr } = await client
       .from('subject_identifiers')
-      .select('subject_id, value_hash, value_masked, type')
+      .select('subject_id, value_hash, value_masked, type, verified')
       .in('value_hash', hashes)
 
     if (idErr || !idRows || idRows.length === 0) {
@@ -204,6 +206,7 @@ export async function checkIdentifiersInDatabase(
         value_hash: string
         value_masked: string
         type: IdentifierType
+        verified: boolean
       }>).find((r) => r.value_hash === norm.hash)
       if (!row) continue
       if (!visibleSubjects.has(row.subject_id)) continue
@@ -216,12 +219,54 @@ export async function checkIdentifiersInDatabase(
         query_value: norm.rawValue,
         incident_count,
         trust_score: trustBySubject.get(row.subject_id) ?? 0,
+        verified: row.verified,
       })
     }
 
     return matches
   } catch (err) {
     console.warn('crossReference exception:', err)
+    return []
+  }
+}
+
+// ── 3. ČOI cross-reference (domény) ──────────────────
+
+export interface CoiMatch {
+  domain: string
+  reason: string | null
+  category: string | null
+  reported_date: string | null
+  source: string
+  source_url: string | null
+}
+
+/**
+ * Cross-referuje domény proti veřejnému seznamu rizikových e-shopů ČOI
+ * (`coi_risky_eshops`). Nezávislé na subject_identifiers/incidents.
+ *
+ * Best-effort: DB chyba → prázdné pole, nikdy nevyhazuje.
+ */
+export async function checkDomainsInCoi(
+  client: SupabaseClient,
+  domains: string[],
+): Promise<CoiMatch[]> {
+  const cleaned = [...new Set(domains.map((d) => d.trim().toLowerCase()).filter(Boolean))]
+  if (cleaned.length === 0) return []
+
+  try {
+    const { data, error } = await client
+      .from('coi_risky_eshops')
+      .select('domain, reason, category, reported_date, source, source_url')
+      .in('domain', cleaned)
+
+    if (error) {
+      console.warn('checkDomainsInCoi lookup failed:', error)
+      return []
+    }
+    return (data ?? []) as CoiMatch[]
+  } catch (err) {
+    console.warn('checkDomainsInCoi exception:', err)
     return []
   }
 }

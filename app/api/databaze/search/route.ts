@@ -46,7 +46,8 @@ import {
   normalizeVarSymbol,
   normalizeWebsite,
 } from '@/utils/databaze/identifiers'
-import type { CoiRiskyEshopRow, DatabazeDatabase, SearchLogQueryType } from '../_lib/database'
+import type { DatabazeDatabase, SearchLogQueryType } from '../_lib/database'
+import { checkDomainsInCoi, type CoiMatch } from '../_lib/crossReference'
 import { checkRateLimit, hashForRL } from '../../_lib/ratelimit'
 
 export const dynamic = 'force-dynamic'
@@ -148,15 +149,6 @@ interface SearchResultSubject {
     value_masked: string
     verified: boolean
   }>
-}
-
-export interface CoiMatch {
-  domain: string
-  reason: string | null
-  category: string | null
-  reported_date: string | null
-  source: string
-  source_url: string | null
 }
 
 interface SearchResponse {
@@ -356,7 +348,7 @@ export async function POST(req: Request) {
 
   try {
     // Paralelní dotazy: user incidenty + ČOI (pokud typ website)
-    const [idResult, coiResult] = await Promise.all([
+    const [idResult, coiMatches] = await Promise.all([
       supabaseAdmin()
         .from('subject_identifiers')
         .select('subject_id')
@@ -364,31 +356,12 @@ export async function POST(req: Request) {
         .limit(1)
         .maybeSingle(),
       coiDomain
-        ? supabaseAdmin()
-            .from('coi_risky_eshops')
-            .select('domain, reason, category, reported_date, source, source_url')
-            .eq('domain', coiDomain)
-            .limit(1)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
+        ? checkDomainsInCoi(supabaseAdmin(), [coiDomain])
+        : Promise.resolve([] as CoiMatch[]),
     ])
 
     const { data: idRow, error: idErr } = idResult
-    const coiMatch: CoiMatch | undefined = (coiResult.data as CoiRiskyEshopRow | null)
-      ? {
-          domain: (coiResult.data as CoiRiskyEshopRow).domain,
-          reason: (coiResult.data as CoiRiskyEshopRow).reason,
-          category: (coiResult.data as CoiRiskyEshopRow).category,
-          reported_date: (coiResult.data as CoiRiskyEshopRow).reported_date,
-          source: (coiResult.data as CoiRiskyEshopRow).source,
-          source_url: (coiResult.data as CoiRiskyEshopRow).source_url,
-        }
-      : undefined
-
-    if (coiResult.error) {
-      // ČOI lookup chyba není kritická — logujeme, ale nepřerušujeme
-      console.warn('COI eshop lookup failed:', coiResult.error)
-    }
+    const coiMatch: CoiMatch | undefined = coiMatches[0]
 
     if (idErr) {
       console.error('Search identifier lookup failed:', idErr)
