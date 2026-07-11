@@ -6,13 +6,21 @@ type Props = {
   /** 0-100 */
   value: number;
   size?: number;
+  /**
+   * Volitelný override barevného pásma. Bez něj se odvozuje z `value`
+   * (prahy 70/40) — s ním se použije přesně tenhle level (např. z
+   * verdictEngine, který má vlastní prahy 80/40). Zpětně kompatibilní:
+   * stávající volání bez tohohle propu se chovají beze změny.
+   */
+  level?: "green" | "orange" | "red";
 };
 
 /**
  * Animated circular risk gauge.
- * Color shifts from green → amber → coral based on value.
+ * Color shifts from green → amber → coral based on value (or on `level`,
+ * pokud je zadaný).
  */
-export default function RiskGauge({ value, size = 200 }: Props) {
+export default function RiskGauge({ value, size = 200, level }: Props) {
   const safeValue = Math.max(0, Math.min(100, value));
   const [animated, setAnimated] = useState(0);
 
@@ -36,9 +44,9 @@ export default function RiskGauge({ value, size = 200 }: Props) {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - animated / 100);
 
-  // Color zones
-  const isHigh = safeValue >= 70;
-  const isMid = !isHigh && safeValue >= 40;
+  // Color zones — `level` (pokud zadaný) přebíjí odvození z `value`.
+  const isHigh = level ? level === "red" : safeValue >= 70;
+  const isMid = level ? level === "orange" : !isHigh && safeValue >= 40;
   const stops = isHigh
     ? { from: "#fb7185", to: "#dc2626" }            // coral → red
     : isMid

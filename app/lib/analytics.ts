@@ -11,7 +11,10 @@ type EventName =
   | "cta_pdf_download"
   | "checkout_started"
   | "lead_magnet_submitted"
-  | "example_clicked";
+  | "example_clicked"
+  | "check_started"
+  | "check_completed"
+  | "check_limit_reached";
 
 type EventParams = Record<string, string | number | boolean | undefined>;
 
