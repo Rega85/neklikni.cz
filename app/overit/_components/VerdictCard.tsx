@@ -35,10 +35,25 @@ export interface VerdictCardProps {
   };
 }
 
-const LEVEL_STYLES: Record<VerdictLevel, { border: string; dot: string; text: string }> = {
-  green: { border: "border-success/30", dot: "bg-success", text: "text-success" },
-  orange: { border: "border-warning/30", dot: "bg-warning", text: "text-warning" },
-  red: { border: "border-destructive/30", dot: "bg-destructive", text: "text-destructive" },
+const LEVEL_STYLES: Record<VerdictLevel, { border: string; headerBg: string; dot: string; text: string }> = {
+  green: {
+    border: "border-success/40",
+    headerBg: "bg-gradient-to-b from-success/25 via-success/10 to-transparent",
+    dot: "bg-success",
+    text: "text-success",
+  },
+  orange: {
+    border: "border-warning/40",
+    headerBg: "bg-gradient-to-b from-warning/25 via-warning/10 to-transparent",
+    dot: "bg-warning",
+    text: "text-warning",
+  },
+  red: {
+    border: "border-destructive/40",
+    headerBg: "bg-gradient-to-b from-destructive/25 via-destructive/10 to-transparent",
+    dot: "bg-destructive",
+    text: "text-destructive",
+  },
 };
 
 export default function VerdictCard({ inputKind, level, score, headline, actions, sources }: VerdictCardProps) {
@@ -53,53 +68,51 @@ export default function VerdictCard({ inputKind, level, score, headline, actions
     <div
       data-testid="verdict-card"
       data-level={level}
-      className={`rounded-[32px] border-2 bg-card backdrop-blur-3xl shadow-2xl overflow-hidden ${styles.border} p-6 sm:p-8 text-left`}
+      className={`rounded-[32px] border-2 bg-card backdrop-blur-3xl shadow-2xl overflow-hidden ${styles.border} text-left`}
     >
-      {/* ── Horní vrstva — vždy viditelná ── */}
-      <div className="flex flex-col items-center text-center gap-4">
-        <span className="relative flex h-3 w-3" aria-hidden="true">
-          <span className={`motion-safe:animate-[ping_2s_ease-in-out_infinite] absolute inline-flex h-full w-full rounded-full ${styles.dot} opacity-75`} />
-          <span className={`relative inline-flex h-3 w-3 rounded-full ${styles.dot}`} />
-        </span>
-
-        {/* RiskGauge uz sama zobrazuje textovy popisek rizika (Nizke/Zvysene/Vysoke) pod skore. */}
-        <RiskGauge value={score} level={level} size={140} />
-
-        <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground leading-snug">{headline}</h2>
+      {/* ── Barevný stavový blok — semafor rozpoznatelný i bez čtení ── */}
+      <div className={`${styles.headerBg} px-6 sm:px-8 pt-7 sm:pt-9 pb-6 sm:pb-8`}>
+        <div className="flex flex-col items-center text-center gap-4">
+          {/* RiskGauge uz sama zobrazuje textovy popisek rizika (Nizke/Stredni/Vysoke) pod skore. */}
+          <RiskGauge value={score} level={level} size={160} />
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground leading-snug">{headline}</h2>
+        </div>
       </div>
 
-      {actions.length > 0 && (
-        <div className="mt-6 space-y-2">
-          <h3 className="text-primary font-black uppercase text-[10px] tracking-widest">Co dělat teď</h3>
-          <ul className="space-y-1.5">
-            {actions.map((action, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                <span className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${styles.dot}`} aria-hidden="true" />
-                {action}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ── Dolní vrstva — rozklikávací detaily ── */}
-      <div className="mt-6 border-t border-border pt-4">
-        <button
-          type="button"
-          onClick={() => setDetailsOpen((v) => !v)}
-          aria-expanded={detailsOpen}
-          className="flex w-full items-center justify-between text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
-        >
-          Zobrazit detaily
-          <ChevronDown size={16} className={`transition-transform ${detailsOpen ? "rotate-180" : ""}`} />
-        </button>
-
-        {detailsOpen && (
-          <div className="mt-4 space-y-5 animate-fade-up">
-            <DatabaseSection database={sources.database} hasSignal={hasDatabaseSignal} />
-            <AiSection ai={sources.ai} inputKind={inputKind} />
+      <div className="p-6 sm:p-8 pt-5 sm:pt-6">
+        {actions.length > 0 && (
+          <div className="space-y-2">
+            <h3 className="text-primary font-black uppercase text-[10px] tracking-widest">Co dělat teď</h3>
+            <ul className="space-y-1.5">
+              {actions.map((action, i) => (
+                <li key={i} className="flex items-start gap-2 text-sm text-foreground">
+                  <span className={`mt-1 h-1.5 w-1.5 rounded-full shrink-0 ${styles.dot}`} aria-hidden="true" />
+                  {action}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
+
+        {/* ── Dolní vrstva — rozklikávací detaily ── */}
+        <div className="mt-6 border-t border-border pt-4">
+          <button
+            type="button"
+            onClick={() => setDetailsOpen((v) => !v)}
+            aria-expanded={detailsOpen}
+            className="flex w-full items-center justify-between text-sm font-bold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Zobrazit detaily
+            <ChevronDown size={16} className={`transition-transform ${detailsOpen ? "rotate-180" : ""}`} />
+          </button>
+
+          {detailsOpen && (
+            <div className="mt-4 space-y-5 animate-fade-up">
+              <DatabaseSection database={sources.database} hasSignal={hasDatabaseSignal} />
+              <AiSection ai={sources.ai} inputKind={inputKind} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
