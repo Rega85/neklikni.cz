@@ -1,22 +1,28 @@
 /**
- * /overit — sjednocený vstup (Fáze 3), napojený na POST /api/check.
+ * /overit — sjednocený vstup, napojený na POST /api/check.
  *
- * VEDLE existující homepage a /databaze/hledat, ne náhrada — přepnutí
- * a úklid starých cest je Fáze 4. Zatím bez odkazu z hlavní navigace,
- * dostupné jen přímou URL.
+ * Od Fáze 4 hlavní vstupní bod produktu — primární položka v Header
+ * navigaci a embedovaný přímo na homepage (viz app/page.tsx). Tahle
+ * stránka zůstává jako samostatná URL pro přímé odkazy a SEO.
+ * /databaze/hledat zůstává na /api/databaze/search (jiná funkce —
+ * procházení databáze, ne rychlé ověření).
  */
 
 import type { Metadata } from "next";
 import { getRecentPublishedIncidents } from "@/app/databaze/_lib/recentIncidents";
 import OveritClient from "./OveritClient";
 
+const URL = "https://www.neklikni.cz/overit";
+
 export const metadata: Metadata = {
   title: "Ověřit zprávu, odkaz nebo kontakt | NeKlikni.cz",
   description:
     "Vlož podezřelou zprávu, odkaz, telefon, číslo účtu nebo e-mail — okamžitě zkontrolujeme databázi nahlášených podvodů a AI analýzu.",
+  alternates: { canonical: URL },
   openGraph: {
     title: "Ověřit zprávu, odkaz nebo kontakt | NeKlikni.cz",
     description: "Jedno pole, okamžitá kontrola databáze i AI analýza podezřelé komunikace.",
+    url: URL,
   },
 };
 

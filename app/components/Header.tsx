@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
-import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database, Flag, Users, ArrowRight, Gamepad2 } from "lucide-react";
+import { LogOut, Zap, ChevronDown, User, KeyRound, Home, Receipt, Sparkles, Gift, BookOpen, Menu, X, Tag, Database, Flag, Users, ArrowRight, Gamepad2, ShieldCheck } from "lucide-react";
 import BrandLogo from "./BrandLogo";
 import SocialLinks from "./SocialLinks";
 
@@ -17,6 +17,7 @@ const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> 
 const navItems = [
   { href: "/", label: "Domů", icon: Home },
   { href: "/databaze", label: "Databáze", icon: Database },
+  { href: "/overit", label: "Ověřit", icon: ShieldCheck, accent: true },
   { href: "/databaze/nahlasit", label: "Nahlásit podvod", icon: Flag, accent: true },
   { href: "/test", label: "Otestuj se", icon: Gamepad2, accent: true },
   { href: "/blog", label: "Blog", icon: BookOpen },

@@ -21,6 +21,7 @@
 import { useEffect, useRef, useState } from "react";
 import { RotateCcw } from "lucide-react";
 import AnalysisScanner from "@/app/components/AnalysisScanner";
+import ReferralCard from "@/app/components/ReferralCard";
 import { trackEvent } from "@/app/lib/analytics";
 import type { RecentIncidentCard } from "@/app/databaze/_lib/recentIncidents";
 import CheckInput from "./_components/CheckInput";
@@ -45,7 +46,15 @@ export default function OveritClient({ recentIncidents }: Props) {
   const [limitMessage, setLimitMessage] = useState<string | undefined>(undefined);
   const [errorMsg, setErrorMsg] = useState("");
   const [resetCount, setResetCount] = useState(0);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setIsLoggedIn(!!d?.profile))
+      .catch(() => setIsLoggedIn(false));
+  }, []);
 
   // Po přijetí odpovědi (ne v idle/loading) na mobilu auto-scroll na
   // výsledek — uživatel nesmí hledat, kde odpověď je. Na desktopu (split
@@ -151,6 +160,7 @@ export default function OveritClient({ recentIncidents }: Props) {
         {status === "result" && result && (
           <div className="animate-fade-up space-y-4">
             <VerdictCard {...result} />
+            <ReferralCard isLoggedIn={isLoggedIn} />
             <button
               type="button"
               onClick={handleReset}

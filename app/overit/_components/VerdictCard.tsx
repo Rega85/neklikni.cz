@@ -17,9 +17,13 @@ import {
   ShieldAlert,
   Users,
   ExternalLink,
+  Share2,
+  Download,
+  Check,
 } from "lucide-react";
 import RiskGauge from "@/app/components/RiskGauge";
 import { identifierLabel } from "@/utils/databaze/identifiers";
+import { trackEvent } from "@/app/lib/analytics";
 import type { VerdictLevel, DatabaseSignal, AiSignal } from "@/lib/verdictEngine";
 import type { InputKind } from "@/lib/inputParser";
 
@@ -33,6 +37,59 @@ export interface VerdictCardProps {
     database: DatabaseSignal | null;
     ai: AiSignal | null;
   };
+  /** Null, když se uložení sdíleného výsledku nepovedlo (best-effort) — tlačítka se pak skryjí. */
+  shareId?: string | null;
+}
+
+function buildReportHtml(props: VerdictCardProps): string {
+  const { level, score, headline, actions, sources } = props;
+  const date = new Date().toLocaleDateString("cs-CZ");
+  const actionsHtml =
+    actions.length > 0
+      ? `<ul class="threats">${actions.map((a) => `<li>${a}</li>`).join("")}</ul>`
+      : "";
+  const aiHtml = sources.ai
+    ? `<div class="section"><h3>AI analýza</h3><p>${sources.ai.analysis}</p></div>`
+    : "";
+  const dbMatches = [
+    ...sources.database?.coi_matches.map((m) => `ČOI: ${m.domain}${m.reason ? ` — ${m.reason}` : ""}`) ?? [],
+    ...sources.database?.identifier_matches.map(
+      (m) => `${identifierLabel(m.type)}: ${m.value_masked} (${m.incident_count} ${m.incident_count === 1 ? "incident" : "incidentů"}${m.verified ? ", ověřeno" : ", komunitní nahlášení"})`,
+    ) ?? [],
+  ];
+  const dbHtml =
+    dbMatches.length > 0
+      ? `<div class="section"><h3>Nález v databázi</h3><ul class="threats">${dbMatches.map((m) => `<li>${m}</li>`).join("")}</ul></div>`
+      : "";
+  return `<!DOCTYPE html>
+<html><head>
+  <title>NeKlikni.cz - Výsledek ověření</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 20px; color: #1f2937; }
+    .header { text-align: center; margin-bottom: 30px; }
+    .logo { font-size: 24px; font-weight: bold; color: #3b82f6; }
+    .risk { font-size: 48px; font-weight: bold; text-align: center; margin: 20px 0; }
+    .risk.red { color: #ef4444; }
+    .risk.orange { color: #f59e0b; }
+    .risk.green { color: #10b981; }
+    .verdict { font-size: 22px; text-align: center; font-weight: bold; margin-bottom: 20px; }
+    .section { margin: 20px 0; padding: 15px; background: #f9fafb; border-radius: 8px; }
+    .section h3 { margin: 0 0 10px; color: #4b5563; }
+    .threats { list-style: none; padding: 0; }
+    .threats li { padding: 5px 0; }
+    .threats li::before { content: "⚠ "; }
+    .footer { text-align: center; margin-top: 40px; color: #9ca3af; font-size: 12px; }
+    @media print { body { margin: 0; } }
+  </style>
+</head><body>
+  <div class="header"><div class="logo">NeKlikni.cz</div><div>Výsledek ověření</div></div>
+  <div class="risk ${level}">${score}%</div>
+  <div class="verdict">${headline}</div>
+  ${dbHtml}
+  ${aiHtml}
+  ${actionsHtml ? `<div class="section"><h3>Co dělat teď</h3>${actionsHtml}</div>` : ""}
+  <div class="footer">Vygenerováno na neklikni.cz • ${date}</div>
+</body></html>`;
 }
 
 const LEVEL_STYLES: Record<VerdictLevel, { border: string; headerBg: string; dot: string; text: string }> = {
@@ -56,13 +113,45 @@ const LEVEL_STYLES: Record<VerdictLevel, { border: string; headerBg: string; dot
   },
 };
 
-export default function VerdictCard({ inputKind, level, score, headline, actions, sources }: VerdictCardProps) {
+export default function VerdictCard(props: VerdictCardProps) {
+  const { inputKind, level, score, headline, actions, sources, shareId } = props;
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const styles = LEVEL_STYLES[level];
 
   const hasDatabaseSignal =
     sources.database !== null &&
     (sources.database.coi_matches.length > 0 || sources.database.identifier_matches.length > 0);
+
+  const shareUrl = shareId ? `${typeof window !== "undefined" ? window.location.origin : "https://neklikni.cz"}/report/${shareId}` : null;
+  const waText = shareUrl ? encodeURIComponent(`Pozor na tento podvod! Podívej se na ověření: ${shareUrl}`) : "";
+
+  async function handleCopyLink() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      trackEvent("cta_share_clicked", { method: "copy", level });
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
+  async function handleNativeShare() {
+    if (!shareUrl || !navigator.share) return;
+    trackEvent("cta_share_clicked", { method: "native", level });
+    try {
+      await navigator.share({ title: "NeKlikni.cz – Varování", text: "Pozor na tento podvod! Podívej se na ověření:", url: shareUrl });
+    } catch {}
+  }
+
+  function handleDownloadPDF() {
+    trackEvent("cta_pdf_download", { level, score });
+    const win = window.open("", "_blank");
+    if (!win) return;
+    win.document.write(buildReportHtml(props));
+    win.document.close();
+    win.print();
+  }
 
   return (
     <div
@@ -93,6 +182,60 @@ export default function VerdictCard({ inputKind, level, score, headline, actions
             </ul>
           </div>
         )}
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-2 text-xs border border-primary text-primary px-4 py-2 rounded-lg hover:bg-primary/10 transition-colors"
+          >
+            <Download size={14} /> Stáhnout report
+          </button>
+          {shareUrl && (
+            <>
+              <a
+                href={`https://wa.me/?text=${waText}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent("cta_share_clicked", { method: "whatsapp", level })}
+                className="flex items-center gap-1.5 text-xs font-bold text-foreground bg-success hover:brightness-110 px-4 py-2 rounded-xl transition-all"
+              >
+                💬 WhatsApp
+              </a>
+              <a
+                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => trackEvent("cta_share_clicked", { method: "facebook", level })}
+                className="flex items-center gap-1.5 text-xs font-bold text-foreground bg-primary hover:brightness-110 px-4 py-2 rounded-xl transition-all"
+              >
+                📘 Facebook
+              </a>
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors bg-secondary hover:bg-secondary/80 px-4 py-2 rounded-xl"
+              >
+                {copied ? (
+                  <>
+                    <Check size={14} className="text-success" /> Zkopírováno!
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={14} /> Kopírovat odkaz
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={handleNativeShare}
+                className="sm:hidden flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors bg-secondary hover:bg-secondary/80 px-4 py-2 rounded-xl"
+              >
+                <Share2 size={14} /> Sdílet
+              </button>
+            </>
+          )}
+        </div>
 
         {/* ── Dolní vrstva — rozklikávací detaily ── */}
         <div className="mt-6 border-t border-border pt-4">

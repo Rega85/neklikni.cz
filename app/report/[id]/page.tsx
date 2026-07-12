@@ -2,7 +2,19 @@ import { Metadata } from "next";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Shield, AlertTriangle, CheckCircle, ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle } from "lucide-react";
+import VerdictCard, { type VerdictCardProps } from "@/app/overit/_components/VerdictCard";
+
+/**
+ * /report/[id] — veřejná stránka sdíleného výsledku (shared_results).
+ *
+ * Dva tvary v jedné tabulce (viz supabase/migrations/20260713_shared_results_verdict_shape.sql):
+ *  - starší řádky z /api/analyze: risk/verdict/analysis/threats (level IS NULL)
+ *  - nové řádky z /api/check (Fáze 4): + level/input_kind/actions/sources —
+ *    renderují se přes STEJNOU komponentu VerdictCard jako na /overit, žádná
+ *    duplicitní šablona.
+ * Staré odkazy (247 řádků k datu přechodu) musí dál fungovat beze změny.
+ */
 
 function getDb() {
   return createServiceClient(
@@ -19,17 +31,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
   const { data: report } = await supabase
     .from("shared_results")
-    .select("risk, verdict, analysis")
+    .select("risk, verdict, analysis, level, sources")
     .eq("id", resolvedParams.id)
     .single();
 
   if (!report) {
-    return { title: "Výsledek analýzy | NeKlikni.cz", alternates: { canonical: url } };
+    return { title: "Výsledek ověření | NeKlikni.cz", alternates: { canonical: url } };
   }
 
-  const firstSentence = report.analysis?.split(/[.!?]/)[0] ?? report.analysis ?? "";
-  const title = `Výsledek analýzy: ${report.verdict} | NeKlikni.cz`;
-  const description = `Riziko ${report.risk}/100 – ${firstSentence}`;
+  const analysisText = report.level ? (report.sources?.ai?.analysis ?? "") : report.analysis;
+  const firstSentence = analysisText?.split(/[.!?]/)[0] ?? analysisText ?? "";
+  const title = `Výsledek ověření: ${report.verdict} | NeKlikni.cz`;
+  const description = firstSentence
+    ? `Riziko ${report.risk}/100 – ${firstSentence}`
+    : `Riziko ${report.risk}/100 na NeKlikni.cz`;
 
   return {
     title,
@@ -40,7 +55,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       description,
       url,
       type: 'article',
-      images: [{ url: '/og-image.png', width: 1200, height: 630, type: 'image/png', alt: 'AI analýza hrozby NeKlikni.cz' }],
+      images: [{ url: '/og-image.png', width: 1200, height: 630, type: 'image/png', alt: 'Výsledek ověření NeKlikni.cz' }],
     },
     twitter: {
       card: 'summary_large_image',
@@ -64,12 +79,36 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   if (!report) return notFound();
 
+  if (report.level) {
+    const verdictProps: VerdictCardProps = {
+      inputKind: report.input_kind ?? "message",
+      level: report.level,
+      score: report.risk,
+      headline: report.verdict ?? "",
+      actions: report.actions ?? [],
+      sources: report.sources ?? { database: null, ai: null },
+      shareId: resolvedParams.id,
+    };
+
+    return (
+      <main className="min-h-screen text-foreground pt-32 pb-20 px-4 sm:px-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Link href="/overit" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group">
+            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+            <span className="text-sm font-bold uppercase tracking-widest">Ověřit další</span>
+          </Link>
+          <VerdictCard {...verdictProps} />
+        </div>
+      </main>
+    );
+  }
+
   const isHigh = report.risk > 50;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white pt-32 pb-20 px-6">
       <div className="max-w-3xl mx-auto space-y-8">
-        
+
         <Link href="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-white transition-colors group">
           <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
           <span className="text-sm font-bold uppercase tracking-widest">Zpět na prověření</span>

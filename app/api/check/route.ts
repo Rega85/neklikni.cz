@@ -62,6 +62,43 @@ function supabaseAdmin() {
   return _supabaseAdmin
 }
 
+// ── Sdílení výsledku ──────────────────────────────────
+// Stejný vzor jako saveResult() v /api/analyze: server ukládá výsledek,
+// který sám dopočítal — nikdy tvar dodaný klientem (VerdictCard by jinak
+// mohl publikovat na /report/[id] cokoliv, co si kdokoliv vymyslí).
+// Best-effort, nesmí shodit response, když insert selže.
+async function saveShareableVerdict(
+  text: string,
+  tier: string,
+  inputKind: ParsedInput['inputKind'],
+  verdict: ReturnType<typeof buildVerdict>,
+): Promise<string | null> {
+  try {
+    const { data } = await supabaseAdmin()
+      .from('shared_results')
+      .insert({
+        original_text: text,
+        risk: verdict.score,
+        verdict: verdict.headline,
+        analysis: verdict.sources.ai?.analysis ?? null,
+        threats: verdict.sources.ai?.threats ?? [],
+        recommendation: verdict.actions[0] ?? null,
+        tier,
+        level: verdict.level,
+        input_kind: inputKind,
+        actions: verdict.actions,
+        sources: verdict.sources,
+        created_at: new Date().toISOString(),
+      })
+      .select('id')
+      .single()
+    return data?.id ?? null
+  } catch (e) {
+    console.warn('check: failed to save shareable verdict:', e)
+    return null
+  }
+}
+
 // ── Database check ────────────────────────────────────
 
 async function runDatabaseChecks(parsed: ParsedInput): Promise<DatabaseSignal> {
@@ -227,10 +264,12 @@ export async function POST(req: Request) {
   ])
 
   const verdict = buildVerdict({ parsed, database, ai })
+  const shareId = await saveShareableVerdict(text, tier, parsed.inputKind, verdict)
 
   return NextResponse.json({
     inputKind: parsed.inputKind,
     tier,
+    shareId,
     ...verdict,
   })
 }
