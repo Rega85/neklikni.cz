@@ -11,7 +11,7 @@
  */
 
 import { useRef, useState } from "react";
-import { MessageSquareWarning, ShoppingBag, Link2, Search } from "lucide-react";
+import { MessageSquareWarning, ShoppingBag, Link2, Search, Lock, ImagePlus } from "lucide-react";
 
 const MIN_LEN = 2;
 const MAX_LEN = 5000;
@@ -87,6 +87,23 @@ export default function CheckInput({ onSubmit, disabled }: Props) {
         <div className="absolute bottom-3 right-4 text-[11px] text-muted-foreground tabular-nums">
           {value.length}/{MAX_LEN}
         </div>
+
+        {/* Screenshoty jsou dnes vždy placená funkce (stejně jako u
+            /api/analyze) — tohle je jen pasivní vizuální upsell.
+            TODO: /api/check zatím obrázky vůbec nepodporuje (na rozdíl
+            od /api/analyze), takže tlačítko není funkční ani pro
+            platící uživatele — až vznikne podpora, nahradit skutečným
+            uploadem s tier-check (free → zámek, oneshot/full → upload). */}
+        <button
+          type="button"
+          disabled
+          title="Dostupné s Full nebo jednorázovou analýzou"
+          aria-label="Nahrát screenshot — dostupné s Full nebo jednorázovou analýzou"
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-full border border-dashed border-border bg-card/80 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground cursor-not-allowed"
+        >
+          <ImagePlus size={13} />
+          <Lock size={11} />
+        </button>
       </div>
 
       {tooLong && (

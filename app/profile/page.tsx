@@ -2,7 +2,7 @@
 
 
 import { useEffect, useState } from "react";
-import { Loader2, CreditCard, Zap, Gift, Copy, Check, FileText, Mail } from "lucide-react";
+import { Loader2, CreditCard, Zap, Gift, Copy, Check, FileText, Mail, Calendar, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { CATEGORY_LABELS, type IncidentCategory } from "@/types/databaze";
 
@@ -65,6 +65,27 @@ export default function ProfilePage() {
   const referralCode = profile.referral_code as string | null;
   const referralLink = referralCode ? `https://neklikni.cz/?ref=${referralCode}` : null;
 
+  const isFull = tier === "full";
+  const subscriptionStatus = profile.subscription_status as string | null;
+  const trialEnd = profile.trial_end as string | null;
+  const currentPeriodEnd = profile.current_period_end as string | null;
+  const cancelAtPeriodEnd = !!profile.cancel_at_period_end;
+
+  const STATUS_LABEL: Record<string, string> = {
+    trialing: "Zkušební období",
+    active: "Aktivní",
+    past_due: "Platba se nezdařila",
+    canceled: "Zrušeno",
+    unpaid: "Nezaplaceno",
+    incomplete: "Čeká na potvrzení platby",
+    incomplete_expired: "Platba nedokončena",
+  };
+
+  function formatDate(iso: string | null): string {
+    if (!iso) return "—";
+    return new Date(iso).toLocaleDateString("cs-CZ", { day: "numeric", month: "long", year: "numeric" });
+  }
+
   function handleCopy() {
     if (!referralLink) return;
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -109,19 +130,56 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Zbývající kredity</p>
-              <p className="text-white font-black text-4xl">{credits.toLocaleString("cs-CZ")}</p>
+              {/* FULL = neomezené (fair use) — 100000 je jen interní technický strop,
+                  nikdy ho neukazujeme jako "reálné" číslo uživateli. */}
+              <p className="text-white font-black text-4xl">{isFull ? "Neomezené" : credits.toLocaleString("cs-CZ")}</p>
             </div>
             <CreditCard size={32} className="text-blue-500" />
           </div>
-          {maxCredits > 0 && (
+          {!isFull && maxCredits > 0 && (
             <div className="w-full bg-slate-800 rounded-full h-2">
               <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${Math.min(100, (credits / maxCredits) * 100)}%` }} />
             </div>
           )}
-          <Link href="/pricing" className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase py-3 rounded-xl transition-colors">
-            <Zap size={14} fill="currentColor" /> Koupit kredity
-          </Link>
+          {!isFull && (
+            <Link href="/pricing" className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase py-3 rounded-xl transition-colors">
+              <Zap size={14} fill="currentColor" /> Koupit kredity
+            </Link>
+          )}
         </div>
+
+        {isFull && (
+          <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-1">Stav předplatného</p>
+                <p className="text-white font-black text-xl">
+                  {subscriptionStatus ? STATUS_LABEL[subscriptionStatus] ?? subscriptionStatus : "—"}
+                </p>
+              </div>
+              <Calendar size={28} className="text-blue-500" />
+            </div>
+            {cancelAtPeriodEnd ? (
+              <p className="text-amber-400 text-sm">
+                Předplatné bylo zrušeno — zůstává aktivní do <strong>{formatDate(currentPeriodEnd)}</strong>, poté se nebude obnovovat.
+              </p>
+            ) : subscriptionStatus === "trialing" ? (
+              <p className="text-slate-400 text-sm">
+                Zkušební období končí <strong className="text-white">{formatDate(trialEnd)}</strong>, poté se automaticky spustí platba.
+              </p>
+            ) : (
+              <p className="text-slate-400 text-sm">
+                Příští platba: <strong className="text-white">{formatDate(currentPeriodEnd)}</strong>
+              </p>
+            )}
+            <Link
+              href="/billing"
+              className="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-black uppercase py-3 rounded-xl transition-colors"
+            >
+              <ExternalLink size={14} /> Spravovat / zrušit předplatné
+            </Link>
+          </div>
+        )}
 
         {myIncidents && myIncidents.length > 0 && (
           <div className="bg-slate-900/40 border border-white/10 p-6 rounded-2xl space-y-3">

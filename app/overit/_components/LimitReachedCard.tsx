@@ -3,17 +3,11 @@
 /**
  * Konverzní okno pro 429 AI_LIMIT_REACHED z POST /api/check.
  *
- * TODO(cenik): Oba CTA texty a odkazy odpovídají NOVÉMU, rozhodnutému
- * ceníku (Free 2 AI ověření/den, jednorázová 49 Kč, Full 79 Kč/měs
- * neomezeně fair-use, roční s 14denním trialem) — NE současnému
- * produkčnímu ceníku (BASIC 99 Kč/50 analýz). Stripe produkty pro nový
- * ceník ještě neexistují (žádný STRIPE_PRICE_* pro 79 Kč plán,
- * "oneshot" v app/api/checkout/route.ts míří na starou 49 Kč PRO
- * analýzu, ne na nový ceník). Tlačítko "Jednorázová 49 Kč" proto vede
- * na /pricing?plan=oneshot (existující flow, funguje, jen text ceny
- * sedí náhodou), tlačítko "Full 79 Kč/měsíc" nemá kam vést → odkaz na
- * obecné /pricing. Čeká na Stripe produkty nového ceníku —
- * BLOKUJE Fázi 4.
+ * Primární CTA vede na /pricing?plan=oneshot (auto-checkout, viz
+ * PricingPage useEffect na ?plan=). Sekundární "Full" CTA vede na
+ * obecné /pricing — měsíčně/ročně + 7denní trial je rozhodnutí, které
+ * si uživatel zaslouží vidět celé na stránce, ne slepý auto-redirect
+ * do checkoutu s trial závazkem.
  */
 
 import Link from "next/link";

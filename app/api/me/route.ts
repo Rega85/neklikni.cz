@@ -42,7 +42,9 @@ export async function GET() {
     const [profileRes, isAdmin] = await Promise.all([
       supabase
         .from("user_profiles")
-        .select("tier, credits_remaining, referral_code, newsletter_consent")
+        .select(
+          "tier, credits_remaining, referral_code, newsletter_consent, subscription_status, trial_end, current_period_end, cancel_at_period_end",
+        )
         .eq("id", user.id)
         .single(),
       checkIsAdmin(user.id),

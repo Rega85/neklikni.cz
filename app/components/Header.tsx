@@ -9,10 +9,9 @@ import BrandLogo from "./BrandLogo";
 import SocialLinks from "./SocialLinks";
 
 const TIER_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  free:  { label: "FREE",  color: "text-muted-foreground",  bg: "bg-secondary"  },
-  easy:  { label: "EASY",  color: "text-primary",   bg: "bg-primary/10"   },
-  basic: { label: "BASIC", color: "text-primary", bg: "bg-primary/10" },
-  pro:   { label: "PRO",   color: "text-warning", bg: "bg-warning/10" },
+  free:    { label: "FREE",    color: "text-muted-foreground", bg: "bg-secondary"   },
+  oneshot: { label: "JEDNORÁZOVÁ", color: "text-primary",      bg: "bg-primary/10"  },
+  full:    { label: "FULL",    color: "text-warning",          bg: "bg-warning/10"  },
 };
 
 const navItems = [
@@ -118,8 +117,9 @@ export default function Header() {
 
   const tier = profile?.tier || "free";
   const tc = TIER_CONFIG[tier] || TIER_CONFIG.free;
+  const isFull = tier === "full";
   const credits = profile?.credits_remaining ?? 0;
-  const maxCredits = tier === "pro" ? 200 : tier === "basic" ? 50 : tier === "easy" ? 10 : 0;
+  const creditsLabel = isFull ? "Neomezené" : credits.toLocaleString("cs-CZ");
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[100] h-16 border-b border-border/60 bg-background/80 backdrop-blur-xl">
@@ -292,7 +292,7 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col leading-none text-left hidden sm:flex">
                   <span className={`text-[9px] font-bold uppercase ${tc.color}`}>{tc.label}</span>
-                  <span className="text-[10px] font-medium text-muted-foreground mt-0.5">{profile !== null ? `${credits.toLocaleString("cs-CZ")} kreditů` : "načítám..."}</span>
+                  <span className="text-[10px] font-medium text-muted-foreground mt-0.5">{profile !== null ? (isFull ? creditsLabel : `${creditsLabel} kreditů`) : "načítám..."}</span>
                 </div>
                 <ChevronDown size={14} className={`text-muted-foreground transition-transform ${menuOpen ? "rotate-180" : ""}`} />
               </button>
@@ -310,18 +310,15 @@ export default function Header() {
                   </div>
 
                   <div className="p-4 border-b border-border">
-                    <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center justify-between mb-3">
                       <span className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest">Zbývající kredity</span>
-                      <span className="text-foreground font-bold text-xl">{credits.toLocaleString("cs-CZ")}</span>
+                      <span className="text-foreground font-bold text-xl">{creditsLabel}</span>
                     </div>
-                    {maxCredits > 0 && (
-                      <div className="w-full bg-secondary rounded-full h-1.5 mb-3">
-                        <div className="bg-primary h-1.5 rounded-full transition-all" style={{ width: `${Math.min(100, (credits / maxCredits) * 100)}%` }} />
-                      </div>
+                    {!isFull && (
+                      <Link href="/pricing" onClick={() => setMenuOpen(false)} className="w-full flex items-center justify-center gap-2 bg-primary hover:brightness-110 text-primary-foreground text-xs font-bold uppercase py-2.5 rounded-xl transition-colors">
+                        <Zap size={12} fill="currentColor" /> {tier === "free" ? "Koupit kredity" : "Dobít kredity"}
+                      </Link>
                     )}
-                    <Link href="/pricing" onClick={() => setMenuOpen(false)} className="w-full flex items-center justify-center gap-2 bg-primary hover:brightness-110 text-primary-foreground text-xs font-bold uppercase py-2.5 rounded-xl transition-colors">
-                      <Zap size={12} fill="currentColor" /> {tier === "free" ? "Koupit kredity" : "Dobít kredity"}
-                    </Link>
                   </div>
 
                   <div className="p-2 space-y-0.5">

@@ -168,7 +168,7 @@ export async function POST(req: Request) {
     if (!userId) {
       if (hasImages) {
         return NextResponse.json({
-          error: "Pro analýzu obrázků se musíte přihlásit a mít tarif BASIC nebo PRO.",
+          error: "Pro analýzu obrázků se musíte přihlásit a mít tarif Full nebo Jednorázová.",
           upgradeRequired: true,
         }, { status: 403 });
       }
@@ -187,9 +187,9 @@ export async function POST(req: Request) {
 
     const tier = profile.tier || "free";
 
-    if (hasImages && !["basic", "pro", "oneshot", "easy"].includes(tier)) {
+    if (hasImages && !["oneshot", "full"].includes(tier)) {
       return NextResponse.json({
-        error: "Analýza obrázků je dostupná pouze pro tarif BASIC a PRO.",
+        error: "Analýza obrázků je dostupná pouze pro tarif Full nebo Jednorázová.",
         upgradeRequired: true,
       }, { status: 403 });
     }

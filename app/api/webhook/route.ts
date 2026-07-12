@@ -2,6 +2,19 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { Resend } from "resend";
+import { FULL_TIER_CREDIT_CEILING, isPlanKey, resolveTierAndCredits } from "../_lib/billingPlans";
+import { sendTrialEndingReminder } from "../_lib/billingEmail";
+
+function toIso(unixSeconds: number | null | undefined): string | null {
+  return unixSeconds ? new Date(unixSeconds * 1000).toISOString() : null;
+}
+
+// V API verzi 2026-01-28.clover žije current_period_end na subscription
+// item (subscription může mít víc items s různými obdobími), ne přímo
+// na Subscription — viz node_modules/stripe/types/SubscriptionItems.d.ts.
+function getCurrentPeriodEnd(sub: Stripe.Subscription): number | null {
+  return sub.items.data[0]?.current_period_end ?? null;
+}
 
 export async function POST(req: Request) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -52,20 +65,13 @@ export async function POST(req: Request) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
-    const plan = (session.metadata?.plan || "pro").toLowerCase();
+    const planRaw = (session.metadata?.plan || "").toLowerCase();
 
     if (!userId) return NextResponse.json({ error: "No user ID" }, { status: 400 });
-
-    // Credit allocation per plan:
-    //   oneshot — 1  (49 Kč premium one-shot, Opus model)
-    //   easy    — 10 (legacy, for grandfathered test users)
-    //   basic   — 50 (99 Kč/měs, Sonnet)
-    //   pro     — 150 (199 Kč/měs, Opus)
-    const addedCredits =
-      plan === "pro"     ? 150 :
-      plan === "basic"   ?  50 :
-      plan === "oneshot" ?   1 :
-      plan === "easy"    ?  10 : 0;
+    if (!isPlanKey(planRaw)) {
+      console.warn("checkout.session.completed: unknown plan in metadata", planRaw);
+      return NextResponse.json({ received: true, ignored: "unknown plan" });
+    }
 
     const { data: profile } = await supabaseAdmin
       .from("user_profiles")
@@ -73,25 +79,35 @@ export async function POST(req: Request) {
       .eq("id", userId)
       .single();
 
-    const currentCredits = profile?.credits_remaining ?? 0;
-    const currentTier = profile?.tier;
+    const { tier, credits } = resolveTierAndCredits(planRaw, profile?.tier, profile?.credits_remaining ?? 0);
 
-    // One-time top-ups (oneshot, easy) preserve an existing paid subscription tier
-    // so users don't get downgraded by buying a top-up.
-    const isTopUp = plan === "oneshot" || plan === "easy";
-    const tierToSet = isTopUp && currentTier && ["basic", "pro"].includes(currentTier)
-      ? currentTier
-      : plan;
+    const updatePayload: Record<string, unknown> = {
+      id: userId,
+      credits_remaining: credits,
+      stripe_customer_id: session.customer as string,
+      tier,
+      updated_at: new Date().toISOString(),
+    };
+
+    // full_monthly/full_yearly = skutecne Stripe predplatne s trialem —
+    // dotahni aktualni stav primo ze Subscription objektu (checkout
+    // session sama o sobe trial_end/current_period_end neobsahuje).
+    if ((planRaw === "full_monthly" || planRaw === "full_yearly") && session.subscription) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(session.subscription as string);
+        updatePayload.stripe_subscription_id = sub.id;
+        updatePayload.subscription_status = sub.status;
+        updatePayload.trial_end = toIso(sub.trial_end);
+        updatePayload.current_period_end = toIso(getCurrentPeriodEnd(sub));
+        updatePayload.cancel_at_period_end = sub.cancel_at_period_end;
+      } catch (err) {
+        console.warn("checkout.session.completed: subscription retrieve failed", err);
+      }
+    }
 
     const { error: upsertError } = await supabaseAdmin
       .from("user_profiles")
-      .upsert({
-        id: userId,
-        credits_remaining: (currentCredits || 0) + addedCredits,
-        stripe_customer_id: session.customer as string,
-        tier: tierToSet,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "id" });
+      .upsert(updatePayload, { onConflict: "id" });
 
     if (upsertError) {
       return NextResponse.json({ error: "DB Update failed" }, { status: 500 });
@@ -99,7 +115,65 @@ export async function POST(req: Request) {
   }
 
   // ==========================================
-  // SCÉNÁŘ B: Měsíční obnova předplatného
+  // SCÉNÁŘ A2: Vznik/změna předplatného (trial→active, renewal date,
+  // naplánované zrušení přes portál, reaktivace) — udržuje
+  // subscription_status/trial_end/current_period_end/cancel_at_period_end
+  // v syncu nezávisle na checkout.session.completed. Klíčováno přes
+  // stripe_customer_id (v tuhle chvíli už vždy nastavený).
+  // ==========================================
+  if (event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") {
+    const sub = event.data.object as Stripe.Subscription;
+    const customerId = sub.customer as string;
+
+    const { error: syncError } = await supabaseAdmin
+      .from("user_profiles")
+      .update({
+        stripe_subscription_id: sub.id,
+        subscription_status: sub.status,
+        trial_end: toIso(sub.trial_end),
+        current_period_end: toIso(getCurrentPeriodEnd(sub)),
+        cancel_at_period_end: sub.cancel_at_period_end,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("stripe_customer_id", customerId);
+
+    if (syncError) {
+      console.warn("customer.subscription sync failed:", syncError);
+    }
+  }
+
+  // ==========================================
+  // SCÉNÁŘ A3: Připomínka konce trialu (Stripe posílá 3 dny předem)
+  // ==========================================
+  if (event.type === "customer.subscription.trial_will_end") {
+    const sub = event.data.object as Stripe.Subscription;
+    const customerId = sub.customer as string;
+
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from("user_profiles")
+        .select("id")
+        .eq("stripe_customer_id", customerId)
+        .single();
+
+      if (profile && sub.trial_end) {
+        const { data: { user } } = await supabaseAdmin.auth.admin.getUserById(profile.id);
+        const price = sub.items.data[0]?.price;
+        const amount = price?.unit_amount ? price.unit_amount / 100 : null;
+        const interval = price?.recurring?.interval === "year" ? "rok" : "měsíc";
+        const priceLabel = amount !== null ? `${amount.toLocaleString("cs-CZ")} Kč/${interval}` : "další platba";
+
+        if (user?.email) {
+          await sendTrialEndingReminder(user.email, new Date(sub.trial_end * 1000), priceLabel);
+        }
+      }
+    } catch (err) {
+      console.warn("trial_will_end handling failed:", err);
+    }
+  }
+
+  // ==========================================
+  // SCÉNÁŘ B: Měsíční/roční obnova předplatného
   // ==========================================
   if (event.type === "invoice.payment_succeeded") {
     const invoice = event.data.object as Stripe.Invoice;
@@ -109,19 +183,17 @@ export async function POST(req: Request) {
 
       const { data: profile } = await supabaseAdmin
         .from("user_profiles")
-        .select("id, credits_remaining, tier")
+        .select("id, tier")
         .eq("stripe_customer_id", customerId)
         .single();
 
-      if (profile) {
-        // Subscription renewal — top up credits to monthly allowance.
-        // Only pro/basic actually have subscriptions; other tiers shouldn't trigger renewal.
-        const addedCredits = profile.tier === "pro" ? 150 : profile.tier === "basic" ? 50 : 0;
-
+      if (profile && profile.tier === "full") {
+        // FULL = neomezene (fair use) — renewal RESETUJE na strop,
+        // nepricita (viz FULL_TIER_CREDIT_CEILING docstring).
         const { error: renewError } = await supabaseAdmin
           .from("user_profiles")
           .update({
-            credits_remaining: profile.credits_remaining + addedCredits,
+            credits_remaining: FULL_TIER_CREDIT_CEILING,
             updated_at: new Date().toISOString(),
           })
           .eq("id", profile.id);
@@ -145,6 +217,11 @@ export async function POST(req: Request) {
       .update({
         tier: "free",
         credits_remaining: 0,
+        stripe_subscription_id: null,
+        subscription_status: null,
+        trial_end: null,
+        current_period_end: null,
+        cancel_at_period_end: false,
         updated_at: new Date().toISOString(),
       })
       .eq("stripe_customer_id", customerId);

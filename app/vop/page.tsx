@@ -43,10 +43,11 @@ export default function VopPage() {
         <section className="space-y-4">
           <h2 className="text-xl font-bold text-blue-400">4. Tarify a platby</h2>
           <p className="text-slate-300 leading-relaxed">
-            Služba je poskytována v několika tarifech: JEDNORÁZOVÁ (jednorázový poplatek 49 Kč za 1 prémiovou analýzu),
-            BASIC (99 Kč/měsíc za 50 analýz) a PRO (199 Kč/měsíc za 150 analýz). Ceny jsou uvedeny
-            včetně DPH. Platby jsou zpracovávány prostřednictvím platební brány Stripe.
-            Předplatné se automaticky obnovuje, dokud není zrušeno.
+            Služba je poskytována v několika tarifech: JEDNORÁZOVÁ (jednorázový poplatek 49 Kč za 1 prémiovou analýzu,
+            bez zkušební doby) a FULL (79 Kč/měsíc nebo 790 Kč/rok, neomezené ověřování v mezích fair use). Tarif FULL
+            zahrnuje 7denní zkušební dobu zdarma; po jejím uplynutí se automaticky strhává platba za zvolené období,
+            dokud uživatel předplatné nezruší. Ceny jsou uvedeny včetně DPH. Platby jsou zpracovávány prostřednictvím
+            platební brány Stripe. Předplatné se automaticky obnovuje, dokud není zrušeno.
           </p>
         </section>
 

@@ -957,7 +957,7 @@ export default function Home() {
                             >
                               <Lock size={12} /> Přidat screenshot{" "}
                               <span className="text-primary/60 ml-1">
-                                (BASIC+)
+                                (Full)
                               </span>
                             </button>
                           ))}

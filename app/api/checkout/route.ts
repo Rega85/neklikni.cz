@@ -2,26 +2,19 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Stripe from "stripe";
+import { PLAN_CONFIG, isPlanKey } from "../_lib/billingPlans";
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error("STRIPE_SECRET_KEY is not set");
   return new Stripe(process.env.STRIPE_SECRET_KEY);
 }
 
-// Price IDs are read from env so live and test keys can coexist.
-// Set these in Vercel (live) and .env.local (test):
-//   STRIPE_PRICE_ONESHOT  — 49 Kč one-time, 1 prémiová PRO analýza
-//   STRIPE_PRICE_BASIC    — 99 Kč/měs, 50 analýz
-//   STRIPE_PRICE_PRO      — 199 Kč/měs, 150 analýz
-type PlanConfig = { priceId: string | undefined; mode: "payment" | "subscription" };
-
-const PRICES: Record<string, PlanConfig> = {
-  oneshot: { priceId: process.env.STRIPE_PRICE_ONESHOT, mode: "payment" },
-  basic:   { priceId: process.env.STRIPE_PRICE_BASIC,   mode: "subscription" },
-  pro:     { priceId: process.env.STRIPE_PRICE_PRO,     mode: "subscription" },
-};
-
-type Plan = keyof typeof PRICES;
+// Price IDs are read from env so live and test keys can coexist — viz
+// PLAN_CONFIG v ../_lib/billingPlans.ts pro přesné názvy proměnných.
+// Nastavit v Vercel (live) a .env.local (test):
+//   STRIPE_PRICE_ONESHOT       — 49 Kč jednorázová analýza
+//   STRIPE_PRICE_FULL_MONTHLY  — 79 Kč/měs, neomezené (fair use), 7denní trial
+//   STRIPE_PRICE_FULL_YEARLY   — 790 Kč/rok, neomezené (fair use), 7denní trial
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +23,12 @@ export async function POST(req: Request) {
     const stripe = getStripe();
     const { plan } = (await req.json()) as { plan?: string };
 
-    if (!plan || !(plan in PRICES) || !PRICES[plan as Plan].priceId) {
+    if (!plan || !isPlanKey(plan)) {
       return NextResponse.json({ error: "Neplatný nebo nedostupný plán" }, { status: 400 });
+    }
+    const priceId = process.env[PLAN_CONFIG[plan].envVar];
+    if (!priceId) {
+      return NextResponse.json({ error: "Plán není v Stripe nakonfigurován" }, { status: 503 });
     }
 
     const cookieStore = await cookies();
@@ -60,19 +57,19 @@ export async function POST(req: Request) {
     // via a redirect to their domain.
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-    const selected = PRICES[plan as Plan];
-    if (!selected.priceId) {
-      return NextResponse.json({ error: "Plán není v Stripe nakonfigurován" }, { status: 503 });
-    }
+    const selected = PLAN_CONFIG[plan];
 
     const session = await stripe.checkout.sessions.create({
       customer_email: user.email,
-      line_items: [{ price: selected.priceId, quantity: 1 }],
+      line_items: [{ price: priceId, quantity: 1 }],
       mode: selected.mode,
       success_url: `${appUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing?canceled=true`,
       allow_promotion_codes: true,
       metadata: { user_id: user.id, plan },
+      ...(selected.mode === "subscription" && selected.trialDays
+        ? { subscription_data: { trial_period_days: selected.trialDays, metadata: { user_id: user.id, plan } } }
+        : {}),
     });
 
     return NextResponse.json({ url: session.url });

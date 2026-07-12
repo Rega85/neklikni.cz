@@ -2,129 +2,64 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Zap, Shield, Crown, X, ChevronDown, ShieldCheck, RotateCcw, BadgeCheck, Sparkles, Users } from "lucide-react";
+import { Check, Zap, Crown, X, ChevronDown, ShieldCheck, RotateCcw, BadgeCheck, Sparkles, Users } from "lucide-react";
 import { PricingSchema } from "../components/StructuredData";
 import { trackEvent } from "../lib/analytics";
+import { trialDisclosure, TRIAL_DAYS } from "../api/_lib/billingPlans";
 
-type Plan = "oneshot" | "basic" | "pro";
+type Plan = "oneshot" | "full_monthly" | "full_yearly";
+type FullBilling = "monthly" | "yearly";
 
-type PlanCard = {
-  key: Plan | "family";
-  name: string;
-  tagline: string;
-  price: number;
-  period: string;
-  icon: typeof Zap;
-  accent: "slate" | "blue" | "purple" | "amber";
-  cta: string;
-  popular?: boolean;
-  comingSoon?: boolean;
-  badge?: string;
-  badgeClass?: string;
-  features: string[];
-};
+const VALID_PLANS: Plan[] = ["oneshot", "full_monthly", "full_yearly"];
 
-const PLANS: PlanCard[] = [
-  {
-    key: "oneshot",
-    name: "JEDNORÁZOVÁ",
-    tagline: "Když to opravdu MUSÍ sedět",
-    price: 49,
-    period: "jednorázově",
-    icon: Zap,
-    accent: "slate",
-    cta: "Koupit 1 analýzu",
-    badge: "Bez závazku",
-    badgeClass: "bg-success text-success-foreground shadow-lg shadow-success/30",
-    features: [
-      "1 kompletní rozbor zprávy",
-      "Nejpokročilejší AI model",
-      "Hloubkový rozbor – taktiky útočníka",
-      "Žádné předplatné",
-    ],
-  },
-  {
-    key: "basic",
-    name: "BASIC",
-    tagline: "Pro pravidelné uživatele",
-    price: 99,
-    period: "měsíc",
-    icon: Shield,
-    accent: "blue",
-    cta: "Získat BASIC",
-    popular: true,
-    features: [
-      "50 analýz měsíčně",
-      "Plný verdikt s vysvětlením",
-      "Analýza odkazů i SMS",
-      "Analýza screenshotů (obrázků)",
-      "Kredity přenosné do dalšího měsíce",
-    ],
-  },
-  {
-    key: "pro",
-    name: "PRO",
-    tagline: "Maximální ochrana pro tebe",
-    price: 199,
-    period: "měsíc",
-    icon: Crown,
-    accent: "purple",
-    cta: "Získat PRO",
-    features: [
-      "150 analýz měsíčně",
-      "Nejpokročilejší AI model",
-      "Hloubkový rozbor – taktiky útočníka",
-      "Konkrétní kroky co dělat dál",
-      "Až 12 000 znaků na zprávu",
-      "Prioritní podpora",
-    ],
-  },
-  {
-    key: "family",
-    name: "FAMILY",
-    tagline: "PRO ochrana pro celou rodinu",
-    price: 399,
-    period: "měsíc",
-    icon: Users,
-    accent: "amber",
-    cta: "Mám zájem",
-    comingSoon: true,
-    features: [
-      "Až 4 účty (rodiče, prarodiče, děti)",
-      "600 analýz měsíčně dohromady",
-      "Sdílený výpis zachycených hrozeb",
-      "Vše z PRO pro každého člena",
-      "Centrální správa a fakturace",
-    ],
-  },
+const FULL_PRICE = { monthly: 79, yearly: 790 };
+const FULL_PERIOD_LABEL = { monthly: "měsíc", yearly: "rok" };
+const FULL_PRICE_LABEL = { monthly: "79 Kč/měsíc", yearly: "790 Kč/rok" };
+
+const FULL_FEATURES = [
+  "Neomezené ověřování (fair use)",
+  "Nejpokročilejší AI model",
+  "Hloubkový rozbor – taktiky útočníka",
+  "Analýza screenshotů (obrázků)",
+  "Prioritní podpora",
 ];
 
-const COMPARE: { label: string; free: string; oneshot: string; basic: string; pro: string; highlight?: boolean }[] = [
-  { label: "Cena",                            free: "0 Kč",        oneshot: "49 Kč",       basic: "99 Kč / měs",   pro: "199 Kč / měs", highlight: true },
-  { label: "Počet analýz",                    free: "2 / den",     oneshot: "1",           basic: "50 / měs",      pro: "150 / měs", highlight: true },
-  { label: "AI model",                        free: "Základní",    oneshot: "Nejpokročilejší", basic: "Pokročilý", pro: "Nejpokročilejší" },
-  { label: "Maximální délka textu",           free: "5 000 znaků", oneshot: "12 000 znaků",basic: "8 000 znaků",   pro: "12 000 znaků" },
-  { label: "Analýza obrázků / screenshotů",   free: "—",            oneshot: "—",           basic: "✓",             pro: "✓" },
-  { label: "Hloubkový rozbor + taktiky",      free: "—",            oneshot: "✓",           basic: "—",             pro: "✓" },
-  { label: "Konkrétní kroky co dělat dál",    free: "—",            oneshot: "rozšířené",   basic: "rozšířené",     pro: "rozšířené" },
-  { label: "Sdílení a varování přes odkaz",   free: "✓",            oneshot: "✓",           basic: "✓",             pro: "✓" },
-  { label: "PDF report ke stažení",           free: "✓",            oneshot: "✓",           basic: "✓",             pro: "✓" },
-  { label: "Expirace kreditů",                free: "—",            oneshot: "ihned po použití", basic: "až +1 měsíc",   pro: "až +1 měsíc" },
-  { label: "Závazek",                         free: "žádný",        oneshot: "žádný",       basic: "zrušit kdykoli",pro: "zrušit kdykoli" },
+const ONESHOT_FEATURES = [
+  "1 kompletní rozbor zprávy",
+  "Nejpokročilejší AI model",
+  "Hloubkový rozbor – taktiky útočníka",
+  "Žádné předplatné",
+];
+
+const COMPARE: { label: string; free: string; oneshot: string; full: string; highlight?: boolean }[] = [
+  { label: "Cena", free: "0 Kč", oneshot: "49 Kč", full: "79 Kč / měs (nebo 790 Kč / rok)", highlight: true },
+  { label: "Počet ověření", free: "2 AI / den", oneshot: "1", full: "neomezeně (fair use)", highlight: true },
+  { label: "Zkušební období", free: "—", oneshot: "—", full: `${TRIAL_DAYS} dní zdarma` },
+  { label: "AI model", free: "Základní", oneshot: "Nejpokročilejší", full: "Nejpokročilejší" },
+  { label: "Vyhledávání v databázi", free: "10 / den", oneshot: "10 / den", full: "10 / den" },
+  { label: "Analýza obrázků / screenshotů", free: "—", oneshot: "—", full: "✓" },
+  { label: "Hloubkový rozbor + taktiky", free: "—", oneshot: "✓", full: "✓" },
+  { label: "Sdílení a varování přes odkaz", free: "✓", oneshot: "✓", full: "✓" },
+  { label: "PDF report ke stažení", free: "✓", oneshot: "✓", full: "✓" },
+  { label: "Závazek", free: "žádný", oneshot: "žádný", full: "zrušit kdykoli jedním klikem" },
 ];
 
 const FAQ: { q: string; a: string }[] = [
   {
     q: "Mohu předplatné kdykoli zrušit?",
-    a: "Ano. Předplatné si zrušíš jedním kliknutím v sekci Fakturace. Kredity, které ti zbývají do konce zaplaceného období, můžeš normálně dočerpat — nic se ti nepropadne dříve.",
+    a: "Ano, kdykoli jedním kliknutím v sekci Fakturace — klidně i během zkušebního období. Předplatné zůstane aktivní do konce zaplaceného (nebo zkušebního) období, pak se samo nebude obnovovat.",
   },
   {
-    q: "Co když mi dojdou kredity uprostřed měsíce?",
-    a: "Pro kritické případy si můžeš dokoupit jednorázovou prémiovou analýzu (49 Kč). Pokud ale analyzuješ častěji, doporučujeme přechod na vyšší tarif, kde se kredity rovnou navýší.",
+    q: "Jak funguje zkušební období u Full?",
+    a: `Prvních ${TRIAL_DAYS} dní je zdarma. Kartu zadáváš předem, ale nic se nestrhne, dokud trial neskončí — 3 dny předem ti pošleme e-mail s připomínkou. Pokud nezrušíš, automaticky se strhne 79 Kč (měsíčně) nebo 790 Kč (ročně).`,
+  },
+  {
+    q: "Co když potřebuju jen jednu analýzu teď hned?",
+    a: "Jednorázová analýza za 49 Kč — žádné předplatné, žádný trial, jen jeden kompletní rozbor nejpokročilejším modelem.",
   },
   {
     q: "Liší se výsledky mezi tarify?",
-    a: "Ano, ale jen v hloubce. FREE používá rychlý základní model — kratší verdikt. BASIC nasazuje pokročilý model — plný popis s vysvětlením. Jednorázový nákup a tarif PRO běží na nejpokročilejším modelu — nejvyšší přesnost, taktiky útočníka, doporučení co dělat dál.",
+    a: "Ano, ale jen v hloubce. FREE používá rychlý základní model — kratší verdikt. Jednorázová analýza i Full běží na nejpokročilejším modelu — nejvyšší přesnost, taktiky útočníka, konkrétní doporučení co dělat dál.",
   },
   {
     q: "Ukládáte moje zprávy?",
@@ -144,74 +79,16 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Co dostanu zdarma?",
-    a: "2 analýzy denně bez registrace, plus PDF report a sdílení. Pro screenshoty, vyšší přesnost a více analýz si můžeš vybrat tarif.",
+    a: "2 AI ověření denně a 10 vyhledávání v databázi bez registrace, plus PDF report a sdílení. Pro screenshoty a neomezené ověřování si vyber Full.",
   },
 ];
-
-const ACCENT_STYLES: Record<"slate" | "blue" | "purple" | "amber", {
-  border: string;
-  glow: string;
-  iconBg: string;
-  iconColor: string;
-  badgeBg: string;
-  badgeText: string;
-  ctaBg: string;
-  check: string;
-  popularRing: string;
-}> = {
-  slate: {
-    border: "border-border",
-    glow: "",
-    iconBg: "bg-secondary",
-    iconColor: "text-muted-foreground",
-    badgeBg: "bg-secondary",
-    badgeText: "text-muted-foreground",
-    ctaBg: "bg-secondary hover:bg-secondary/70 text-foreground",
-    check: "text-muted-foreground",
-    popularRing: "",
-  },
-  blue: {
-    border: "border-primary/40",
-    glow: "shadow-[0_30px_80px_-30px_oklch(0.62_0.19_256_/_0.55)]",
-    iconBg: "bg-primary/20",
-    iconColor: "text-primary",
-    badgeBg: "bg-primary/15",
-    badgeText: "text-primary",
-    ctaBg: "bg-primary hover:brightness-110 text-primary-foreground shadow-lg shadow-primary/25",
-    check: "text-primary",
-    popularRing: "ring-2 ring-primary/40",
-  },
-  purple: {
-    border: "border-primary/40",
-    glow: "shadow-[0_30px_80px_-30px_oklch(0.62_0.19_256_/_0.55)]",
-    iconBg: "bg-primary/20",
-    iconColor: "text-primary",
-    badgeBg: "bg-primary/15",
-    badgeText: "text-primary",
-    ctaBg: "bg-primary hover:brightness-110 text-primary-foreground shadow-lg shadow-primary/30",
-    check: "text-primary",
-    popularRing: "",
-  },
-  amber: {
-    border: "border-warning/40",
-    glow: "shadow-[0_30px_80px_-30px_oklch(0.78_0.15_75_/_0.45)]",
-    iconBg: "bg-warning/20",
-    iconColor: "text-warning",
-    badgeBg: "bg-warning/15",
-    badgeText: "text-warning",
-    ctaBg: "bg-warning/15 hover:bg-warning/25 text-warning border border-warning/40",
-    check: "text-warning",
-    popularRing: "",
-  },
-};
-
-const VALID_PLANS: Plan[] = ["oneshot", "basic", "pro"];
 
 export default function PricingPage() {
   const [loading, setLoading] = useState<Plan | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [autoRedirecting, setAutoRedirecting] = useState(false);
+  const [fullBilling, setFullBilling] = useState<FullBilling>("monthly");
   const router = useRouter();
 
   useEffect(() => {
@@ -253,6 +130,7 @@ export default function PricingPage() {
   useEffect(() => {
     const plan = new URLSearchParams(window.location.search).get("plan") as Plan | null;
     if (plan && VALID_PLANS.includes(plan)) {
+      if (plan === "full_yearly") setFullBilling("yearly");
       setAutoRedirecting(true);
       handleCheckout(plan);
     }
@@ -260,6 +138,8 @@ export default function PricingPage() {
   }, []);
 
   const disabled = loading !== null;
+  const fullPlanKey: Plan = fullBilling === "yearly" ? "full_yearly" : "full_monthly";
+  const isFullLoading = loading === fullPlanKey;
 
   if (autoRedirecting) {
     return (
@@ -287,27 +167,27 @@ export default function PricingPage() {
             </span>
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto leading-relaxed">
-            Začni zdarma — 2 ověření denně bez registrace. Plať jen když potřebuješ víc.
+            Začni zdarma — 2 AI ověření denně bez registrace. Plať jen když potřebuješ víc.
           </p>
 
           {/* Trust badges */}
           <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-muted-foreground pt-2">
             <span className="inline-flex items-center gap-1.5"><ShieldCheck size={14} className="text-success" /> 100% anonymní</span>
             <span className="inline-flex items-center gap-1.5"><RotateCcw size={14} className="text-success" /> Zrušit kdykoli</span>
-            <span className="inline-flex items-center gap-1.5"><BadgeCheck size={14} className="text-success" /> Garantujeme nebo vrátíme peníze</span>
+            <span className="inline-flex items-center gap-1.5"><BadgeCheck size={14} className="text-success" /> {TRIAL_DAYS} dní zdarma na Full</span>
           </div>
         </section>
 
         {/* ─── Plan Cards ───────────────────────────────── */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5 mb-16">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
 
-          {/* FREE — vždy první, CTA vede na homepage */}
-          <div className="relative surface-card p-5 sm:p-6 xl:p-5 flex flex-col animate-fade-up border-success/30">
+          {/* FREE */}
+          <div className="relative surface-card p-6 sm:p-7 flex flex-col animate-fade-up border-success/30">
             <div className="flex items-center gap-3 mb-5">
               <div className="bg-success/15 text-success p-2.5 rounded-xl shrink-0">
                 <ShieldCheck size={20} />
               </div>
-              <h2 className="text-xl xl:text-base font-black tracking-tight min-w-0">FREE</h2>
+              <h2 className="text-xl font-black tracking-tight min-w-0">FREE</h2>
             </div>
 
             <div className="mb-1">
@@ -318,8 +198,8 @@ export default function PricingPage() {
 
             <ul className="space-y-3 mb-7 flex-1">
               {[
-                "2 analýzy denně zdarma",
-                "Vyhledávání v databázi",
+                "2 AI ověření denně",
+                "10 vyhledávání v databázi denně",
                 "Bez registrace",
                 "Sdílení a varování",
               ].map((f) => (
@@ -338,75 +218,160 @@ export default function PricingPage() {
             </button>
           </div>
 
-          {PLANS.map((p, idx) => {
-            const styles = ACCENT_STYLES[p.accent];
-            const Icon = p.icon;
-            const isLoading = !p.comingSoon && loading === (p.key as Plan);
-            return (
-              <div
-                key={p.key}
-                className={`relative surface-card p-6 sm:p-7 xl:p-5 flex flex-col animate-fade-up ${p.popular ? "md:-translate-y-3 surface-card-elevated " + styles.popularRing : ""} ${styles.border} ${styles.glow}`}
-                style={{ animationDelay: `${(idx + 1) * 80}ms` }}
-              >
-                {p.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-primary/30">
-                    Nejoblíbenější
-                  </div>
-                )}
-                {p.comingSoon && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-warning text-warning-foreground text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-warning/40">
-                    Připravujeme
-                  </div>
-                )}
-                {p.badge && (
-                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap ${p.badgeClass}`}>
-                    {p.badge}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-3 mb-5 min-w-0">
-                  <div className={`${styles.iconBg} ${styles.iconColor} p-2.5 rounded-xl shrink-0`}>
-                    <Icon size={20} />
-                  </div>
-                  <h2 className="text-xl xl:text-base font-black tracking-tight min-w-0">{p.name}</h2>
-                </div>
-
-                <div className="mb-1">
-                  <span className="text-5xl font-black tracking-tight">{p.price} Kč</span>
-                  <span className="text-muted-foreground text-base font-medium ml-1">/ {p.period}</span>
-                </div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2">včetně 21 % DPH</p>
-                <p className="text-muted-foreground text-sm font-medium mb-6">{p.tagline}</p>
-
-                <ul className="space-y-3 mb-7 flex-1">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex gap-2.5 items-start text-sm text-foreground">
-                      <Check className={`${styles.check} shrink-0 mt-0.5`} size={16} />
-                      <span>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {p.comingSoon ? (
-                  <a
-                    href={`mailto:info@neklikni.cz?subject=${encodeURIComponent("Mám zájem o FAMILY tarif")}`}
-                    onClick={() => trackEvent("cta_upgrade_clicked", { from: "pricing", action: "family_inquiry" })}
-                    className={`w-full inline-flex items-center justify-center py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] ${styles.ctaBg}`}
-                  >
-                    {p.cta}
-                  </a>
-                ) : (
-                  <button
-                    onClick={() => handleCheckout(p.key as Plan)}
-                    disabled={disabled}
-                    className={`w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed ${styles.ctaBg}`}
-                  >
-                    {isLoading ? "Načítám pokladnu..." : p.cta}
-                  </button>
-                )}
+          {/* ONESHOT */}
+          <div className="relative surface-card p-6 sm:p-7 flex flex-col animate-fade-up border-border" style={{ animationDelay: "80ms" }}>
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-success text-success-foreground text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-success/30">
+              Bez závazku
+            </div>
+            <div className="flex items-center gap-3 mb-5 min-w-0">
+              <div className="bg-secondary text-muted-foreground p-2.5 rounded-xl shrink-0">
+                <Zap size={20} />
               </div>
-            );
-          })}
+              <h2 className="text-xl font-black tracking-tight min-w-0">JEDNORÁZOVÁ</h2>
+            </div>
+
+            <div className="mb-1">
+              <span className="text-5xl font-black tracking-tight">49 Kč</span>
+              <span className="text-muted-foreground text-base font-medium ml-1">/ jednorázově</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2">včetně 21 % DPH</p>
+            <p className="text-muted-foreground text-sm font-medium mb-6">Když to opravdu MUSÍ sedět</p>
+
+            <ul className="space-y-3 mb-7 flex-1">
+              {ONESHOT_FEATURES.map((f) => (
+                <li key={f} className="flex gap-2.5 items-start text-sm text-foreground">
+                  <Check className="text-muted-foreground shrink-0 mt-0.5" size={16} />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => handleCheckout("oneshot")}
+              disabled={disabled}
+              className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed bg-secondary hover:bg-secondary/70 text-foreground"
+            >
+              {loading === "oneshot" ? "Načítám pokladnu..." : "Koupit 1 analýzu"}
+            </button>
+          </div>
+
+          {/* FULL — měsíčně/ročně přepínač + trial */}
+          <div
+            className="relative surface-card-elevated p-6 sm:p-7 flex flex-col animate-fade-up md:-translate-y-3 ring-2 ring-primary/40 border-primary/40 shadow-[0_30px_80px_-30px_oklch(0.62_0.19_256_/_0.55)]"
+            style={{ animationDelay: "160ms" }}
+          >
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-primary/30">
+              Nejoblíbenější
+            </div>
+
+            <div className="flex items-center gap-3 mb-4 min-w-0">
+              <div className="bg-primary/20 text-primary p-2.5 rounded-xl shrink-0">
+                <Crown size={20} />
+              </div>
+              <h2 className="text-xl font-black tracking-tight min-w-0">FULL</h2>
+            </div>
+
+            {/* Měsíčně / Ročně přepínač */}
+            <div className="flex bg-secondary rounded-xl p-1 mb-4 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setFullBilling("monthly")}
+                className={`flex-1 py-2 rounded-lg transition-all ${fullBilling === "monthly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Měsíčně
+              </button>
+              <button
+                type="button"
+                onClick={() => setFullBilling("yearly")}
+                className={`flex-1 py-2 rounded-lg transition-all ${fullBilling === "yearly" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Ročně
+                <span className="ml-1 text-success">−17 %</span>
+              </button>
+            </div>
+
+            <div className="mb-1">
+              <span className="text-5xl font-black tracking-tight">{FULL_PRICE[fullBilling]} Kč</span>
+              <span className="text-muted-foreground text-base font-medium ml-1">/ {FULL_PERIOD_LABEL[fullBilling]}</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2">
+              včetně 21 % DPH{fullBilling === "yearly" ? " · 2 měsíce zdarma oproti měsíčnímu" : ""}
+            </p>
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-success bg-success/10 border border-success/20 px-2.5 py-1 rounded-full mb-4 w-fit">
+              <BadgeCheck size={12} /> {TRIAL_DAYS} dní zdarma
+            </div>
+
+            <ul className="space-y-3 mb-5 flex-1">
+              {FULL_FEATURES.map((f) => (
+                <li key={f} className="flex gap-2.5 items-start text-sm text-foreground">
+                  <Check className="text-primary shrink-0 mt-0.5" size={16} />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            <button
+              onClick={() => handleCheckout(fullPlanKey)}
+              disabled={disabled}
+              className="w-full py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed bg-primary hover:brightness-110 text-primary-foreground shadow-lg shadow-primary/25 mb-3"
+            >
+              {isFullLoading ? "Načítám pokladnu..." : `Začít ${TRIAL_DAYS}denní trial zdarma`}
+            </button>
+
+            {/* Právní minimum — NEPODKROČITELNÉ, viditelně u tlačítka, ne jen ve VOP */}
+            <p className="text-[11px] text-muted-foreground leading-relaxed text-center">
+              <strong className="text-foreground">
+                Prvních {TRIAL_DAYS} dní zdarma. Poté {FULL_PRICE_LABEL[fullBilling]}
+              </strong>
+              , strhává se automaticky. Zrušíte kdykoli jedním klikem.
+            </p>
+          </div>
+
+          {/* FAMILY — coming soon, nezměněno */}
+          <div
+            className="relative surface-card p-6 sm:p-7 flex flex-col animate-fade-up border-warning/40 shadow-[0_30px_80px_-30px_oklch(0.78_0.15_75_/_0.45)]"
+            style={{ animationDelay: "240ms" }}
+          >
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-warning text-warning-foreground text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap shadow-lg shadow-warning/40">
+              Připravujeme
+            </div>
+            <div className="flex items-center gap-3 mb-5 min-w-0">
+              <div className="bg-warning/20 text-warning p-2.5 rounded-xl shrink-0">
+                <Users size={20} />
+              </div>
+              <h2 className="text-xl font-black tracking-tight min-w-0">FAMILY</h2>
+            </div>
+
+            <div className="mb-1">
+              <span className="text-5xl font-black tracking-tight">399 Kč</span>
+              <span className="text-muted-foreground text-base font-medium ml-1">/ měsíc</span>
+            </div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2">včetně 21 % DPH</p>
+            <p className="text-muted-foreground text-sm font-medium mb-6">PRO ochrana pro celou rodinu</p>
+
+            <ul className="space-y-3 mb-7 flex-1">
+              {[
+                "Až 4 účty (rodiče, prarodiče, děti)",
+                "Neomezené ověřování pro každého",
+                "Sdílený výpis zachycených hrozeb",
+                "Vše z Full pro každého člena",
+                "Centrální správa a fakturace",
+              ].map((f) => (
+                <li key={f} className="flex gap-2.5 items-start text-sm text-foreground">
+                  <Check className="text-warning shrink-0 mt-0.5" size={16} />
+                  <span>{f}</span>
+                </li>
+              ))}
+            </ul>
+
+            <a
+              href={`mailto:info@neklikni.cz?subject=${encodeURIComponent("Mám zájem o FAMILY tarif")}`}
+              onClick={() => trackEvent("cta_upgrade_clicked", { from: "pricing", action: "family_inquiry" })}
+              className="w-full inline-flex items-center justify-center py-3.5 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] bg-warning/15 hover:bg-warning/25 text-warning border border-warning/40"
+            >
+              Mám zájem
+            </a>
+          </div>
         </section>
 
         {/* ─── Loss Aversion Calculator ─────────────────── */}
@@ -427,36 +392,35 @@ export default function PricingPage() {
             <div className="bg-secondary/30 border border-border rounded-2xl p-5 sm:p-6">
               <div className="space-y-3">
                 <div className="flex justify-between items-baseline">
-                  <span className="text-muted-foreground text-sm">Cena BASIC za rok:</span>
-                  <span className="text-foreground font-black tabular-nums">1 188 Kč</span>
+                  <span className="text-muted-foreground text-sm">Cena Full za rok (měsíčně):</span>
+                  <span className="text-foreground font-black tabular-nums">948 Kč</span>
                 </div>
                 <div className="flex justify-between items-baseline">
-                  <span className="text-muted-foreground text-sm">Cena PRO za rok:</span>
-                  <span className="text-foreground font-black tabular-nums">2 388 Kč</span>
+                  <span className="text-muted-foreground text-sm">Cena Full za rok (ročně):</span>
+                  <span className="text-foreground font-black tabular-nums">790 Kč</span>
                 </div>
                 <div className="flex justify-between items-baseline">
                   <span className="text-muted-foreground text-sm">Průměrná škoda z phishingu:</span>
                   <span className="text-warning font-black tabular-nums">35 000 Kč</span>
                 </div>
                 <div className="border-t border-border pt-3 flex justify-between items-baseline">
-                  <span className="text-foreground font-bold text-sm">ROI při 1 odhaleném podvodu (BASIC):</span>
-                  <span className="text-success font-black text-xl tabular-nums">29×</span>
+                  <span className="text-foreground font-bold text-sm">ROI při 1 odhaleném podvodu (roční Full):</span>
+                  <span className="text-success font-black text-xl tabular-nums">44×</span>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* ─── Money-Back Banner ────────────────────────── */}
+        {/* ─── Trial banner ─────────────────────────────── */}
         <section className="surface-card p-6 sm:p-8 mb-16 flex flex-col sm:flex-row items-center gap-5 animate-fade-up">
           <div className="bg-success/15 text-success p-4 rounded-2xl shrink-0">
             <BadgeCheck size={28} />
           </div>
           <div className="text-center sm:text-left">
-            <h3 className="text-lg font-black mb-1">14denní garance vrácení peněz</h3>
+            <h3 className="text-lg font-black mb-1">{TRIAL_DAYS} dní Full zdarma, zrušíš jedním klikem</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Pokud ti Neklikni během 14 dnů od první platby nepomůže odhalit ani jeden podvod nebo nesplní očekávání, napiš nám —
-              vrátíme ti celou částku, bez otázek.
+              {trialDisclosure(FULL_PRICE_LABEL.monthly)} Žádné otázky, žádné čekání na odpověď — zrušení je okamžité.
             </p>
           </div>
         </section>
@@ -474,24 +438,22 @@ export default function PricingPage() {
           <div className="surface-card overflow-x-auto">
            <div className="min-w-[560px]">
             {/* Header row */}
-            <div className="grid grid-cols-5 text-[10px] sm:text-xs font-black uppercase tracking-widest border-b border-border">
+            <div className="grid grid-cols-4 text-[10px] sm:text-xs font-black uppercase tracking-widest border-b border-border">
               <div className="p-3 sm:p-4 text-muted-foreground"></div>
               <div className="p-3 sm:p-4 text-center text-muted-foreground">FREE</div>
-              <div className="p-3 sm:p-4 text-center text-muted-foreground">EASY</div>
-              <div className="p-3 sm:p-4 text-center text-primary bg-primary/5">BASIC</div>
-              <div className="p-3 sm:p-4 text-center text-primary">PRO</div>
+              <div className="p-3 sm:p-4 text-center text-muted-foreground">JEDNORÁZOVÁ</div>
+              <div className="p-3 sm:p-4 text-center text-primary bg-primary/5">FULL</div>
             </div>
 
             {COMPARE.map((row) => (
               <div
                 key={row.label}
-                className={`grid grid-cols-5 text-xs sm:text-sm border-b border-border last:border-0 ${row.highlight ? "bg-secondary/20 font-semibold" : ""}`}
+                className={`grid grid-cols-4 text-xs sm:text-sm border-b border-border last:border-0 ${row.highlight ? "bg-secondary/20 font-semibold" : ""}`}
               >
                 <div className="p-3 sm:p-4 text-muted-foreground">{row.label}</div>
                 <div className="p-3 sm:p-4 text-center text-muted-foreground">{row.free}</div>
                 <div className="p-3 sm:p-4 text-center text-muted-foreground">{row.oneshot}</div>
-                <div className="p-3 sm:p-4 text-center text-primary bg-primary/5">{row.basic}</div>
-                <div className="p-3 sm:p-4 text-center text-primary">{row.pro}</div>
+                <div className="p-3 sm:p-4 text-center text-primary bg-primary/5">{row.full}</div>
               </div>
             ))}
            </div>
@@ -539,8 +501,8 @@ export default function PricingPage() {
         <section className="surface-card-elevated p-8 sm:p-12 text-center space-y-4 animate-fade-up">
           <h2 className="text-2xl sm:text-3xl font-black tracking-tighter">Stále váháš?</h2>
           <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed">
-            Začni se 2 analýzami denně zdarma — bez registrace, bez kreditky.
-            Kdykoli později se rozhodneš pro tarif, kredity se ti spočítají hned od první minuty.
+            Začni se 2 AI ověřeními denně zdarma — bez registrace, bez kreditky.
+            Kdykoli později si vybereš Full, prvních {TRIAL_DAYS} dní je taky zdarma.
           </p>
           <div className="flex flex-wrap justify-center gap-3 pt-2">
             <button
@@ -550,11 +512,11 @@ export default function PricingPage() {
               Vyzkoušet zdarma
             </button>
             <button
-              onClick={() => handleCheckout("basic")}
+              onClick={() => handleCheckout("full_monthly")}
               disabled={disabled}
               className="px-6 py-3 rounded-2xl bg-primary hover:brightness-110 text-primary-foreground font-bold text-sm shadow-lg shadow-primary/25 transition-all active:scale-[0.98] disabled:opacity-60"
             >
-              {loading === "basic" ? "Načítám…" : "Začít s BASIC za 99 Kč"}
+              {loading === "full_monthly" ? "Načítám…" : `Začít ${TRIAL_DAYS}denní trial zdarma`}
             </button>
           </div>
         </section>

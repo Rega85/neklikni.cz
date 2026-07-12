@@ -11,7 +11,7 @@ const STEPS = [
   {
     icon: Send,
     title: "Vlož zprávu",
-    text: "Zkopíruj podezřelou SMS, e-mail nebo přetáhni screenshot. Můžeš i jen odkaz.",
+    text: "Zkopíruj podezřelou SMS, e-mail nebo jen vlož odkaz. Přetažení screenshotu je součástí Full nebo jednorázové analýzy.",
   },
   {
     icon: Brain,
@@ -62,7 +62,7 @@ const USE_CASES = [
   {
     label: "Pro firmy / účetní",
     title: "Když ti denně chodí 5+ podezřelých e-mailů",
-    text: "Pro účetní a HR pracovníky chodí denně desítky e-mailů od „úřadů“, „bank“, „dodavatelů“. PRO tarif s detailním rozborem rychle odliší legitimní žádost od pokusu o podvodný převod. Šetří desítky minut denně.",
+    text: "Pro účetní a HR pracovníky chodí denně desítky e-mailů od „úřadů“, „bank“, „dodavatelů“. Full tarif s detailním rozborem rychle odliší legitimní žádost od pokusu o podvodný převod. Šetří desítky minut denně.",
   },
   {
     label: "Pro nákupy z bazaru",
@@ -196,7 +196,7 @@ export default function HomeSections() {
           Připraven na <span className="text-primary">víc analýz</span>?
         </h2>
         <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed">
-          Od 99 Kč měsíčně získáš 50 analýz, screenshoty a plný verdikt. Zruš kdykoli, 14denní garance vrácení peněz.
+          Za 79 Kč měsíčně získáš neomezené ověřování, screenshoty a plný verdikt — první 7 dní zdarma. Zruš kdykoli jedním klikem.
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
           <Link

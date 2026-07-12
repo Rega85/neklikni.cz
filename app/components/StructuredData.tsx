@@ -77,14 +77,14 @@ export function PricingSchema(faq: { q: string; a: string }[]) {
             url: `${BASE}/pricing`, availability: "https://schema.org/InStock",
           },
           {
-            "@type": "Offer", name: "BASIC", price: "99",  priceCurrency: "CZK",
+            "@type": "Offer", name: "FULL měsíční", price: "79",  priceCurrency: "CZK",
             url: `${BASE}/pricing`, availability: "https://schema.org/InStock",
-            priceSpecification: { "@type": "UnitPriceSpecification", price: "99", priceCurrency: "CZK", referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitCode: "MON" } },
+            priceSpecification: { "@type": "UnitPriceSpecification", price: "79", priceCurrency: "CZK", referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitCode: "MON" } },
           },
           {
-            "@type": "Offer", name: "PRO", price: "199", priceCurrency: "CZK",
+            "@type": "Offer", name: "FULL roční", price: "790", priceCurrency: "CZK",
             url: `${BASE}/pricing`, availability: "https://schema.org/InStock",
-            priceSpecification: { "@type": "UnitPriceSpecification", price: "199", priceCurrency: "CZK", referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitCode: "MON" } },
+            priceSpecification: { "@type": "UnitPriceSpecification", price: "790", priceCurrency: "CZK", referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitCode: "ANN" } },
           },
         ],
       },

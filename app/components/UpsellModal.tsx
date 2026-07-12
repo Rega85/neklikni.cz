@@ -9,7 +9,7 @@ type Reason = "anon_daily" | "no_credits" | null;
 type Props = {
   reason: Reason;
   onClose: () => void;
-  /** "free" | "easy" | "basic" | "pro" | undefined */
+  /** "free" | "oneshot" | "full" | undefined */
   tier?: string;
 };
 
@@ -20,7 +20,7 @@ const COPY: Record<Exclude<Reason, null>, { title: string; sub: string }> = {
   },
   no_credits: {
     title: "Vyčerpal jsi všechny analýzy",
-    sub: "Doplň si analýzy nebo upgraduj na vyšší tarif. Analýzy z BASIC/PRO se obnoví automaticky.",
+    sub: "Dokup si jednorázovou analýzu nebo přejdi na Full — neomezené ověřování bez počítání kreditů.",
   },
 };
 
@@ -94,7 +94,7 @@ export default function UpsellModal({ reason, onClose, tier }: Props) {
 
           <Link
             href="/pricing"
-            onClick={() => trackEvent("cta_upgrade_clicked", { from: "upsell_modal", action: "basic", tier })}
+            onClick={() => trackEvent("cta_upgrade_clicked", { from: "upsell_modal", action: "full", tier })}
             className="group relative flex items-center gap-3 bg-primary p-4 rounded-2xl shadow-lg shadow-primary/30 transition-all"
           >
             <div className="absolute -top-2 right-4 bg-warning text-warning-foreground text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full">
@@ -104,8 +104,8 @@ export default function UpsellModal({ reason, onClose, tier }: Props) {
               <Crown size={18} />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-foreground font-bold text-sm">BASIC — 99 Kč/měs</div>
-              <div className="text-primary-foreground/80 text-xs">50 analýz / měsíc, screenshoty, plný verdikt</div>
+              <div className="text-foreground font-bold text-sm">FULL — 79 Kč/měs</div>
+              <div className="text-primary-foreground/80 text-xs">Neomezené ověřování, screenshoty, plný verdikt — 7 dní zdarma</div>
             </div>
             <ArrowRight size={16} className="text-primary-foreground group-hover:translate-x-0.5 transition-all shrink-0" />
           </Link>
