@@ -183,58 +183,61 @@ export default function VerdictCard(props: VerdictCardProps) {
           </div>
         )}
 
-        <div className="mt-5 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleDownloadPDF}
-            className="flex items-center gap-2 text-xs border border-primary text-primary px-4 py-2 rounded-lg hover:bg-primary/10 transition-colors"
-          >
-            <Download size={14} /> Stáhnout report
-          </button>
-          {shareUrl && (
-            <>
-              <a
-                href={`https://wa.me/?text=${waText}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent("cta_share_clicked", { method: "whatsapp", level })}
-                className="flex items-center gap-1.5 text-xs font-bold text-foreground bg-success hover:brightness-110 px-4 py-2 rounded-xl transition-all"
-              >
-                💬 WhatsApp
-              </a>
-              <a
-                href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => trackEvent("cta_share_clicked", { method: "facebook", level })}
-                className="flex items-center gap-1.5 text-xs font-bold text-foreground bg-primary hover:brightness-110 px-4 py-2 rounded-xl transition-all"
-              >
-                📘 Facebook
-              </a>
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors bg-secondary hover:bg-secondary/80 px-4 py-2 rounded-xl"
-              >
-                {copied ? (
-                  <>
-                    <Check size={14} className="text-success" /> Zkopírováno!
-                  </>
-                ) : (
-                  <>
-                    <Share2 size={14} /> Kopírovat odkaz
-                  </>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={handleNativeShare}
-                className="sm:hidden flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors bg-secondary hover:bg-secondary/80 px-4 py-2 rounded-xl"
-              >
-                <Share2 size={14} /> Sdílet
-              </button>
-            </>
-          )}
+        <div className="mt-6 pt-5 border-t border-border space-y-2.5">
+          <h3 className="text-primary font-black uppercase text-[10px] tracking-widest">Sdílet výsledek</h3>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDownloadPDF}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/40 hover:bg-secondary px-3.5 py-2 text-xs font-semibold text-foreground transition-colors"
+            >
+              <Download size={14} className="text-muted-foreground" /> Stáhnout report
+            </button>
+            {shareUrl && (
+              <>
+                <a
+                  href={`https://wa.me/?text=${waText}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent("cta_share_clicked", { method: "whatsapp", level })}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/40 hover:bg-secondary px-3.5 py-2 text-xs font-semibold text-foreground transition-colors"
+                >
+                  <span aria-hidden="true">💬</span> WhatsApp
+                </a>
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackEvent("cta_share_clicked", { method: "facebook", level })}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/40 hover:bg-secondary px-3.5 py-2 text-xs font-semibold text-foreground transition-colors"
+                >
+                  <span aria-hidden="true">📘</span> Facebook
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/40 hover:bg-secondary px-3.5 py-2 text-xs font-semibold text-foreground transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check size={14} className="text-success" /> Zkopírováno!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 size={14} className="text-muted-foreground" /> Kopírovat odkaz
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNativeShare}
+                  className="sm:hidden inline-flex items-center gap-1.5 rounded-xl border border-border bg-secondary/40 hover:bg-secondary px-3.5 py-2 text-xs font-semibold text-foreground transition-colors"
+                >
+                  <Share2 size={14} className="text-muted-foreground" /> Sdílet
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* ── Dolní vrstva — rozklikávací detaily ── */}

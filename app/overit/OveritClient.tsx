@@ -132,7 +132,7 @@ export default function OveritClient({ recentIncidents }: Props) {
 
       {/* ── Pravý sloupec (na mobilu pod vstupem) — klidový stav / výsledek ── */}
       <div ref={resultRef} className="scroll-mt-24">
-        {status === "idle" && recentIncidents.length > 0 && (
+        {status === "idle" && (
           <div className="hidden md:block animate-fade-up">
             <RecentIncidentsPanel incidents={recentIncidents} />
           </div>
