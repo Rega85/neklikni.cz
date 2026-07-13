@@ -194,16 +194,20 @@ export async function runAnalysis(
     messages: [{ role: "user", content: userContent }],
   }));
 
-  const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
+  // Ne vždy je content[0] textový blok — modely s adaptive/extended
+  // thinking (např. Sonnet 5 s výchozím effort=high) mohou před textem
+  // vracet "thinking" blok. Hledá první textový blok, ne fixní index.
+  const textBlock = msg.content.find((b) => b.type === "text");
+  const raw = textBlock && "text" in textBlock ? textBlock.text : "";
   let aiData: any;
   try {
     aiData = sanitizeCyrillic(extractJson(raw));
   } catch (err) {
-    // Diagnostický kontext (stop_reason odhalí oříznutí max_tokens),
-    // ne jen "AI nevrátila validní JSON" bez stopy proč.
+    // Diagnostický kontext (stop_reason odhalí oříznutí max_tokens,
+    // blockTypes odhalí neočekávanou strukturu content pole).
     throw new Error(
       `AI nevrátila validní JSON (model=${model}, stop_reason=${msg.stop_reason}, ` +
-      `délka=${raw.length}): ${raw.slice(-300)}`,
+      `blockTypes=${msg.content.map((b) => b.type).join(",")}, délka=${raw.length}): ${raw.slice(-300)}`,
     );
   }
   if (typeof aiData.risk !== "number" || !aiData.verdict) throw new Error("Neúplná AI odpověď");
