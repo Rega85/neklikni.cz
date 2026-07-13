@@ -195,7 +195,17 @@ export async function runAnalysis(
   }));
 
   const raw = msg.content[0].type === "text" ? msg.content[0].text : "";
-  const aiData = sanitizeCyrillic(extractJson(raw));
+  let aiData: any;
+  try {
+    aiData = sanitizeCyrillic(extractJson(raw));
+  } catch (err) {
+    // Diagnostický kontext (stop_reason odhalí oříznutí max_tokens),
+    // ne jen "AI nevrátila validní JSON" bez stopy proč.
+    throw new Error(
+      `AI nevrátila validní JSON (model=${model}, stop_reason=${msg.stop_reason}, ` +
+      `délka=${raw.length}): ${raw.slice(-300)}`,
+    );
+  }
   if (typeof aiData.risk !== "number" || !aiData.verdict) throw new Error("Neúplná AI odpověď");
 
   return aiData;
