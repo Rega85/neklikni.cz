@@ -10,17 +10,14 @@ import Anthropic from "@anthropic-ai/sdk";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+// Staré tarify (pro/easy/basic) smazány — 0 aktivních předplatitelů
+// k 2026-07, checkout je už neprodává. Historické shared_results.tier
+// záznamy s těmito hodnotami zůstávají čitelné (fallback na .free
+// v runAnalysis() níže), jen se pro ně nikdy znovu nevolá AI.
 export const TIER_MODELS: Record<string, string> = {
   free:    "claude-haiku-4-5-20251001",
   oneshot: "claude-opus-4-5",     // 49 Kč jednorázová analýza
-  full:    "claude-opus-4-5",     // 79 Kč/měs nebo 790 Kč/rok, neomezené (fair use) — novy cenik
-  // DEPRECATED — starý ceník (0 aktivních předplatitelů k 2026-07),
-  // checkout/pricing je už neprodávají. Ponecháno jako neškodný mrtvý
-  // kód, ať nerozbije čtení historických shared_results.tier záznamů.
-  // Smazat spolu s /api/analyze ve Fázi 4.
-  easy:    "claude-opus-4-5",
-  basic:   "claude-sonnet-4-5",
-  pro:     "claude-opus-4-5",
+  full:    "claude-opus-4-5",     // 79 Kč/měs nebo 790 Kč/rok, neomezené (fair use)
 };
 
 const SYSTEM_PROMPT_FREE = `Jsi expert na kybernetickou bezpečnost a phishing.
@@ -138,22 +135,31 @@ async function withRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
   throw new Error('unreachable');
 }
 
-export async function runAnalysis(text: string | null, tier: string, images: string[] = []) {
-  const model = TIER_MODELS[tier] || TIER_MODELS.free;
-  const basePrompt = ["pro", "easy", "full"].includes(tier) ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
+export async function runAnalysis(
+  text: string | null,
+  tier: string,
+  images: string[] = [],
+  modelOverride?: string,
+) {
+  const model = modelOverride || TIER_MODELS[tier] || TIER_MODELS.free;
+  const basePrompt = ["oneshot", "full"].includes(tier) ? SYSTEM_PROMPT_PRO : SYSTEM_PROMPT_FREE;
   // Dynamický prefix — model nezná aktuální datum, bez toho označuje
   // včerejší/dnešní data jako "z budoucnosti". Europe/Prague = CET/CEST.
+  // Oddělený od basePromptu (ne spojený do jednoho stringu), protože
+  // basePrompt je cache_control: ephemeral — mění-li se datum denně
+  // uvnitř cachovaného bloku, cache se znovupíše každý den. Takhle
+  // zůstává cachovaný blok bit-přesně stejný napříč dny a jen tahle
+  // malá dynamická část se posílá nekešovaná.
   const todayPrague = new Date().toLocaleDateString("cs-CZ", {
     timeZone: "Europe/Prague",
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  const systemPrompt =
+  const dateInstruction =
     `Dnešní datum je ${todayPrague}. Datum v minulosti ani dnešní datum NENÍ samo o sobě` +
-    ` indikátor podvodu — podezřelé je pouze datum jasně v budoucnosti vůči dnešku.\n\n` +
-    basePrompt;
-  const maxTokens = ["pro", "easy", "full"].includes(tier) ? 2000 : tier === "basic" ? 1500 : 800;
+    ` indikátor podvodu — podezřelé je pouze datum jasně v budoucnosti vůči dnešku.`;
+  const maxTokens = ["oneshot", "full"].includes(tier) ? 2000 : 800;
 
   let userContent: any;
   if (images.length > 0) {
@@ -178,7 +184,13 @@ export async function runAnalysis(text: string | null, tier: string, images: str
   const msg = await withRetry(() => anthropic.messages.create({
     model,
     max_tokens: maxTokens,
-    system: systemPrompt,
+    // basePrompt (FREE/PRO šablona) je pro daný tier vždy bit-přesně
+    // stejný → cache_control: ephemeral dá 90% slevu na tuhle část
+    // při opakovaných dotazech (stejný vzor jako databaze/_lib/precheck.ts).
+    system: [
+      { type: "text", text: basePrompt, cache_control: { type: "ephemeral" } },
+      { type: "text", text: dateInstruction },
+    ],
     messages: [{ role: "user", content: userContent }],
   }));
 

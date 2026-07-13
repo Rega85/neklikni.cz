@@ -46,3 +46,6 @@ next-env.d.ts
 
 # design reference mockup (not part of production app)
 /design-predloha/
+
+# scripts/compare-models.ts output — obsahuje reálné testovací texty, scratch
+scripts/model-comparison-results.json
