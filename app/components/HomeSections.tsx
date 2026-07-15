@@ -7,11 +7,13 @@ import {
 } from "lucide-react";
 import LeadMagnet from "./LeadMagnet";
 
+// TODO: vrátit zmínku o screenshotech v prvním kroku po dodělání image
+// uploadu do /api/check (viz app/overit/_components/CheckInput.tsx).
 const STEPS = [
   {
     icon: Send,
     title: "Vlož zprávu",
-    text: "Zkopíruj podezřelou SMS, e-mail nebo jen vlož odkaz. Přetažení screenshotu je součástí Full nebo jednorázové analýzy.",
+    text: "Zkopíruj podezřelou SMS, e-mail nebo jen vlož odkaz, telefon či číslo účtu.",
   },
   {
     icon: Brain,
@@ -71,10 +73,12 @@ const USE_CASES = [
   },
 ];
 
+// TODO: vrátit zmínku o screenshotech v odpovědi na "Je to opravdu
+// zdarma?" po dodělání image uploadu do /api/check.
 const FAQ_HOME: { q: string; a: string }[] = [
   {
     q: "Je to opravdu zdarma?",
-    a: "Ano. 2 analýzy denně máš zdarma — bez registrace, bez kreditky. Pro častější použití nebo screenshoty si můžeš vybrat tarif.",
+    a: "Ano. 2 analýzy denně máš zdarma — bez registrace, bez kreditky. Pro častější a neomezené použití si můžeš vybrat tarif Full.",
   },
   {
     q: "Ukládáte moje zprávy?",
@@ -195,8 +199,10 @@ export default function HomeSections() {
         <h2 className="text-3xl sm:text-4xl font-black tracking-tighter">
           Připraven na <span className="text-primary">víc analýz</span>?
         </h2>
+        {/* TODO: vrátit zmínku o screenshotech po dodělání image uploadu
+            do /api/check. */}
         <p className="text-muted-foreground max-w-xl mx-auto leading-relaxed">
-          Za 79 Kč měsíčně získáš neomezené ověřování, screenshoty a plný verdikt — první 7 dní zdarma. Zruš kdykoli jedním klikem.
+          Za 79 Kč měsíčně získáš neomezené ověřování a plný verdikt — první 7 dní zdarma. Zruš kdykoli jedním klikem.
         </p>
         <div className="flex flex-wrap justify-center gap-3 pt-2">
           <Link
