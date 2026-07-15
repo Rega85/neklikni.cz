@@ -2,45 +2,29 @@
 
 /**
  * Vstupní pole pro /overit — jedno textarea pro libovolný text (zpráva,
- * odkaz, telefon, účet, e-mail…) + 3 dlaždice jako lehká nápověda.
+ * odkaz, telefon, účet, e-mail…).
  *
- * Dlaždice jsou ČISTĚ kosmetické — jen zaostří textarea a upraví
- * placeholder na konkrétnější formulaci. NEMĚNÍ odesílaný text ani
- * neposílají žádný "kontext" — lib/inputParser.ts žádný takový parametr
- * nezná, parser si poradí sám z holého textu.
+ * Placeholder rotuje mezi příklady toho, co se dá vložit (SMS, doména
+ * e-shopu, telefon, číslo účtu) — čistě ambientní nápověda, žádné
+ * přepínání režimu. Pole samo se chová vždycky stejně bez ohledu na
+ * to, jaký příklad je zrovna vidět.
  */
 
-import { useRef, useState } from "react";
-import { MessageSquareWarning, ShoppingBag, Link2, Search } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Search } from "lucide-react";
 
 const MIN_LEN = 2;
 const MAX_LEN = 5000;
 
-const DEFAULT_PLACEHOLDER =
-  "Vlož podezřelou zprávu, odkaz, telefon, číslo účtu nebo e-mail…";
-
-const HINTS = [
-  {
-    key: "sms" as const,
-    label: "Přišla mi zpráva/SMS",
-    icon: MessageSquareWarning,
-    placeholder: "Vlož zprávu, kterou jsi dostal/a (SMS, e-mail, chat)…",
-  },
-  {
-    key: "prodejce" as const,
-    label: "Kupuju od prodejce",
-    icon: ShoppingBag,
-    placeholder: "Vlož telefon, e-mail nebo odkaz na profil prodejce…",
-  },
-  {
-    key: "eshop" as const,
-    label: "Ověřuju e-shop/odkaz",
-    icon: Link2,
-    placeholder: "Vlož adresu e-shopu nebo odkaz, který chceš ověřit…",
-  },
+const PLACEHOLDER_EXAMPLES = [
+  "Vlož podezřelou zprávu, odkaz, telefon, číslo účtu nebo e-mail…",
+  "Přišla mi SMS o nedoručeném balíku…",
+  "levneiphony.cz",
+  "+420 777 123 456",
+  "Číslo účtu z inzerátu na bazaru…",
 ];
 
-type HintKey = (typeof HINTS)[number]["key"];
+const ROTATE_INTERVAL_MS = 3500;
 
 interface Props {
   onSubmit: (text: string) => void;
@@ -49,7 +33,7 @@ interface Props {
 
 export default function CheckInput({ onSubmit, disabled }: Props) {
   const [value, setValue] = useState("");
-  const [activeHint, setActiveHint] = useState<HintKey | null>(null);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const trimmed = value.trim();
@@ -57,13 +41,12 @@ export default function CheckInput({ onSubmit, disabled }: Props) {
   const tooLong = value.length > MAX_LEN;
   const canSubmit = !disabled && trimmed.length >= MIN_LEN && !tooLong;
 
-  const placeholder =
-    HINTS.find((h) => h.key === activeHint)?.placeholder ?? DEFAULT_PLACEHOLDER;
-
-  function handleHintClick(key: HintKey) {
-    setActiveHint((prev) => (prev === key ? null : key));
-    textareaRef.current?.focus();
-  }
+  useEffect(() => {
+    const id = setInterval(() => {
+      setPlaceholderIndex((i) => (i + 1) % PLACEHOLDER_EXAMPLES.length);
+    }, ROTATE_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, []);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -78,7 +61,7 @@ export default function CheckInput({ onSubmit, disabled }: Props) {
           ref={textareaRef}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder={placeholder}
+          placeholder={PLACEHOLDER_EXAMPLES[placeholderIndex]}
           disabled={disabled}
           rows={5}
           maxLength={MAX_LEN + 200}
@@ -102,27 +85,6 @@ export default function CheckInput({ onSubmit, disabled }: Props) {
       {tooShort && (
         <p className="text-xs text-muted-foreground">Zadej aspoň {MIN_LEN} znaky.</p>
       )}
-
-      <div className="flex flex-wrap gap-2">
-        {HINTS.map((hint) => {
-          const Icon = hint.icon;
-          const isActive = activeHint === hint.key;
-          return (
-            <button
-              key={hint.key}
-              type="button"
-              onClick={() => handleHintClick(hint.key)}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-xs font-semibold transition-all ${
-                isActive
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
-              }`}
-            >
-              <Icon size={13} /> {hint.label}
-            </button>
-          );
-        })}
-      </div>
 
       <button
         type="submit"
