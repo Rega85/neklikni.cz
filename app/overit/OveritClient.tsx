@@ -77,7 +77,7 @@ export default function OveritClient({ recentIncidents }: Props) {
     setLastText(text);
     setStatus("loading");
     setErrorMsg("");
-    trackEvent("check_started", { hasImages: !!images?.length });
+    trackEvent("check_started", { hasImages: !!images?.length, imageCount: images?.length ?? 0 });
 
     try {
       const res = await fetch("/api/check", {
