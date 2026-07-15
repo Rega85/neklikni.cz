@@ -16,12 +16,10 @@ const FULL_PRICE = { monthly: 79, yearly: 790 };
 const FULL_PERIOD_LABEL = { monthly: "měsíc", yearly: "rok" };
 const FULL_PRICE_LABEL = { monthly: "79 Kč/měsíc", yearly: "790 Kč/rok" };
 
-// TODO: vrátit zmínku o screenshotech po dodělání image uploadu do /api/check
-// (viz app/overit/_components/CheckInput.tsx) — dřív "Analýza screenshotů
-// (obrázků)" tady bylo, ale /api/check obrázky zatím vůbec nepřijímá.
 const FULL_FEATURES = [
   "Neomezené ověřování (fair use)",
   "Nejpokročilejší AI model",
+  "Analýza screenshotů (až 2 najednou)",
   "Hloubkový rozbor – taktiky útočníka",
   "Prioritní podpora",
 ];
@@ -29,6 +27,7 @@ const FULL_FEATURES = [
 const ONESHOT_FEATURES = [
   "1 kompletní rozbor zprávy",
   "Nejpokročilejší AI model",
+  "Analýza screenshotů (až 2 najednou)",
   "Hloubkový rozbor – taktiky útočníka",
   "Žádné předplatné",
 ];
@@ -39,8 +38,7 @@ const COMPARE: { label: string; free: string; oneshot: string; full: string; hig
   { label: "Zkušební období", free: "—", oneshot: "—", full: `${TRIAL_DAYS} dní zdarma` },
   { label: "AI model", free: "Základní", oneshot: "Nejpokročilejší", full: "Nejpokročilejší" },
   { label: "Vyhledávání v databázi", free: "10 / den", oneshot: "10 / den", full: "10 / den" },
-  // TODO: vrátit řádek "Analýza obrázků / screenshotů" po dodělání image
-  // uploadu do /api/check — /api/check zatím obrázky vůbec nepřijímá.
+  { label: "Analýza screenshotů (až 2)", free: "—", oneshot: "✓", full: "✓" },
   { label: "Hloubkový rozbor + taktiky", free: "—", oneshot: "✓", full: "✓" },
   { label: "Sdílení a varování přes odkaz", free: "✓", oneshot: "✓", full: "✓" },
   { label: "PDF report ke stažení", free: "✓", oneshot: "✓", full: "✓" },
@@ -82,7 +80,7 @@ const FAQ: { q: string; a: string }[] = [
   },
   {
     q: "Co dostanu zdarma?",
-    a: "2 AI ověření denně a 10 vyhledávání v databázi bez registrace, plus PDF report a sdílení. Pro neomezené ověřování si vyber Full.",
+    a: "2 AI ověření denně a 10 vyhledávání v databázi bez registrace, plus PDF report a sdílení. Nahrávání screenshotů je součástí Jednorázové analýzy nebo Full. Pro neomezené ověřování si vyber Full.",
   },
 ];
 

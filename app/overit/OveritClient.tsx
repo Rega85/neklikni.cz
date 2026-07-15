@@ -47,14 +47,20 @@ export default function OveritClient({ recentIncidents }: Props) {
   const [errorMsg, setErrorMsg] = useState("");
   const [resetCount, setResetCount] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+  const [tier, setTier] = useState<string>("free");
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetch("/api/me", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setIsLoggedIn(!!d?.profile))
+      .then((d) => {
+        setIsLoggedIn(!!d?.profile);
+        setTier(d?.profile?.tier || "free");
+      })
       .catch(() => setIsLoggedIn(false));
   }, []);
+
+  const canUploadImages = tier === "oneshot" || tier === "full";
 
   // Po přijetí odpovědi (ne v idle/loading) na mobilu auto-scroll na
   // výsledek — uživatel nesmí hledat, kde odpověď je. Na desktopu (split
@@ -67,18 +73,18 @@ export default function OveritClient({ recentIncidents }: Props) {
     resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [status]);
 
-  async function runCheck(text: string) {
+  async function runCheck(text: string, images?: string[]) {
     setLastText(text);
     setStatus("loading");
     setErrorMsg("");
-    trackEvent("check_started");
+    trackEvent("check_started", { hasImages: !!images?.length });
 
     try {
       const res = await fetch("/api/check", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify(images?.length ? { text, images } : { text }),
       });
 
       const contentType = res.headers.get("content-type");
@@ -127,7 +133,12 @@ export default function OveritClient({ recentIncidents }: Props) {
     <div className="w-full max-w-md md:max-w-6xl mx-auto grid md:grid-cols-2 gap-5 md:gap-8 items-start">
       {/* ── Levý sloupec — vstup, sticky na desktopu ── */}
       <div className="md:sticky md:top-24">
-        <CheckInput key={resetCount} onSubmit={runCheck} disabled={status === "loading"} />
+        <CheckInput
+          key={resetCount}
+          onSubmit={runCheck}
+          disabled={status === "loading"}
+          canUploadImages={canUploadImages}
+        />
       </div>
 
       {/* ── Pravý sloupec (na mobilu pod vstupem) — klidový stav / výsledek ── */}

@@ -169,13 +169,20 @@ export async function runAnalysis(
       const data = match?.[2] ?? b64;
       return { type: "image", source: { type: "base64", media_type: mediaType, data } };
     });
-    const instructionText =
+    const baseInstruction =
       images.length === 1
-        ? "Nejdříve extrahuj veškerý text z tohoto obrázku, poté ho analyzuj na phishing/podvodné indikátory. Odpověz ve stejném JSON formátu."
-        : `Toto je ${images.length} screenshotů jedné zprávy nebo konverzace (rozdělené napříč více obrázky). Posuď je jako JEDEN celek: extrahuj veškerý text ze všech screenshotů, slož ho dohromady v pořadí ${images.length} obrázků a analyzuj výsledný celek na phishing/podvodné indikátory. Odpověz ve stejném JSON formátu.`;
+        ? "Nejdříve extrahuj veškerý text z tohoto obrázku, poté ho analyzuj na phishing/podvodné indikátory."
+        : `Toto je ${images.length} screenshotů jedné zprávy nebo konverzace (rozdělené napříč více obrázky). Posuď je jako JEDEN celek: extrahuj veškerý text ze všech screenshotů, slož ho dohromady v pořadí ${images.length} obrázků a analyzuj výsledný celek na phishing/podvodné indikátory.`;
+    // Doprovodný text (např. "tohle mi poslala teta") se dřív u
+    // obrázků úplně zahazoval — uživatel ho typicky připojuje jako
+    // vlastní kontext ke screenshotu, ne jako duplicitní obsah, takže
+    // ho AI musí vzít v potaz spolu s tím, co přečte z obrázku.
+    const userNote = text?.trim()
+      ? `\n\nUživatel k obrázku/obrázkům připojil tuto poznámku — zohledni ji jako kontext: "${text.trim()}"`
+      : "";
     userContent = [
       ...imageBlocks,
-      { type: "text", text: instructionText },
+      { type: "text", text: `${baseInstruction}${userNote} Odpověz ve stejném JSON formátu.` },
     ];
   } else {
     userContent = `Analyzuj tuto zprávu/odkaz na phishing a podvody:\n\n${text}`;

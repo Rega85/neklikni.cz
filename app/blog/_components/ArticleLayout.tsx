@@ -53,8 +53,6 @@ export default function ArticleLayout({
           <h3 className="text-xl font-black tracking-tighter mb-2">
             Máš podezřelou zprávu? Nechej AI, ať ji prověří.
           </h3>
-          {/* TODO: vrátit zmínku o screenshotech po dodělání image uploadu
-              do /api/check. */}
           <p className="text-muted-foreground text-sm mb-4">
             Vlož text — odpověď do 3 sekund. Zdarma a bez registrace.
           </p>

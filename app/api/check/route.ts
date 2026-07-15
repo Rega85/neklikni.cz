@@ -1,24 +1,31 @@
 /**
- * POST /api/check — sjednocený vstup (Fáze 2).
+ * POST /api/check — sjednocený vstup.
  *
- * Vezme libovolný text (zpráva, odkaz, holý identifikátor), přes
- * lib/inputParser.ts ho rozebere na entity a podle inputKind spustí
- * jen relevantní kontroly:
+ * Vezme libovolný text (zpráva, odkaz, holý identifikátor) a/nebo
+ * screenshoty, přes lib/inputParser.ts rozebere text na entity a podle
+ * inputKind spustí jen relevantní kontroly:
  *   - 'identifier' → jen databáze (subject_identifiers + ČOI)
  *   - 'message'    → jen AI analýza
  *   - 'url'/'mixed' → obojí paralelně
  * Výsledky sleje lib/verdictEngine.ts do jednotného verdiktu.
  *
- * Nikdo tenhle endpoint zatím nevolá — UI přijde ve Fázi 3.
  * /api/analyze a /api/databaze/search zůstávají nedotčené a
  * nezávislé, tenhle endpoint jen znovupoužívá jejich sdílené
  * knihovny (app/api/_lib/aiAnalysis.ts, databaze/_lib/crossReference.ts).
  *
+ * Screenshoty — EPHEMERNÍ, stejný model jako /api/analyze a jak už
+ * dnes slibuje /gdpr ("nejsou po dokončení analýzy ukládány"): jdou
+ * jen do Claude API volání (runAnalysis) a zahodí se. Žádný Supabase
+ * Storage bucket, žádná retence. Gatováno na oneshot/full (viz níže),
+ * max MAX_IMAGES obrázků, MAX_IMAGE_BYTES na obrázek — stejné limity
+ * jako /api/analyze až na počet (tady schválně nižší, cílovka nahrává
+ * typicky jeden screenshot).
+ *
  * Rate limiting je rozdělený podle nákladu:
- *   - AI větev (message/url/mixed) pálí tokeny → limit odpovídá
- *     cenníku (free/anon 2/24h, placené tarify jen obecná anti-abuse
- *     hranice). Při vyčerpání vrací 429 s `code: 'AI_LIMIT_REACHED'`
- *     a `upgradeRequired: true` — konverzní bod pro Fázi 3 UI, ne chyba.
+ *   - AI větev (message/url/mixed, nebo cokoliv se screenshotem) pálí
+ *     tokeny → limit odpovídá cenníku (free/anon 2/24h, placené tarify
+ *     jen obecná anti-abuse hranice). Při vyčerpání vrací 429 s
+ *     `code: 'AI_LIMIT_REACHED'` a `upgradeRequired: true`.
  *   - Čistě databázová větev (identifier) je levná → volnější limit.
  */
 
@@ -48,6 +55,15 @@ const AI_LIMIT_PAID = 50
 const DB_LIMIT_FREE = 10
 const DB_LIMIT_PAID = 100
 const WINDOW = '24 h' as const
+
+// ── Screenshoty ────────────────────────────────────────
+// Nižší strop než /api/analyze (4) — cílovka nahrává typicky jeden
+// screenshot, dva jsou rezerva (např. delší konverzace na dva
+// snímky). Menší limit = menší request payload = menší riziko
+// narazit na limit těla requestu u serverless funkce.
+const MAX_IMAGES = 2
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024
+const IMAGE_TIERS = ['oneshot', 'full']
 
 // ── Lazy-init Supabase admin ─────────────────────────
 
@@ -127,9 +143,9 @@ async function runDatabaseChecks(parsed: ParsedInput): Promise<DatabaseSignal> {
 
 // ── AI check ──────────────────────────────────────────
 
-async function runAiCheck(text: string, tier: string): Promise<AiSignal | null> {
+async function runAiCheck(text: string, tier: string, images: string[] = []): Promise<AiSignal | null> {
   try {
-    const result = await runAnalysis(text, tier)
+    const result = await runAnalysis(text, tier, images)
     return {
       risk: result.risk,
       verdict: result.verdict,
@@ -160,17 +176,38 @@ export async function POST(req: Request) {
   const rawText =
     body && typeof body === 'object' && 'text' in body
       ? (body as Record<string, unknown>).text
-      : null
-  if (typeof rawText !== 'string' || rawText.trim().length < 2) {
+      : ''
+
+  // images: pole data-URL base64 stringů, stejný tvar jako /api/analyze.
+  const rawImages: unknown[] =
+    body && typeof body === 'object' && Array.isArray((body as Record<string, unknown>).images)
+      ? (body as Record<string, unknown>).images as unknown[]
+      : []
+  const images: string[] = []
+  for (const item of rawImages) {
+    if (typeof item === 'string' && item.length > 0) images.push(item)
+  }
+  const hasImages = images.length > 0
+
+  if (!hasImages && (typeof rawText !== 'string' || rawText.trim().length < 2)) {
     return NextResponse.json(
-      { error: 'Zadejte text, odkaz nebo identifikátor ke kontrole.' },
+      { error: 'Zadejte text, odkaz nebo identifikátor ke kontrole, nebo nahrajte screenshot.' },
       { status: 400 },
     )
   }
-  if (rawText.length > 5000) {
+  if (!hasImages && typeof rawText === 'string' && rawText.length > 5000) {
     return NextResponse.json({ error: 'Text je příliš dlouhý. Maximum je 5000 znaků.' }, { status: 400 })
   }
-  const text = rawText.trim()
+  if (images.length > MAX_IMAGES) {
+    return NextResponse.json({ error: `Maximum ${MAX_IMAGES} screenshoty na jednu kontrolu.` }, { status: 400 })
+  }
+  for (const img of images) {
+    const base64Data = img.split(',')[1] ?? img
+    if (Math.ceil(base64Data.length * 0.75) > MAX_IMAGE_BYTES) {
+      return NextResponse.json({ error: 'Některý screenshot je příliš velký. Maximum jsou 4 MB na obrázek.' }, { status: 400 })
+    }
+  }
+  const text = typeof rawText === 'string' ? rawText.trim() : ''
 
   // Auth — stejný vzor jako /api/analyze a /api/databaze/search
   // (cookies, Bearer token jako fallback). Endpointy samotné nedotčené.
@@ -211,8 +248,39 @@ export async function POST(req: Request) {
     tier = profile?.tier || 'free'
   }
 
+  // Screenshoty — gatováno na oneshot/full, stejný vzor jako /api/analyze.
+  if (hasImages) {
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: 'Pro nahrání screenshotu se musíte přihlásit a mít tarif Full nebo Jednorázová.',
+          code: 'IMAGE_UPLOAD_REQUIRES_PAID_TIER',
+          upgradeRequired: true,
+          requireRegistration: true,
+        },
+        { status: 403 },
+      )
+    }
+    if (!IMAGE_TIERS.includes(tier)) {
+      return NextResponse.json(
+        {
+          error: 'Analýza screenshotů je dostupná pro tarif Full nebo Jednorázová.',
+          code: 'IMAGE_UPLOAD_REQUIRES_PAID_TIER',
+          upgradeRequired: true,
+        },
+        { status: 403 },
+      )
+    }
+  }
+
   const parsed = parseInput(text)
-  const plan = planChecks(parsed.inputKind)
+  const planFromText = planChecks(parsed.inputKind)
+  // Screenshot vždy vynutí AI větev, i kdyby doprovodný text sám o sobě
+  // vypadal jako holý identifikátor (planChecks by jinak AI přeskočilo —
+  // viz lib/verdictEngine.ts planChecks/'identifier'). Databázová větev
+  // se řídí podle textu beze změny (obrázek sám o sobě nic k
+  // prohledání do databáze nedává, dokud ho AI nepřečte).
+  const plan = hasImages ? { ...planFromText, checkAi: true } : planFromText
   const isPaid = tier !== 'free'
 
   // Rate limit — rozdělený podle toho, jestli větev pálí AI tokeny.
@@ -260,11 +328,15 @@ export async function POST(req: Request) {
 
   const [database, ai] = await Promise.all([
     plan.checkDatabase ? runDatabaseChecks(parsed) : Promise.resolve(null),
-    plan.checkAi ? runAiCheck(text, tier) : Promise.resolve(null),
+    plan.checkAi ? runAiCheck(text, tier, images) : Promise.resolve(null),
   ])
 
   const verdict = buildVerdict({ parsed, database, ai })
-  const shareId = await saveShareableVerdict(text, tier, parsed.inputKind, verdict)
+  // shared_results.original_text — u čistého screenshotu bez textu
+  // nahradit popisným placeholderem (stejný vzor jako saveResult()
+  // v /api/analyze), ať řádek nezůstane s prázdným original_text.
+  const textForSharing = text || (images.length > 0 ? `[Analýza ${images.length > 1 ? images.length + ' screenshotů' : 'screenshotu'}]` : text)
+  const shareId = await saveShareableVerdict(textForSharing, tier, parsed.inputKind, verdict)
 
   return NextResponse.json({
     inputKind: parsed.inputKind,
