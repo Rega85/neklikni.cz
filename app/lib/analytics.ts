@@ -14,7 +14,8 @@ type EventName =
   | "example_clicked"
   | "check_started"
   | "check_completed"
-  | "check_limit_reached";
+  | "check_limit_reached"
+  | "b2b_lead_submitted";
 
 type EventParams = Record<string, string | number | boolean | undefined>;
 
